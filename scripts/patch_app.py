@@ -50,9 +50,29 @@ TESTED_SOURCE_BUILDS = {
         "26.803.61601",
         "6396",
     ): "d5a44ed9e2f1db5f81dbbe85408aed256f3203c5b16f00817bb9d7cd941343cf",
+    (
+        "26.810.52044",
+        "6662",
+    ): "6e7e8791b8bf69a586ff994721fff518af391d9efdc66cd2e620dd2a4aedc90f",
 }
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS = 49
+EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
+    ("26.803.61601", "6396"): 49,
+    ("26.810.52044", "6662"): 99,
+}
+DEFAULT_CUA_SERVICE_LAYOUT = (("Codex Computer Use.app", 17),)
+EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
+    ("26.803.61601", "6396"): DEFAULT_CUA_SERVICE_LAYOUT,
+    ("26.810.52044", "6662"): (
+        ("Codex Computer Use.app", 17),
+        ("bin/mac/normal/Codex Computer Use.app", 13),
+    ),
+}
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS = 17
+EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
+    ("26.803.61601", "6396"): 17,
+    ("26.810.52044", "6662"): 20,
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -297,14 +317,14 @@ def retire_stale_cached_computer_use_app() -> None:
     print(f"Stale cached Computer Use helper moved to {backup}")
 
 
-def patch_computer_use_identity(app: Path, team_identifier: str | None) -> None:
+def patch_computer_use_identity(
+    app: Path,
+    team_identifier: str | None,
+    expected_replacements: int = EXPECTED_CUA_IDENTIFIER_REPLACEMENTS,
+    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
+) -> None:
     """Give the copied CUA service an independent identity and trusted callers."""
     package = computer_use_package(app)
-    service = package / "Codex Computer Use.app"
-    executable = service / "Contents" / "MacOS" / "SkyComputerUseService"
-    if not executable.is_file():
-        raise RuntimeError("bundled Codex Computer Use service was not found")
-
     for profile in package.rglob("embedded.provisionprofile"):
         profile.unlink()
 
@@ -316,65 +336,94 @@ def patch_computer_use_identity(app: Path, team_identifier: str | None) -> None:
                 OPENAI_COMPUTER_USE_BUNDLE_IDENTIFIER,
                 COMPUTER_USE_BUNDLE_IDENTIFIER,
             )
-    if identifier_replacements != EXPECTED_CUA_IDENTIFIER_REPLACEMENTS:
+    if identifier_replacements != expected_replacements:
         raise RuntimeError(
             "expected "
-            f"{EXPECTED_CUA_IDENTIFIER_REPLACEMENTS} Computer Use identity "
+            f"{expected_replacements} Computer Use identity "
             f"references, found {identifier_replacements}"
         )
 
-    plist_path = service / "Contents" / "Info.plist"
-    with plist_path.open("rb") as handle:
-        info = plistlib.load(handle)
-    info["CFBundleIdentifier"] = COMPUTER_USE_BUNDLE_IDENTIFIER
-    info["CFBundleDisplayName"] = COMPUTER_USE_DISPLAY_NAME
-    info["CFBundleName"] = COMPUTER_USE_DISPLAY_NAME
-    for key in list(info):
-        if key.startswith("SU"):
-            del info[key]
-    with plist_path.open("wb") as handle:
-        plistlib.dump(info, handle, fmt=plistlib.FMT_BINARY, sort_keys=False)
-
-    if team_identifier is None:
-        return
-    binary = executable.read_bytes()
-    replacement = arm64_swift_small_string(team_identifier)
-    for original_team, description in (
-        (OPENAI_INTERNAL_TEAM_IDENTIFIER, "internal"),
-        (OPENAI_DISTRIBUTION_TEAM_IDENTIFIER, "distribution"),
-    ):
-        original = arm64_swift_small_string(original_team)
-        match_count = binary.count(original)
-        if match_count != 2:
-            raise RuntimeError(
-                f"expected two Computer Use {description}-team checks, "
-                f"found {match_count}; the official app layout may have changed"
-            )
-        binary = binary.replace(original, replacement)
-
-        raw_original = original_team.encode("ascii")
-        raw_replacement = team_identifier.encode("ascii")
-        raw_match_count = binary.count(raw_original)
-        expected_raw_matches = 1 if description == "internal" else 17
-        if raw_match_count != expected_raw_matches:
-            raise RuntimeError(
-                f"expected {expected_raw_matches} Computer Use {description}-team "
-                f"constants, found {raw_match_count}; the official app layout may have changed"
-            )
-        binary = binary.replace(raw_original, raw_replacement)
-
-    original_bundle_id = b"com.openai.codex\0"
-    replacement_bundle_id = DESKTOP_BUNDLE_IDENTIFIER.encode("ascii") + b"\0"
-    if len(replacement_bundle_id) != len(original_bundle_id):
+    expected_service_paths = {relative for relative, _ in service_layout}
+    actual_service_paths = {
+        str(candidate.relative_to(package))
+        for candidate in package.rglob("Codex Computer Use.app")
+        if candidate.is_dir()
+    }
+    if actual_service_paths != expected_service_paths:
         raise RuntimeError(
-            "the independent bundle identifier must match the CUA identifier length"
+            "unexpected Computer Use service layout: "
+            f"expected {sorted(expected_service_paths)}, "
+            f"found {sorted(actual_service_paths)}"
         )
-    if binary.count(original_bundle_id) != 1:
-        raise RuntimeError("could not find the Computer Use production bundle ID")
-    executable.write_bytes(binary.replace(original_bundle_id, replacement_bundle_id))
+
+    for relative, expected_distribution_matches in service_layout:
+        service = package / relative
+        executable = service / "Contents" / "MacOS" / "SkyComputerUseService"
+        if not executable.is_file():
+            raise RuntimeError(f"bundled Computer Use service was not found: {relative}")
+
+        plist_path = service / "Contents" / "Info.plist"
+        with plist_path.open("rb") as handle:
+            info = plistlib.load(handle)
+        info["CFBundleIdentifier"] = COMPUTER_USE_BUNDLE_IDENTIFIER
+        info["CFBundleDisplayName"] = COMPUTER_USE_DISPLAY_NAME
+        info["CFBundleName"] = COMPUTER_USE_DISPLAY_NAME
+        for key in list(info):
+            if key.startswith("SU"):
+                del info[key]
+        with plist_path.open("wb") as handle:
+            plistlib.dump(info, handle, fmt=plistlib.FMT_BINARY, sort_keys=False)
+
+        if team_identifier is None:
+            continue
+        binary = executable.read_bytes()
+        replacement = arm64_swift_small_string(team_identifier)
+        for original_team, description, expected_raw_matches in (
+            (OPENAI_INTERNAL_TEAM_IDENTIFIER, "internal", 1),
+            (
+                OPENAI_DISTRIBUTION_TEAM_IDENTIFIER,
+                "distribution",
+                expected_distribution_matches,
+            ),
+        ):
+            original = arm64_swift_small_string(original_team)
+            match_count = binary.count(original)
+            if match_count != 2:
+                raise RuntimeError(
+                    f"expected two Computer Use {description}-team checks in "
+                    f"{relative}, found {match_count}; the official app layout may "
+                    "have changed"
+                )
+            binary = binary.replace(original, replacement)
+
+            raw_original = original_team.encode("ascii")
+            raw_replacement = team_identifier.encode("ascii")
+            raw_match_count = binary.count(raw_original)
+            if raw_match_count != expected_raw_matches:
+                raise RuntimeError(
+                    f"expected {expected_raw_matches} Computer Use {description}-team "
+                    f"constants in {relative}, found {raw_match_count}; the official "
+                    "app layout may have changed"
+                )
+            binary = binary.replace(raw_original, raw_replacement)
+
+        original_bundle_id = b"com.openai.codex\0"
+        replacement_bundle_id = DESKTOP_BUNDLE_IDENTIFIER.encode("ascii") + b"\0"
+        if len(replacement_bundle_id) != len(original_bundle_id):
+            raise RuntimeError(
+                "the independent bundle identifier must match the CUA identifier length"
+            )
+        if binary.count(original_bundle_id) != 1:
+            raise RuntimeError(
+                f"could not find the Computer Use production bundle ID in {relative}"
+            )
+        executable.write_bytes(binary.replace(original_bundle_id, replacement_bundle_id))
 
 
-def patch_asar_computer_use_identity(extracted: Path) -> None:
+def patch_asar_computer_use_identity(
+    extracted: Path,
+    expected_replacements: int = EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS,
+) -> None:
     """Keep desktop launch, temp-file, and service references on the new CUA ID."""
     replacements = 0
     for candidate in extracted.rglob("*"):
@@ -384,10 +433,10 @@ def patch_asar_computer_use_identity(extracted: Path) -> None:
                 OPENAI_COMPUTER_USE_BUNDLE_IDENTIFIER,
                 COMPUTER_USE_BUNDLE_IDENTIFIER,
             )
-    if replacements != EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS:
+    if replacements != expected_replacements:
         raise RuntimeError(
             "expected "
-            f"{EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS} Computer Use references "
+            f"{expected_replacements} Computer Use references "
             f"in app.asar, found {replacements}"
         )
 
@@ -415,6 +464,7 @@ def sign_native_code_tree(root: Path, identity: str) -> None:
 
 TEAM_SCOPED_ENTITLEMENTS = (
     "com.apple.application-identifier",
+    "com.apple.developer.aps-environment",
     "com.apple.developer.team-identifier",
     "com.apple.security.application-groups",
     "keychain-access-groups",
@@ -543,63 +593,75 @@ def sign_runtime_bundle(
 
 def capture_computer_use_entitlements(
     app: Path,
+    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
 ) -> dict[Path, dict[str, object] | None]:
-    service = computer_use_package(app) / "Codex Computer Use.app"
-    if not service.is_dir():
-        raise RuntimeError("bundled Codex Computer Use service was not found")
-    return {
-        executable.relative_to(service): sanitized_runtime_entitlements(executable)
-        for executable in service.rglob("*")
-        if is_mach_o(executable)
-    }
+    package = computer_use_package(app)
+    entitlements: dict[Path, dict[str, object] | None] = {}
+    for relative, _ in service_layout:
+        service = package / relative
+        if not service.is_dir():
+            raise RuntimeError(f"bundled Computer Use service was not found: {relative}")
+        entitlements.update(
+            {
+                executable.relative_to(package): sanitized_runtime_entitlements(
+                    executable
+                )
+                for executable in service.rglob("*")
+                if is_mach_o(executable)
+            }
+        )
+    return entitlements
 
 
 def sign_computer_use_code(
     app: Path,
     identity: str,
     preserved_entitlements: dict[Path, dict[str, object] | None],
+    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
 ) -> None:
     """Keep the Computer Use service and its callers on one signing team."""
     resources = app / "Contents" / "Resources"
-    service = computer_use_package(app) / "Codex Computer Use.app"
-    if not service.is_dir():
-        raise RuntimeError("bundled Codex Computer Use service was not found")
+    package = computer_use_package(app)
+    for relative, _ in service_layout:
+        service = package / relative
+        if not service.is_dir():
+            raise RuntimeError(f"bundled Computer Use service was not found: {relative}")
 
-    for executable in sorted(
-        (candidate for candidate in service.rglob("*") if is_mach_o(candidate)),
-        key=lambda candidate: len(candidate.parts),
-        reverse=True,
-    ):
-        relative = executable.relative_to(service)
-        sign_runtime_executable(
-            executable,
-            identity,
-            entitlements=preserved_entitlements.get(relative),
-        )
+        for executable in sorted(
+            (candidate for candidate in service.rglob("*") if is_mach_o(candidate)),
+            key=lambda candidate: len(candidate.parts),
+            reverse=True,
+        ):
+            executable_relative = executable.relative_to(package)
+            sign_runtime_executable(
+                executable,
+                identity,
+                entitlements=preserved_entitlements.get(executable_relative),
+            )
 
-    bundle_suffixes = {".app", ".appex", ".bundle", ".framework", ".xpc"}
-    bundles = [
-        candidate
-        for candidate in service.rglob("*")
-        if candidate.is_dir() and candidate.suffix in bundle_suffixes
-    ]
-    bundles.append(service)
-    for bundle in sorted(
-        set(bundles),
-        key=lambda candidate: len(candidate.parts),
-        reverse=True,
-    ):
-        identifier = (
-            COMPUTER_USE_BUNDLE_IDENTIFIER if bundle == service else None
-        )
-        executable = bundle_main_executable(bundle)
-        entitlements = (
-            preserved_entitlements.get(executable.relative_to(service))
-            if executable is not None
-            else None
-        )
-        sign_runtime_bundle(bundle, identity, identifier, entitlements)
-        run(["codesign", "--verify", "--deep", "--strict", str(bundle)])
+        bundle_suffixes = {".app", ".appex", ".bundle", ".framework", ".xpc"}
+        bundles = [
+            candidate
+            for candidate in service.rglob("*")
+            if candidate.is_dir() and candidate.suffix in bundle_suffixes
+        ]
+        bundles.append(service)
+        for bundle in sorted(
+            set(bundles),
+            key=lambda candidate: len(candidate.parts),
+            reverse=True,
+        ):
+            identifier = (
+                COMPUTER_USE_BUNDLE_IDENTIFIER if bundle == service else None
+            )
+            executable = bundle_main_executable(bundle)
+            entitlements = (
+                preserved_entitlements.get(executable.relative_to(package))
+                if executable is not None
+                else None
+            )
+            sign_runtime_bundle(bundle, identity, identifier, entitlements)
+            run(["codesign", "--verify", "--deep", "--strict", str(bundle)])
 
     for executable_name in ("node", "node_repl"):
         executable = resources / "cua_node" / "bin" / executable_name
@@ -613,12 +675,21 @@ def sign_computer_use_code(
 
 
 def sign_independent_app(
-    app: Path, identity: str, team_identifier: str | None
+    app: Path,
+    identity: str,
+    team_identifier: str | None,
+    expected_cua_replacements: int = EXPECTED_CUA_IDENTIFIER_REPLACEMENTS,
+    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
 ) -> None:
     """Apply one stable identity throughout the modified Electron bundle."""
-    computer_use_entitlements = capture_computer_use_entitlements(app)
-    patch_computer_use_identity(app, team_identifier)
-    sign_computer_use_code(app, identity, computer_use_entitlements)
+    computer_use_entitlements = capture_computer_use_entitlements(app, service_layout)
+    patch_computer_use_identity(
+        app,
+        team_identifier,
+        expected_cua_replacements,
+        service_layout,
+    )
+    sign_computer_use_code(app, identity, computer_use_entitlements, service_layout)
     run(
         [
             "codesign",
@@ -709,6 +780,18 @@ def ensure_asar_tool() -> Path:
     return asar
 
 
+def replace_javascript_identifiers(source: str, replacements: dict[str, str]) -> str:
+    """Retarget injected source to the minified imports in a supported build."""
+    for original, replacement in replacements.items():
+        pattern = rf"(?<![A-Za-z0-9_$]){re.escape(original)}(?![A-Za-z0-9_$])"
+        source, count = re.subn(pattern, replacement, source)
+        if count == 0:
+            raise RuntimeError(
+                f"could not retarget injected JavaScript identifier {original!r}"
+            )
+    return source
+
+
 def patch_renderer(extracted: Path, token: str) -> None:
     webview = extracted / "webview"
     index_path = webview / "index.html"
@@ -737,20 +820,42 @@ def patch_renderer(extracted: Path, token: str) -> None:
     component = (PROJECT_ROOT / "ui" / "account-menu.js").read_text(encoding="utf-8")
     component = component.replace("__CODEX_MUX_CONTROL_PORT__", str(CONTROL_PORT))
     component = component.replace("__CODEX_MUX_CONTROL_TOKEN__", token)
-    component_anchor = "function wXc({sidebarFooter:e,triggerButton:t})"
+    build_6662 = "function Icl(e){let t=(0,Vcl.c)(248)," in bundle
+    if build_6662:
+        component = replace_javascript_identifiers(
+            component,
+            {
+                "e7": "$5",
+                "kXc": "Hcl",
+                "Lo": "Fo",
+                "BW": "RU",
+                "QLs": "E$s",
+                "_H": "GV",
+                "S2": "E0",
+                "CH": "ZV",
+                "jLa": "x$a",
+                "lt": "ct",
+            },
+        )
+        component_anchor = "function Icl(e){let t=(0,Vcl.c)(248),"
+    else:
+        component_anchor = "function wXc({sidebarFooter:e,triggerButton:t})"
     if bundle.count(component_anchor) != 1:
         raise RuntimeError("could not find the native ChatGPT profile menu component")
     bundle = bundle.replace(component_anchor, component + "\n" + component_anchor, 1)
 
+    rpc_wrapper = "J9" if build_6662 else "q9"
+    status_rpc_wrapper = "q9" if build_6662 else "K9"
     plugin_rpc_mapping_anchors = (
-        '"list-apps":q9((e,{priority:t,source:n,timeoutMs:r,trace:i,...a})=>'
-        "e.sendRequest(`app/list`,a,",
-        '"list-installed-apps":q9((e,t)=>e.sendRequest(`app/installed`,t))',
-        '"read-apps":q9((e,t)=>e.sendRequest(`app/read`,t))',
-        '"login-mcp-server":q9((e,t)=>'
+        f'"list-apps":{rpc_wrapper}((e,{{priority:t,source:n,timeoutMs:r,'
+        "trace:i,...a})=>e.sendRequest(`app/list`,a,",
+        f'"list-installed-apps":{rpc_wrapper}((e,t)=>'
+        "e.sendRequest(`app/installed`,t))",
+        f'"read-apps":{rpc_wrapper}((e,t)=>e.sendRequest(`app/read`,t))',
+        f'"login-mcp-server":{rpc_wrapper}((e,t)=>'
         "e.sendRequest(`mcpServer/oauth/login`,t))",
-        '"list-mcp-server-status":K9((e,{priority:t,source:n,timeoutMs:r,'
-        "trace:i,...a})=>e.listMcpServers(a,",
+        f'"list-mcp-server-status":{status_rpc_wrapper}((e,{{priority:t,'
+        "source:n,timeoutMs:r,trace:i,...a})=>e.listMcpServers(a,",
         "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
         "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
     )
@@ -760,20 +865,37 @@ def patch_renderer(extracted: Path, token: str) -> None:
                 "could not verify the native Plugins request-to-RPC mapping"
             )
 
-    app_server_request_anchor = (
-        "function gm(e,t,n){return n==null?h6e.sendRequest(e,t):"
-        "h6e.sendRequest(e,t,n)}"
-    )
+    if build_6662:
+        app_server_request_anchor = (
+            "function Bp(e,t,n){return n==null?N8e.sendRequest(e,t):"
+            "N8e.sendRequest(e,t,n)}"
+        )
+        app_server_request_replacement = (
+            "function Bp(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
+            "return n==null?N8e.sendRequest(e,r):N8e.sendRequest(e,r,n)}"
+        )
+    else:
+        app_server_request_anchor = (
+            "function gm(e,t,n){return n==null?h6e.sendRequest(e,t):"
+            "h6e.sendRequest(e,t,n)}"
+        )
+        app_server_request_replacement = (
+            "function gm(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
+            "return n==null?h6e.sendRequest(e,r):h6e.sendRequest(e,r,n)}"
+        )
     if bundle.count(app_server_request_anchor) != 1:
         raise RuntimeError("could not find the native app-server request bridge")
     bundle = bundle.replace(
         app_server_request_anchor,
-        "function gm(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
-        "return n==null?h6e.sendRequest(e,r):h6e.sendRequest(e,r,n)}",
+        app_server_request_replacement,
         1,
     )
 
-    profile_query_anchor = "let e=await T_.safeGet(`/wham/profiles/me`)"
+    profile_query_anchor = (
+        "let e=await c_.safeGet(`/wham/profiles/me`)"
+        if build_6662
+        else "let e=await T_.safeGet(`/wham/profiles/me`)"
+    )
     if bundle.count(profile_query_anchor) != 1:
         raise RuntimeError("could not find the native profile stats request")
     bundle = bundle.replace(
@@ -783,53 +905,95 @@ def patch_renderer(extracted: Path, token: str) -> None:
         1,
     )
 
-    native_usage_modal_anchor = "function QLs(e){"
+    native_usage_modal_name = "E$s" if build_6662 else "QLs"
+    native_usage_modal_anchor = f"function {native_usage_modal_name}(e){{"
     if bundle.count(native_usage_modal_anchor) != 1:
         raise RuntimeError("could not find the native Usage modal component")
     bundle = bundle.replace(
         native_usage_modal_anchor,
-        "function QLs(e){CodexMuxUseResetAccountState();",
+        f"function {native_usage_modal_name}(e){{CodexMuxUseResetAccountState();",
         1,
     )
 
-    reset_query_anchor = (
-        "function l6r(){let e=(0,$F.c)(1),t;return "
-        "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
-        "(t={queryKey:[`rate-limit-reset-credits`],queryFn:u6r,"
-        "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS},e[0]=t):"
-        "t=e[0],Lt(t)}"
-    )
+    if build_6662:
+        reset_query_anchor = (
+            "function Ooi(){let e=(0,SI.c)(1),t;return "
+            "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
+            "(t={queryKey:[`rate-limit-reset-credits`],queryFn:koi,"
+            "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS},e[0]=t):"
+            "t=e[0],It(t)}"
+        )
+        reset_query_replacement = (
+            "function Ooi(){let e=window.__codexMuxResetAccountId;return It({"
+            "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
+            "queryFn:e?()=>codexMuxRateLimitResets(e):koi,"
+            "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS})}"
+        )
+    else:
+        reset_query_anchor = (
+            "function l6r(){let e=(0,$F.c)(1),t;return "
+            "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
+            "(t={queryKey:[`rate-limit-reset-credits`],queryFn:u6r,"
+            "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS},e[0]=t):"
+            "t=e[0],Lt(t)}"
+        )
+        reset_query_replacement = (
+            "function l6r(){let e=window.__codexMuxResetAccountId;return Lt({"
+            "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
+            "queryFn:e?()=>codexMuxRateLimitResets(e):u6r,"
+            "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS})}"
+        )
     if bundle.count(reset_query_anchor) != 1:
         raise RuntimeError("could not find the native reset-credit query")
     bundle = bundle.replace(
         reset_query_anchor,
-        "function l6r(){let e=window.__codexMuxResetAccountId;return Lt({"
-        "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
-        "queryFn:e?()=>codexMuxRateLimitResets(e):u6r,"
-        "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS})}",
+        reset_query_replacement,
         1,
     )
 
-    reset_mutation_anchor = (
-        "function d6r(){let e=(0,$F.c)(3),t=lt(),n=zO(),r;return "
-        "e[0]!==n||e[1]!==t?(r={mutationFn:f6r,onSuccess:(e,r)=>{"
-        "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
-        "let n=e.code===`reset`?e.credit?.id??i:i;"
-        "t.setQueryData([`rate-limit-reset-credits`],e=>F3r(e,a,n))}"
-        "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
-        "e[0]=n,e[1]=t,e[2]=r):r=e[2],$t(r)}"
-    )
+    if build_6662:
+        reset_mutation_anchor = (
+            "function Aoi(){let e=(0,SI.c)(3),t=ct(),n=Uw(),r;return "
+            "e[0]!==n||e[1]!==t?(r={mutationFn:joi,onSuccess:(e,r)=>{"
+            "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
+            "let n=e.code===`reset`?e.credit?.id??i:i;"
+            "t.setQueryData([`rate-limit-reset-credits`],e=>eoi(e,a,n))}"
+            "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
+            "e[0]=n,e[1]=t,e[2]=r):r=e[2],Qt(r)}"
+        )
+        reset_mutation_replacement = (
+            "function Aoi(){let e=ct(),t=Uw(),n=window.__codexMuxResetAccountId,"
+            "r=[`rate-limit-reset-credits`,n??`primary`];return Qt({"
+            "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):joi,"
+            "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
+            "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
+            "n.credit?.id??a:a;e.setQueryData(r,e=>eoi(e,o,t))}"
+            "Promise.all([t([`rate-limit-status`]),t(r)])}})}"
+        )
+    else:
+        reset_mutation_anchor = (
+            "function d6r(){let e=(0,$F.c)(3),t=lt(),n=zO(),r;return "
+            "e[0]!==n||e[1]!==t?(r={mutationFn:f6r,onSuccess:(e,r)=>{"
+            "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
+            "let n=e.code===`reset`?e.credit?.id??i:i;"
+            "t.setQueryData([`rate-limit-reset-credits`],e=>F3r(e,a,n))}"
+            "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
+            "e[0]=n,e[1]=t,e[2]=r):r=e[2],$t(r)}"
+        )
+        reset_mutation_replacement = (
+            "function d6r(){let e=lt(),t=zO(),n=window.__codexMuxResetAccountId,"
+            "r=[`rate-limit-reset-credits`,n??`primary`];return $t({"
+            "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):f6r,"
+            "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
+            "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
+            "n.credit?.id??a:a;e.setQueryData(r,e=>F3r(e,o,t))}"
+            "Promise.all([t([`rate-limit-status`]),t(r)])}})}"
+        )
     if bundle.count(reset_mutation_anchor) != 1:
         raise RuntimeError("could not find the native reset-credit mutation")
     bundle = bundle.replace(
         reset_mutation_anchor,
-        "function d6r(){let e=lt(),t=zO(),n=window.__codexMuxResetAccountId,"
-        "r=[`rate-limit-reset-credits`,n??`primary`];return $t({"
-        "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):f6r,"
-        "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
-        "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
-        "n.credit?.id??a:a;e.setQueryData(r,e=>F3r(e,o,t))}"
-        "Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+        reset_mutation_replacement,
         1,
     )
 
@@ -842,40 +1006,66 @@ def patch_renderer(extracted: Path, token: str) -> None:
         1,
     )
 
-    usage_header_anchor = (
-        "let ve;t[46]===ge?ve=t[47]:"
-        "(ve=(0,k2.jsxs)(LL,{children:[ge,_e]}),t[46]=ge,t[47]=ve);"
-    )
+    if build_6662:
+        usage_header_anchor = (
+            "let _e;t[46]===he?_e=t[47]:"
+            "(_e=(0,I0.jsxs)(WL,{children:[he,ge]}),t[46]=he,t[47]=_e);"
+        )
+        usage_header_replacement = (
+            "let _e=(0,I0.jsxs)(WL,{children:[he,ge,"
+            "window.__codexMuxResetAccountSelector??null]});"
+        )
+    else:
+        usage_header_anchor = (
+            "let ve;t[46]===ge?ve=t[47]:"
+            "(ve=(0,k2.jsxs)(LL,{children:[ge,_e]}),t[46]=ge,t[47]=ve);"
+        )
+        usage_header_replacement = (
+            "let ve=(0,k2.jsxs)(LL,{children:[ge,_e,"
+            "window.__codexMuxResetAccountSelector??null]});"
+        )
     if bundle.count(usage_header_anchor) != 1:
         raise RuntimeError("could not find the native Usage sheet header")
     bundle = bundle.replace(
         usage_header_anchor,
-        "let ve=(0,k2.jsxs)(LL,{children:[ge,_e,"
-        "window.__codexMuxResetAccountSelector??null]});",
+        usage_header_replacement,
         1,
     )
 
-    usage_anchor = "usageItems:Ge"
+    usage_anchor = "usageItems:Ct" if build_6662 else "usageItems:Ge"
     if bundle.count(usage_anchor) != 1:
         raise RuntimeError("could not find the native ChatGPT usage menu slot")
     bundle = bundle.replace(
         usage_anchor,
-        "usageItems:(0,e7.jsx)(CodexMuxAccountMenu,{})",
+        (
+            "usageItems:(0,$5.jsx)(CodexMuxAccountMenu,{})"
+            if build_6662
+            else "usageItems:(0,e7.jsx)(CodexMuxAccountMenu,{})"
+        ),
         1,
     )
 
-    open_change_anchors = (
-        "triggerButton:Ke,onOpenChange:o,children:(0,e7.jsx)(bXc",
-        "return(0,e7.jsx)(vH,{open:a,onOpenChange:o,contentWidth:`panel`",
-    )
+    if build_6662:
+        open_change_anchors = (
+            "triggerButton:Dt,onOpenChange:l,children:P",
+            "open:s,onOpenChange:l,contentWidth:`panel`,triggerButton:Dt",
+        )
+        open_change_name = "l"
+    else:
+        open_change_anchors = (
+            "triggerButton:Ke,onOpenChange:o,children:(0,e7.jsx)(bXc",
+            "return(0,e7.jsx)(vH,{open:a,onOpenChange:o,contentWidth:`panel`",
+        )
+        open_change_name = "o"
     for anchor in open_change_anchors:
         if bundle.count(anchor) != 1:
             raise RuntimeError("could not find a native profile menu open-state hook")
         bundle = bundle.replace(
             anchor,
             anchor.replace(
-                "onOpenChange:o",
-                "onOpenChange:CodexMuxProfileMenuOpenChange(o)",
+                f"onOpenChange:{open_change_name}",
+                "onOpenChange:CodexMuxProfileMenuOpenChange("
+                f"{open_change_name})",
             ),
             1,
         )
@@ -902,49 +1092,105 @@ def patch_renderer(extracted: Path, token: str) -> None:
         )
     profile_bundle_path = profile_bundles[0]
     profile_bundle = profile_bundle_path.read_text(encoding="utf-8")
-    profile_avatar_anchor = (
-        "children:[(0,$.jsxs)(`div`,{className:`relative mb-4 size-20`,children:["
-    )
+    if build_6662:
+        profile_avatar_anchor = (
+            "avatar:(0,$.jsxs)($.Fragment,{children:["
+            "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
+            "className:Le(`group relative flex size-20 rounded-full outline-none "
+            "focus-within:ring-1 focus-within:ring-ring`,"
+        )
+        profile_avatar_replacement = (
+            "avatar:(0,$.jsxs)($.Fragment,{children:["
+            "globalThis.CodexMuxProfileAvatarStack?.("
+            "{onSelect:()=>M.refetch()})??null,"
+            "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
+            "className:Le(globalThis.CodexMuxProfileAvatarStack?`hidden`:"
+            "`group relative flex size-20 rounded-full outline-none "
+            "focus-within:ring-1 focus-within:ring-ring`,"
+        )
+    else:
+        profile_avatar_anchor = (
+            "children:[(0,$.jsxs)(`div`,{className:`relative mb-4 size-20`,"
+            "children:["
+        )
+        profile_avatar_replacement = (
+            "children:[globalThis.CodexMuxProfileAvatarStack?.("
+            "{onSelect:()=>A.refetch()})??null,"
+            "(0,$.jsxs)(`div`,{className:"
+            "globalThis.CodexMuxProfileAvatarStack?"
+            "`hidden`:`relative mb-4 size-20`,children:["
+        )
     if profile_bundle.count(profile_avatar_anchor) != 1:
         raise RuntimeError("could not find the native Profile avatar")
     profile_bundle = profile_bundle.replace(
         profile_avatar_anchor,
-        "children:[globalThis.CodexMuxProfileAvatarStack?.("
-        "{onSelect:()=>A.refetch()})??null,"
-        "(0,$.jsxs)(`div`,{className:"
-        "globalThis.CodexMuxProfileAvatarStack?"
-        "`hidden`:`relative mb-4 size-20`,children:[",
+        profile_avatar_replacement,
         1,
     )
 
-    profile_name_anchor = "className:`flex w-full justify-center`"
+    profile_name_anchor = (
+        "displayName:Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
+        "defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})"
+        if build_6662
+        else "className:`flex w-full justify-center`"
+    )
     if profile_bundle.count(profile_name_anchor) != 1:
         raise RuntimeError("could not find the native Profile display name")
     profile_bundle = profile_bundle.replace(
         profile_name_anchor,
-        "className:globalThis.__codexMuxSelectedProfileAccountId&&!A.isFetching?"
-        "`flex w-full justify-center`:`hidden`",
+        (
+            "displayName:globalThis.__codexMuxSelectedProfileAccountId?"
+            "(Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
+            "defaultMessage:`ChatGPT user`,"
+            "description:`Fallback profile display name`})):null"
+            if build_6662
+            else "className:globalThis.__codexMuxSelectedProfileAccountId&&"
+            "!A.isFetching?`flex w-full justify-center`:`hidden`"
+        ),
         1,
     )
     profile_identity_anchor = (
-        "className:`mt-1 flex min-h-7 items-center gap-1.5 text-base leading-5 "
+        "username:Ke==null?null:(0,$.jsx)(o,{id:`profile.usernameValue`,"
+        "defaultMessage:`@{username}`,"
+        "description:`Profile username shown with an at-sign prefix`,"
+        "values:{username:Ke}})"
+        if build_6662
+        else "className:`mt-1 flex min-h-7 items-center gap-1.5 text-base leading-5 "
         "font-normal text-token-text-tertiary`"
     )
     if profile_bundle.count(profile_identity_anchor) != 1:
         raise RuntimeError("could not find the native Profile username and plan badge")
     profile_bundle = profile_bundle.replace(
         profile_identity_anchor,
-        "className:globalThis.__codexMuxSelectedProfileAccountId&&!A.isFetching?"
-        "`mt-1 flex min-h-7 items-center gap-1.5 text-base leading-5 font-normal "
-        "text-token-text-tertiary`:`hidden`",
+        (
+            "username:globalThis.__codexMuxSelectedProfileAccountId&&Ke!=null?"
+            "(0,$.jsx)(o,{id:`profile.usernameValue`,"
+            "defaultMessage:`@{username}`,"
+            "description:`Profile username shown with an at-sign prefix`,"
+            "values:{username:Ke}}):null"
+            if build_6662
+            else "className:globalThis.__codexMuxSelectedProfileAccountId&&"
+            "!A.isFetching?`mt-1 flex min-h-7 items-center gap-1.5 text-base "
+            "leading-5 font-normal text-token-text-tertiary`:`hidden`"
+        ),
         1,
     )
     profile_bundle_path.write_text(profile_bundle, encoding="utf-8")
 
-    plugin_scope_anchor = "action:F,children:w})"
+    plugin_scope_anchor = (
+        "ee=(0,tc.jsxs)(tc.Fragment,{children:[H,U]})"
+        if build_6662
+        else "action:F,children:w})"
+    )
+    plugin_scope_replacement = (
+        "ee=(0,tc.jsxs)(tc.Fragment,{children:[globalThis.CodexMuxPluginScope?.()??null,H,U]})"
+        if build_6662
+        else "action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})"
+    )
+    plugin_bundle_glob = "plugins-page-*.js" if build_6662 else "plugins-settings-*.js"
     plugin_bundles = [
         path
-        for path in (webview / "assets").glob("plugins-settings-*.js")
+        for path in (webview / "assets").glob(plugin_bundle_glob)
         if plugin_scope_anchor in path.read_text(encoding="utf-8")
     ]
     if len(plugin_bundles) != 1:
@@ -957,12 +1203,21 @@ def patch_renderer(extracted: Path, token: str) -> None:
         raise RuntimeError("could not find the native Plugins settings content")
     plugin_bundle = plugin_bundle.replace(
         plugin_scope_anchor,
-        "action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
+        plugin_scope_replacement,
         1,
     )
     plugin_bundle_path.write_text(plugin_bundle, encoding="utf-8")
 
-    thread_bundles = list((webview / "assets").glob("local-conversation-thread-*.js"))
+    thread_component_anchor = (
+        "function bE(){let e=(0,SE.c)(1)"
+        if build_6662
+        else "function bE(){let e=(0,wE.c)(57)"
+    )
+    thread_bundles = [
+        path
+        for path in (webview / "assets").glob("local-conversation-thread-*.js")
+        if thread_component_anchor in path.read_text(encoding="utf-8")
+    ]
     if len(thread_bundles) != 1:
         raise RuntimeError(
             f"expected one local conversation renderer bundle, found {len(thread_bundles)}"
@@ -976,7 +1231,20 @@ def patch_renderer(extracted: Path, token: str) -> None:
         "__CODEX_MUX_CONTROL_PORT__", str(CONTROL_PORT)
     )
     thread_component = thread_component.replace("__CODEX_MUX_CONTROL_TOKEN__", token)
-    thread_component_anchor = "function bE(){let e=(0,wE.c)(57)"
+    if build_6662:
+        thread_component = replace_javascript_identifiers(
+            thread_component,
+            {
+                "$n": "jf",
+                "sr": "Pa",
+                "TE": "jy",
+                "zE": "CE",
+                "K": "q",
+            },
+        )
+        summary_component = "CE"
+    else:
+        summary_component = "zE"
     if thread_bundle.count(thread_component_anchor) != 1:
         raise RuntimeError("could not find the native thread summary sources component")
     thread_bundle = thread_bundle.replace(
@@ -989,7 +1257,9 @@ def patch_renderer(extracted: Path, token: str) -> None:
         raise RuntimeError("could not find the native thread summary section list")
     thread_bundle = thread_bundle.replace(
         summary_children_anchor,
-        "children:[c,l,u,d,f,(0,zE.jsx)(CodexMuxThreadSubscription,{}),p,m,h,g,_,v,y,b,x]",
+        "children:[c,l,u,d,f,(0,"
+        f"{summary_component}.jsx)(CodexMuxThreadSubscription,{{}}),"
+        "p,m,h,g,_,v,y,b,x]",
         1,
     )
     thread_bundle_path.write_text(thread_bundle, encoding="utf-8")
@@ -1210,7 +1480,13 @@ def patch_app(
         original_asar = resources / "app.asar"
         print("Patching desktop profile and renderer…")
         run([str(asar), "extract", str(original_asar), str(extracted)])
-        patch_asar_computer_use_identity(extracted)
+        expected_cua_replacements = (
+            EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD.get(
+                (source_version, source_build),
+                EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS,
+            )
+        )
+        patch_asar_computer_use_identity(extracted, expected_cua_replacements)
         patch_desktop_profile(extracted, installed_computer_use_app)
         patch_renderer(extracted, token)
         sign_native_code_tree(extracted, signing_identity)
@@ -1252,7 +1528,23 @@ def patch_app(
 
         patch_info_plist(staged_app, original_asar, team_identifier)
         print(f"Signing independent app copy with {signing_identity}…")
-        sign_independent_app(staged_app, signing_identity, team_identifier)
+        expected_cua_identity_replacements = (
+            EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD.get(
+                (source_version, source_build),
+                EXPECTED_CUA_IDENTIFIER_REPLACEMENTS,
+            )
+        )
+        cua_service_layout = EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD.get(
+            (source_version, source_build),
+            DEFAULT_CUA_SERVICE_LAYOUT,
+        )
+        sign_independent_app(
+            staged_app,
+            signing_identity,
+            team_identifier,
+            expected_cua_identity_replacements,
+            cua_service_layout,
+        )
         verify_signed_code(
             staged_app,
             DESKTOP_BUNDLE_IDENTIFIER,

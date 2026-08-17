@@ -7,6 +7,7 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Compatibility with official ChatGPT `26.810.52044` (build `6662`).
 - One-command installer with safe source updates, prerequisite checks, signed
   rebuilds, recoverable upgrades, and automatic launch.
 - Reset-aware routing that prioritizes weekly quota at risk of expiring and
