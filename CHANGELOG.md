@@ -20,6 +20,11 @@ this project uses [Semantic Versioning](https://semver.org/).
 - Native usage surfaces (limit banner, sidebar usage alert, reset prompts)
   now reflect pooled usage, so a depleted Primary account no longer triggers
   them while another connected subscription still has weekly capacity.
+### Changed
+
+- The account menu, Usage sheet, and Plugins picker open with the last known
+  subscriptions and usage and refresh in place instead of showing a connecting
+  state on every open.
 
 ## [0.1.0] - 2026-08-15
 
