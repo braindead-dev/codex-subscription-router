@@ -49,5 +49,5 @@ this project uses [Semantic Versioning](https://semver.org/).
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/b-nnett/codex-subscription-router/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/b-nnett/codex-subscription-router/releases/tag/v0.1.0
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.1.0

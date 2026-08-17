@@ -94,7 +94,7 @@ def main() -> int:
     if re.search(dated_heading, changelog, re.MULTILINE) is None:
         fail(f"CHANGELOG.md has no dated entry for {version}")
     expected_release_link = (
-        "https://github.com/b-nnett/codex-subscription-router/releases/tag/"
+        "https://github.com/braindead-dev/codex-subscription-router/releases/tag/"
         f"v{version}"
     )
     if expected_release_link not in changelog:
