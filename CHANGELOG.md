@@ -25,6 +25,11 @@ this project uses [Semantic Versioning](https://semver.org/).
 - The account menu, Usage sheet, and Plugins picker open with the last known
   subscriptions and usage and refresh in place instead of showing a connecting
   state on every open.
+### Changed
+
+- Turn routing reads recently observed account snapshots, kept current by the
+  children's rate-limit notifications, instead of querying every app-server
+  before each turn is forwarded.
 
 ## [0.1.0] - 2026-08-15
 
