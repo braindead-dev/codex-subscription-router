@@ -48,6 +48,76 @@ async function codexMuxProfileData(accountId = null) {
   return result.profile;
 }
 
+// The renderer polls `/wham/usage` over HTTP for the Primary account only, so
+// its usage banners, sidebar alert, and reset prompts describe one account
+// while the multiplexer routes across the pool. Replace the rate-limit
+// windows with the pooled view (mean usage, earliest reset) and clear the
+// limit-reached fields while any connected subscription still has weekly
+// capacity. A fully depleted pool keeps the native limit-reached response.
+async function codexMuxFilterUsageStatus(status) {
+  if (status == null || typeof status !== "object") return status;
+  let accounts;
+  try {
+    accounts = (await codexMuxRequest("/accounts")).accounts || [];
+  } catch {
+    return status;
+  }
+  const pool = accounts.filter(
+    (account) =>
+      account.enabled &&
+      account.connected &&
+      (!account.authType || account.authType === "chatgpt"),
+  );
+  if (pool.length < 2) return status;
+  const poolHasCapacity = pool.some((account) => {
+    const weekly = codexMuxWeeklyWindow(account.rateLimits);
+    return weekly == null || weekly.usedPercent < 100;
+  });
+  const rateLimit = status.rate_limit;
+  const pooledRateLimit =
+    rateLimit == null
+      ? rateLimit
+      : {
+          ...rateLimit,
+          primary_window: codexMuxPooledUsageWindow(
+            rateLimit.primary_window,
+            pool.map((account) => account.rateLimits?.primary),
+          ),
+          secondary_window: codexMuxPooledUsageWindow(
+            rateLimit.secondary_window,
+            pool.map((account) => account.rateLimits?.secondary),
+          ),
+        };
+  if (!poolHasCapacity) return { ...status, rate_limit: pooledRateLimit };
+  return {
+    ...status,
+    rate_limit_upsell: null,
+    rate_limit_reached_type: null,
+    rate_limit:
+      pooledRateLimit == null
+        ? pooledRateLimit
+        : { ...pooledRateLimit, allowed: true, limit_reached: false },
+  };
+}
+
+function codexMuxPooledUsageWindow(window, accountWindows) {
+  if (window == null) return window;
+  const windows = accountWindows.filter(Boolean);
+  if (windows.length === 0) return window;
+  const usedPercent =
+    windows.reduce((total, entry) => total + entry.usedPercent, 0) /
+    windows.length;
+  const resets = windows
+    .map((entry) => entry.resetsAt)
+    .filter((value) => value != null);
+  const resetsAt = resets.length === 0 ? null : Math.min(...resets);
+  return {
+    ...window,
+    used_percent: usedPercent,
+    reset_at: resetsAt ?? window.reset_at,
+  };
+}
+
 async function codexMuxRateLimitResets(accountId) {
   return codexMuxRequest(
     `/accounts/${encodeURIComponent(accountId)}/rate-limit-resets`,

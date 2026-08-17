@@ -17,6 +17,9 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 - Profile menus now dismiss normally on outside clicks and Escape after an
   additional subscription sign-in.
+- Native usage surfaces (limit banner, sidebar usage alert, reset prompts)
+  now reflect pooled usage, so a depleted Primary account no longer triggers
+  them while another connected subscription still has weekly capacity.
 
 ## [0.1.0] - 2026-08-15
 
