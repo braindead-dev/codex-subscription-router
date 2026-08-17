@@ -1,12 +1,7 @@
 const CODEX_MUX_API = "http://127.0.0.1:__CODEX_MUX_CONTROL_PORT__/v1";
 const CODEX_MUX_TOKEN = "__CODEX_MUX_CONTROL_TOKEN__";
-let codexMuxLoginActive = false;
-
 function CodexMuxProfileMenuOpenChange(setOpen) {
-  return (nextOpen) => {
-    if (!nextOpen && codexMuxLoginActive) return;
-    setOpen(nextOpen);
-  };
+  return (nextOpen) => setOpen(nextOpen);
 }
 
 async function codexMuxRequest(path, options = {}) {
@@ -264,7 +259,6 @@ function CodexMuxAccountMenu() {
           payload.type === "account-updated" &&
           payload.accountId === loginAccountId
         ) {
-          codexMuxLoginActive = false;
           setLogin(null);
         }
         if (payload.type === "account-updated") refresh();
@@ -287,7 +281,6 @@ function CodexMuxAccountMenu() {
     if (!login) return;
     const allowEscapeDismissal = (event) => {
       if (event.key !== "Escape") return;
-      codexMuxLoginActive = false;
       setLogin(null);
     };
     window.addEventListener("keydown", allowEscapeDismissal, true);
@@ -325,7 +318,6 @@ function CodexMuxAccountMenu() {
       const pendingLogin = result.login
         ? { ...result.login, accountId: created.account.id }
         : null;
-      codexMuxLoginActive = pendingLogin != null;
       setCodeCopied(false);
       setLogin(pendingLogin);
       await refresh();

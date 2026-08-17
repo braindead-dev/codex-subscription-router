@@ -13,6 +13,11 @@ this project uses [Semantic Versioning](https://semver.org/).
 - Reset-aware routing that prioritizes weekly quota at risk of expiring and
   gives a bounded boost to subscriptions with banked usage resets.
 
+### Fixed
+
+- Profile menus now dismiss normally on outside clicks and Escape after an
+  additional subscription sign-in.
+
 ## [0.1.0] - 2026-08-15
 
 ### Added
