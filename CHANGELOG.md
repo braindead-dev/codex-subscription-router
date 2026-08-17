@@ -30,6 +30,9 @@ this project uses [Semantic Versioning](https://semver.org/).
 - Turn routing reads recently observed account snapshots, kept current by the
   children's rate-limit notifications, instead of querying every app-server
   before each turn is forwarded.
+- Thread listings no longer reassign a moved thread back to the account whose
+  history still contains it, so steering and follow-ups stay on the
+  subscription that is running the turn. Moved threads are also listed once.
 
 ## [0.1.0] - 2026-08-15
 
