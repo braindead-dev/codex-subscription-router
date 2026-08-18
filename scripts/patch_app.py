@@ -1328,6 +1328,27 @@ def disable_updater_lifecycle(extracted: Path) -> None:
     bundle_path.write_text(bundle, encoding="utf-8")
 
 
+def disable_copied_app_updater(bootstrap: str, variant: str) -> str:
+    """Remove the official updater bootstrap for a supported ChatGPT build."""
+    if variant in ("6396", "6662"):
+        updater_pattern = re.compile(
+            r"await [A-Za-z_$][\w$]*\.initialize\(\);"
+            r"(?=try\{let\{runMainAppStartup:)"
+        )
+    elif variant == "6720":
+        updater_pattern = re.compile(
+            r"await [A-Za-z_$][\w$]*\.initialize\(\);"
+            r"(?=let\{runMainAppStartup:)"
+        )
+    else:
+        raise RuntimeError(f"unsupported ChatGPT build variant: {variant}")
+
+    bootstrap, replacements = updater_pattern.subn("", bootstrap)
+    if replacements != 1:
+        raise RuntimeError("could not disable updates in the copied ChatGPT app")
+    return bootstrap
+
+
 def patch_desktop_profile(
     extracted: Path, installed_computer_use_app: Path, variant: str
 ) -> None:
@@ -1365,13 +1386,7 @@ def patch_desktop_profile(
         raise RuntimeError("could not isolate the copied ChatGPT desktop profile")
 
     # The copied app must never replace itself with an unpatched official update.
-    updater_pattern = re.compile(
-        r"await [A-Za-z_$][\w$]*\.initialize\(\);"
-        r"(?=try\{let\{runMainAppStartup:)"
-    )
-    bootstrap, updater_replacements = updater_pattern.subn("", bootstrap, count=1)
-    if updater_replacements != 1:
-        raise RuntimeError("could not disable updates in the copied ChatGPT app")
+    bootstrap = disable_copied_app_updater(bootstrap, variant)
     bootstrap_path.write_text(bootstrap, encoding="utf-8")
     disable_updater_lifecycle(extracted)
 
