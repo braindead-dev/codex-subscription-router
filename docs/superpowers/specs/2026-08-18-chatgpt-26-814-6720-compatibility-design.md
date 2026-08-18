@@ -29,7 +29,7 @@ Codex Subscription Router 当前维护分支只验证到 ChatGPT
 
 ## 源码基线与工作位置
 
-- 仓库：`/Users/wangshilian/gWorkspace/codex-subscription-router`
+- 仓库：当前 `codex-subscription-router` checkout
 - 远端：`https://github.com/braindead-dev/codex-subscription-router.git`
 - 基线提交：`8e94e9454793a2483eeeb35f45ce2ead87de4d8c`
 - 本地分支：`codex/compat-chatgpt-26-814-6720`

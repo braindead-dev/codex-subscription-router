@@ -10,12 +10,12 @@
 
 ## Global Constraints
 
-- Work only in `/Users/wangshilian/gWorkspace/codex-subscription-router` on branch `codex/compat-chatgpt-26-814-6720`.
+- Work only in this repository checkout on branch `codex/compat-chatgpt-26-814-6720`.
 - Preserve `/Applications/ChatGPT.app` byte-for-byte; it is a read-only source.
 - Do not use `--allow-untested-source` in the probe or final build.
 - Ad-hoc signing is explicitly approved; Appshots and Computer Use may remain unavailable and must not be reported as verified.
 - Keep build `6396` and `6662` behavior unchanged. Unknown version/build pairs and anchor-count mismatches must still fail closed.
-- Use task-owned directories matching `/Users/wangshilian/gWorkspace/.tmp-codex-router-*`; remove them and stop task-owned processes before completion.
+- Use task-owned directories matching `.tmp-codex-router-*` beside the repository; remove them and stop task-owned processes before completion.
 - Do not alter or delete `~/.codex-mux`, which contains durable router state.
 
 ---
@@ -188,17 +188,18 @@ Run:
 
 ```bash
 npm run check:python
-python3 - <<'PY'
+CODEX_ROUTER_ASAR_ROOT="${CODEX_ROUTER_ASAR_ROOT:?set to a fresh extracted ASAR directory}" python3 - <<'PY'
+import os
 from pathlib import Path
 import sys
 sys.path.insert(0, "scripts")
 import patch_app
 
-root = Path("/Users/wangshilian/gWorkspace/.tmp-codex-router-6720.qGCNsj/asar")
+root = Path(os.environ["CODEX_ROUTER_ASAR_ROOT"])
 assert root.is_dir(), root
 patch_app.patch_desktop_profile(
     root,
-    Path("/Users/wangshilian/Applications/Codex Subscription Router Computer Use.app"),
+    Path.home() / "Applications" / "Codex Subscription Router Computer Use.app",
     "6720",
 )
 print("desktop profile patch: PASS")
@@ -405,7 +406,8 @@ Run:
 ```bash
 npm run check:python
 npm run check:js
-probe_root="$(mktemp -d /Users/wangshilian/gWorkspace/.tmp-codex-router-build.XXXXXX)"
+repo_parent="$(dirname "$PWD")"
+probe_root="$(mktemp -d "$repo_parent/.tmp-codex-router-build.XXXXXX")"
 python3 scripts/patch_app.py \
   --allow-adhoc-signing \
   --destination "$probe_root/Codex Subscription Router.app"
@@ -482,8 +484,8 @@ git commit -m "docs: add ChatGPT build 6720 compatibility [skip ci]"
 **Files:**
 
 - Read-only source: `/Applications/ChatGPT.app`
-- Install: `/Users/wangshilian/Applications/Codex Subscription Router.app`
-- Install: `/Users/wangshilian/Applications/Codex Subscription Router Computer Use.app`
+- Install: `$HOME/Applications/Codex Subscription Router.app`
+- Install: `$HOME/Applications/Codex Subscription Router Computer Use.app`
 
 - [ ] **Step 1: Capture pre-install state**
 
@@ -492,7 +494,7 @@ Run:
 ```bash
 official_hash_before="$(shasum -a 256 /Applications/ChatGPT.app/Contents/Resources/app.asar | awk '{print $1}')"
 test "$official_hash_before" = "8fba32f8baa6d984b0f0f4149d3da46221e3adb3b52836f85fe65e31e655a8c0"
-pgrep -fl '/Users/wangshilian/Applications/Codex Subscription Router' || true
+pgrep -fl "$HOME/Applications/Codex Subscription Router" || true
 ```
 
 If a prior Router instance is running, quit that exact app before replacement. Do not quit or alter official ChatGPT unless the patcher explicitly reports that its read-only source is locked.
@@ -516,8 +518,8 @@ Never add `--allow-untested-source`. Preserve any backup path printed by the pat
 - [ ] **Step 3: Verify all final signatures**
 
 ```bash
-router_app="/Users/wangshilian/Applications/Codex Subscription Router.app"
-router_helper="/Users/wangshilian/Applications/Codex Subscription Router Computer Use.app"
+router_app="$HOME/Applications/Codex Subscription Router.app"
+router_helper="$HOME/Applications/Codex Subscription Router Computer Use.app"
 codesign --verify --deep --strict "$router_app"
 codesign --verify --deep --strict "$router_helper"
 codesign --verify --deep --strict "$router_app/Contents/Resources/cua_node/lib/node_modules/@oai/sky/Codex Computer Use.app"
@@ -529,13 +531,13 @@ Expected: all commands exit `0`; ad-hoc metadata may report no team identifier.
 - [ ] **Step 4: Launch and prove the mux health endpoint**
 
 ```bash
-open "/Users/wangshilian/Applications/Codex Subscription Router.app"
+open "$HOME/Applications/Codex Subscription Router.app"
 ```
 
 Wait in short intervals for at most 30 seconds, then verify:
 
 ```bash
-pgrep -fl '/Users/wangshilian/Applications/Codex Subscription Router.app'
+pgrep -fl "$HOME/Applications/Codex Subscription Router.app"
 curl --fail --silent --show-error http://127.0.0.1:48123/v1/health
 ```
 
@@ -568,7 +570,7 @@ Expected: checks pass; all source/doc work is committed; branch identity is corr
 
 - [ ] **Step 7: Clean task-owned temporary artifacts**
 
-Resolve every `/Users/wangshilian/gWorkspace/.tmp-codex-router-*` directory individually. Remove only directories confirmed to belong to this task and no longer needed. Stop only task-owned probe processes. Preserve final installed apps, repository source, Git commits, `~/.codex-mux`, and any recoverable installation backup until success is confirmed.
+Resolve every sibling `.tmp-codex-router-*` directory individually. Remove only directories confirmed to belong to this task and no longer needed. Stop only task-owned probe processes. Preserve final installed apps, repository source, Git commits, `~/.codex-mux`, and any recoverable installation backup until success is confirmed.
 
 - [ ] **Step 8: Report the exact result**
 
