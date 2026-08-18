@@ -45,34 +45,52 @@ PREFERRED_SIGNING_IDENTITY_PREFIXES = (
 )
 OPENAI_INTERNAL_TEAM_IDENTIFIER = "HX7739G8FX"
 OPENAI_DISTRIBUTION_TEAM_IDENTIFIER = "2DC432GLL2"
+BUILD_6396 = ("26.803.61601", "6396")
+BUILD_6662 = ("26.810.52044", "6662")
+BUILD_6720 = ("26.814.41407", "6720")
 TESTED_SOURCE_BUILDS = {
-    (
-        "26.803.61601",
-        "6396",
-    ): "d5a44ed9e2f1db5f81dbbe85408aed256f3203c5b16f00817bb9d7cd941343cf",
-    (
-        "26.810.52044",
-        "6662",
-    ): "6e7e8791b8bf69a586ff994721fff518af391d9efdc66cd2e620dd2a4aedc90f",
+    BUILD_6396: "d5a44ed9e2f1db5f81dbbe85408aed256f3203c5b16f00817bb9d7cd941343cf",
+    BUILD_6662: "6e7e8791b8bf69a586ff994721fff518af391d9efdc66cd2e620dd2a4aedc90f",
+    BUILD_6720: "8fba32f8baa6d984b0f0f4149d3da46221e3adb3b52836f85fe65e31e655a8c0",
 }
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS = 49
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
-    ("26.803.61601", "6396"): 49,
-    ("26.810.52044", "6662"): 99,
+    BUILD_6396: 49,
+    BUILD_6662: 99,
+    BUILD_6720: 107,
 }
 DEFAULT_CUA_SERVICE_LAYOUT = (("Codex Computer Use.app", 17),)
 EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
-    ("26.803.61601", "6396"): DEFAULT_CUA_SERVICE_LAYOUT,
-    ("26.810.52044", "6662"): (
+    BUILD_6396: DEFAULT_CUA_SERVICE_LAYOUT,
+    BUILD_6662: (
+        ("Codex Computer Use.app", 17),
+        ("bin/mac/normal/Codex Computer Use.app", 13),
+    ),
+    BUILD_6720: (
         ("Codex Computer Use.app", 17),
         ("bin/mac/normal/Codex Computer Use.app", 13),
     ),
 }
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS = 17
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
-    ("26.803.61601", "6396"): 17,
-    ("26.810.52044", "6662"): 20,
+    BUILD_6396: 17,
+    BUILD_6662: 20,
+    BUILD_6720: 20,
 }
+
+
+def source_build_variant(source_version: str, source_build: str) -> str:
+    variants = {
+        BUILD_6396: "6396",
+        BUILD_6662: "6662",
+        BUILD_6720: "6720",
+    }
+    try:
+        return variants[(source_version, source_build)]
+    except KeyError as error:
+        raise RuntimeError(
+            f"unsupported ChatGPT source build: {source_version} ({source_build})"
+        ) from error
 
 
 def parse_args() -> argparse.Namespace:
@@ -792,7 +810,7 @@ def replace_javascript_identifiers(source: str, replacements: dict[str, str]) ->
     return source
 
 
-def patch_renderer(extracted: Path, token: str) -> None:
+def patch_renderer(extracted: Path, token: str, variant: str) -> None:
     webview = extracted / "webview"
     index_path = webview / "index.html"
     index = index_path.read_text(encoding="utf-8")
@@ -820,7 +838,7 @@ def patch_renderer(extracted: Path, token: str) -> None:
     component = (PROJECT_ROOT / "ui" / "account-menu.js").read_text(encoding="utf-8")
     component = component.replace("__CODEX_MUX_CONTROL_PORT__", str(CONTROL_PORT))
     component = component.replace("__CODEX_MUX_CONTROL_TOKEN__", token)
-    build_6662 = "function Icl(e){let t=(0,Vcl.c)(248)," in bundle
+    build_6662 = variant == "6662"
     if build_6662:
         component = replace_javascript_identifiers(
             component,
@@ -1311,7 +1329,7 @@ def disable_updater_lifecycle(extracted: Path) -> None:
 
 
 def patch_desktop_profile(
-    extracted: Path, installed_computer_use_app: Path
+    extracted: Path, installed_computer_use_app: Path, variant: str
 ) -> None:
     """Give the copied Electron app its own user-data and single-instance scope."""
     bootstrap_files = list((extracted / ".vite" / "build").glob("bootstrap-*.js"))
@@ -1490,6 +1508,7 @@ def patch_app(
             "the patch will continue only while every expected anchor matches.",
             file=sys.stderr,
         )
+    variant = source_build_variant(source_version, source_build)
 
     for tool in ("codesign", "ditto", "go", "npm", "security", "xcrun"):
         require_tool(tool)
@@ -1533,8 +1552,8 @@ def patch_app(
             )
         )
         patch_asar_computer_use_identity(extracted, expected_cua_replacements)
-        patch_desktop_profile(extracted, installed_computer_use_app)
-        patch_renderer(extracted, token)
+        patch_desktop_profile(extracted, installed_computer_use_app, variant)
+        patch_renderer(extracted, token, variant)
         sign_native_code_tree(extracted, signing_identity)
         repacked_asar = temporary_path / "app.asar"
         run(
