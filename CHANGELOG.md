@@ -33,6 +33,9 @@ this project uses [Semantic Versioning](https://semver.org/).
 - Turn routing reads recently observed account snapshots, kept current by the
   children's rate-limit notifications, instead of querying every app-server
   before each turn is forwarded.
+- The copied app can no longer start Sparkle through the renderer's update
+  gate or the Check for Updates menu item, so it does not offer to replace
+  itself with an unpatched official build.
 - Thread listings no longer reassign a moved thread back to the account whose
   history still contains it, so steering and follow-ups stay on the
   subscription that is running the turn. Moved threads are also listed once.

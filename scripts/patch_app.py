@@ -1281,6 +1281,35 @@ def patch_renderer(extracted: Path, token: str) -> None:
     thread_bundle_path.write_text(thread_bundle, encoding="utf-8")
 
 
+def disable_updater_lifecycle(extracted: Path) -> None:
+    """Keep every updater entry point (launch gate, menu, IPC) from starting Sparkle."""
+    updater_anchor = (
+        "initializeUpdater(){return this.options.enableUpdater?"
+        "(this.updaterInitialization??=this.initializeUpdaterOnce(),"
+        "this.updaterInitialization):Promise.resolve()}"
+    )
+    matches = [
+        path
+        for path in (extracted / ".vite" / "build").glob("*.js")
+        if updater_anchor in path.read_text(encoding="utf-8")
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"expected one desktop updater lifecycle bundle, found {len(matches)}"
+        )
+    bundle_path = matches[0]
+    bundle = bundle_path.read_text(encoding="utf-8")
+    if bundle.count(updater_anchor) != 1:
+        raise RuntimeError("could not find the desktop updater lifecycle")
+    bundle = bundle.replace(
+        updater_anchor,
+        "initializeUpdater(){return this.lastUnavailableReason="
+        f"`disabled by {DESKTOP_PROFILE_NAME}`,Promise.resolve()}}",
+        1,
+    )
+    bundle_path.write_text(bundle, encoding="utf-8")
+
+
 def patch_desktop_profile(
     extracted: Path, installed_computer_use_app: Path
 ) -> None:
@@ -1326,6 +1355,7 @@ def patch_desktop_profile(
     if updater_replacements != 1:
         raise RuntimeError("could not disable updates in the copied ChatGPT app")
     bootstrap_path.write_text(bootstrap, encoding="utf-8")
+    disable_updater_lifecycle(extracted)
 
     main_files = list((extracted / ".vite" / "build").glob("main-*.js"))
     if len(main_files) != 1:
