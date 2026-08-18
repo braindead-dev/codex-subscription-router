@@ -1,5 +1,6 @@
 import unittest
 import sys
+import subprocess
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,6 +39,19 @@ class DesktopBootstrapTests(unittest.TestCase):
 
 
 class RendererVariantTests(unittest.TestCase):
+    BUILD_6720_PLUGIN_REQUEST_FIXTURE = """
+async function loadApps(e,n,i,XMr,t,a){let o=await Qg(e,n).sendRequest(`app/list`,{cursor:i,limit:XMr,forceRefetch:t},{trace:a});return o}
+async function loadInstalled(e,n,t,YMr,ZMr){let r=(await Qg(e,n).sendRequest(`app/installed`,t?{forceRefresh:!0}:{})).apps;let i=await Promise.all((0,YMr.default)(r.map(e=>e.id),ZMr).map(t=>Qg(e,n).sendRequest(`app/read`,{appIds:t})));return[r,i]}
+async function loginMcp(t,n){let{authorizationUrl:r}=await t.sendRequest(`mcpServer/oauth/login`,n);return r}
+class RequestClient {
+  constructor(){this.dispatchMessage=()=>{};this.mcpServerStatusPromises=new Map;this.calls=[]}
+  async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error(`AppServerRequestClient is missing a message dispatcher`);return e===`config/read`?this.sendConfigReadRequest(t,n):this.enqueueRequest(e,t,e===`plugin/list`&&n?.timeoutMs==null?{...n,timeoutMs:Vjt}:n)}
+  sendConfigReadRequest(t,n){return this.enqueueRequest(`config/read`,t,n)}
+  enqueueRequest(e,t,n){this.calls.push({method:e,params:t,options:n});return new Promise(()=>{})}
+  listMcpServers(e,t){let n=JSON.stringify({options:t,params:e}),r=this.mcpServerStatusPromises.get(n);if(r)return r;let i=this.sendRequest(`mcpServerStatus/list`,e,t);return this.mcpServerStatusPromises.set(n,i),i.finally(()=>{this.mcpServerStatusPromises.delete(n)})}
+}
+"""
+
     def test_build_6720_renderer_configuration_uses_exact_native_identifiers(self):
         renderer_variant_config = getattr(
             patch_app, "renderer_variant_config", None
@@ -82,19 +96,75 @@ class RendererVariantTests(unittest.TestCase):
             {"$n": "Xn", "sr": "ec", "TE": "mb", "zE": "TE", "K": "Z"},
         )
 
-    def test_account_menu_scopes_build_6720_direct_request_names(self):
+    def test_build_6720_config_guards_unique_direct_request_callsites(self):
+        config = patch_app.renderer_variant_config("6720")
+        self.assertIn("plugin_rpc_mapping_anchors", config)
+        self.assertEqual(
+            config["plugin_rpc_mapping_anchors"],
+            (
+                "let o=await Qg(e,n).sendRequest(`app/list`,{cursor:i,limit:XMr,forceRefetch:t},{trace:a})",
+                "let r=(await Qg(e,n).sendRequest(`app/installed`,t?{forceRefresh:!0}:{})).apps",
+                "map(t=>Qg(e,n).sendRequest(`app/read`,{appIds:t}))",
+                "{authorizationUrl:r}=await t.sendRequest(`mcpServer/oauth/login`,n);",
+                "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
+            ),
+        )
+
+    def test_account_menu_scopes_build_6720_direct_request_methods(self):
         account_menu = (
             Path(__file__).resolve().parents[1] / "ui" / "account-menu.js"
         ).read_text(encoding="utf-8")
-        for request_name in (
-            "app/list",
-            "app/installed",
-            "app/read",
-            "mcpServer/oauth/login",
-            "mcpServerStatus/list",
-        ):
-            with self.subTest(request_name=request_name):
-                self.assertIn(f'"{request_name}"', account_menu)
+        assertions = """
+globalThis.__codexMuxPluginAccountId = "secondary";
+for (const method of ["app/list","app/installed","app/read","mcpServer/oauth/login","mcpServerStatus/list"]) {
+  const scoped = codexMuxScopePluginRequest(method, {value: 1});
+  if (scoped.value !== 1 || scoped.codexMuxAccountId !== "secondary") {
+    throw new Error(`request method was not scoped: ${method}`);
+  }
+}
+const untouched = {value: 2};
+if (codexMuxScopePluginRequest("thread/list", untouched) !== untouched) {
+  throw new Error("unscoped request was changed");
+}
+"""
+        result = subprocess.run(
+            ["node", "-e", account_menu + assertions],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_build_6720_scopes_mcp_status_before_inflight_key_lookup(self):
+        patch_plugin_requests = getattr(patch_app, "patch_plugin_requests", None)
+        self.assertIsNotNone(patch_plugin_requests)
+        patched = patch_plugin_requests(
+            self.BUILD_6720_PLUGIN_REQUEST_FIXTURE,
+            "6720",
+        )
+        account_menu = (
+            Path(__file__).resolve().parents[1] / "ui" / "account-menu.js"
+        ).read_text(encoding="utf-8")
+        regression = """
+const client = new RequestClient();
+globalThis.__codexMuxPluginAccountId = "account-a";
+client.listMcpServers({}, {});
+globalThis.__codexMuxPluginAccountId = "account-b";
+client.listMcpServers({}, {});
+if (client.calls.length !== 2) {
+  throw new Error(`expected two account-specific dispatches, got ${client.calls.length}`);
+}
+if (client.calls[0].params.codexMuxAccountId !== "account-a" || client.calls[1].params.codexMuxAccountId !== "account-b") {
+  throw new Error(`wrong scoped dispatch params: ${JSON.stringify(client.calls)}`);
+}
+"""
+        result = subprocess.run(
+            ["node", "-e", account_menu + patched + regression],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

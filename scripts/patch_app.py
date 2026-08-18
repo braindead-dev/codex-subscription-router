@@ -890,6 +890,16 @@ def renderer_variant_config(variant: str) -> dict[str, object]:
             "profile_query_anchor": "let e=await Hv.safeGet(`/wham/profiles/me`)",
             "native_usage_modal_name": "kxc",
             "plugin_bundle_glob": "plugins-page-*.js",
+            "plugin_rpc_mapping_anchors": (
+                "let o=await Qg(e,n).sendRequest(`app/list`,"
+                "{cursor:i,limit:XMr,forceRefetch:t},{trace:a})",
+                "let r=(await Qg(e,n).sendRequest(`app/installed`,"
+                "t?{forceRefresh:!0}:{})).apps",
+                "map(t=>Qg(e,n).sendRequest(`app/read`,{appIds:t}))",
+                "{authorizationUrl:r}=await t.sendRequest("
+                "`mcpServer/oauth/login`,n);",
+                "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
+            ),
             "thread_component_anchor": "function xE(e){let t=(0,wE.c)(32),",
             "thread_identifiers": {
                 "$n": "Xn",
@@ -906,6 +916,48 @@ def renderer_variant_config(variant: str) -> dict[str, object]:
         return configs[variant]
     except KeyError as error:
         raise RuntimeError(f"unsupported ChatGPT build variant: {variant}") from error
+
+
+def patch_plugin_requests(bundle: str, variant: str) -> str:
+    """Scope direct build 6720 plugin requests before native memoization."""
+    if variant != "6720":
+        raise RuntimeError(f"unsupported direct plugin request variant: {variant}")
+    config = renderer_variant_config(variant)
+    for mapping_anchor in config["plugin_rpc_mapping_anchors"]:
+        if bundle.count(mapping_anchor) != 1:
+            raise RuntimeError(
+                "could not verify the native Plugins request-to-RPC mapping"
+            )
+
+    list_mcp_servers_anchor = (
+        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})"
+    )
+    if bundle.count(list_mcp_servers_anchor) != 1:
+        raise RuntimeError("could not find the native MCP status promise key")
+    bundle = bundle.replace(
+        list_mcp_servers_anchor,
+        "listMcpServers(e,t){e=codexMuxScopePluginRequest("
+        "`mcpServerStatus/list`,e);let n=JSON.stringify({options:t,params:e})",
+        1,
+    )
+
+    app_server_request_anchor = (
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
+        "`AppServerRequestClient is missing a message dispatcher`);return "
+        "e===`config/read`?this.sendConfigReadRequest(t,n):this.enqueueRequest("
+        "e,t,e===`plugin/list`&&n?.timeoutMs==null?{...n,timeoutMs:Vjt}:n)}"
+    )
+    if bundle.count(app_server_request_anchor) != 1:
+        raise RuntimeError("could not find the native app-server request bridge")
+    return bundle.replace(
+        app_server_request_anchor,
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
+        "`AppServerRequestClient is missing a message dispatcher`);"
+        "t=codexMuxScopePluginRequest(e,t);return e===`config/read`?"
+        "this.sendConfigReadRequest(t,n):this.enqueueRequest(e,t,"
+        "e===`plugin/list`&&n?.timeoutMs==null?{...n,timeoutMs:Vjt}:n)}",
+        1,
+    )
 
 
 def patch_renderer(extracted: Path, token: str, variant: str) -> None:
@@ -948,25 +1000,7 @@ def patch_renderer(extracted: Path, token: str, variant: str) -> None:
     bundle = bundle.replace(component_anchor, component + "\n" + component_anchor, 1)
 
     if variant == "6720":
-        for request_name in (
-            "app/list",
-            "app/installed",
-            "app/read",
-            "mcpServer/oauth/login",
-            "mcpServerStatus/list",
-        ):
-            if request_name not in bundle:
-                raise RuntimeError(
-                    "could not verify the native Plugins request-to-RPC mapping"
-                )
-        for mapping_anchor in (
-            "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
-            "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
-        ):
-            if bundle.count(mapping_anchor) != 1:
-                raise RuntimeError(
-                    "could not verify the native Plugins request-to-RPC mapping"
-                )
+        bundle = patch_plugin_requests(bundle, variant)
     else:
         if variant == "6662":
             rpc_wrapper = "J9"
@@ -995,47 +1029,34 @@ def patch_renderer(extracted: Path, token: str, variant: str) -> None:
                     "could not verify the native Plugins request-to-RPC mapping"
                 )
 
-    if variant == "6720":
-        app_server_request_anchor = (
-            "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
-            "`AppServerRequestClient is missing a message dispatcher`);return "
-            "e===`config/read`?this.sendConfigReadRequest(t,n):this.enqueueRequest("
-            "e,t,e===`plugin/list`&&n?.timeoutMs==null?{...n,timeoutMs:Vjt}:n)}"
+    if variant != "6720":
+        if variant == "6662":
+            app_server_request_anchor = (
+                "function Bp(e,t,n){return n==null?N8e.sendRequest(e,t):"
+                "N8e.sendRequest(e,t,n)}"
+            )
+            app_server_request_replacement = (
+                "function Bp(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
+                "return n==null?N8e.sendRequest(e,r):N8e.sendRequest(e,r,n)}"
+            )
+        elif variant == "6396":
+            app_server_request_anchor = (
+                "function gm(e,t,n){return n==null?h6e.sendRequest(e,t):"
+                "h6e.sendRequest(e,t,n)}"
+            )
+            app_server_request_replacement = (
+                "function gm(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
+                "return n==null?h6e.sendRequest(e,r):h6e.sendRequest(e,r,n)}"
+            )
+        else:
+            raise RuntimeError(f"unsupported ChatGPT build variant: {variant}")
+        if bundle.count(app_server_request_anchor) != 1:
+            raise RuntimeError("could not find the native app-server request bridge")
+        bundle = bundle.replace(
+            app_server_request_anchor,
+            app_server_request_replacement,
+            1,
         )
-        app_server_request_replacement = (
-            "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
-            "`AppServerRequestClient is missing a message dispatcher`);"
-            "t=codexMuxScopePluginRequest(e,t);return e===`config/read`?"
-            "this.sendConfigReadRequest(t,n):this.enqueueRequest(e,t,"
-            "e===`plugin/list`&&n?.timeoutMs==null?{...n,timeoutMs:Vjt}:n)}"
-        )
-    elif variant == "6662":
-        app_server_request_anchor = (
-            "function Bp(e,t,n){return n==null?N8e.sendRequest(e,t):"
-            "N8e.sendRequest(e,t,n)}"
-        )
-        app_server_request_replacement = (
-            "function Bp(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
-            "return n==null?N8e.sendRequest(e,r):N8e.sendRequest(e,r,n)}"
-        )
-    elif variant == "6396":
-        app_server_request_anchor = (
-            "function gm(e,t,n){return n==null?h6e.sendRequest(e,t):"
-            "h6e.sendRequest(e,t,n)}"
-        )
-        app_server_request_replacement = (
-            "function gm(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
-            "return n==null?h6e.sendRequest(e,r):h6e.sendRequest(e,r,n)}"
-        )
-    else:
-        raise RuntimeError(f"unsupported ChatGPT build variant: {variant}")
-    if bundle.count(app_server_request_anchor) != 1:
-        raise RuntimeError("could not find the native app-server request bridge")
-    bundle = bundle.replace(
-        app_server_request_anchor,
-        app_server_request_replacement,
-        1,
-    )
 
     if variant == "6720":
         usage_result_anchor = (
