@@ -73,7 +73,7 @@ Codex Subscription Router currently targets:
 | Component | Supported value |
 | --- | --- |
 | Platform | macOS on Apple silicon |
-| Official ChatGPT versions | `26.803.61601` (build `6396`), `26.810.52044` (build `6662`) |
+| Official ChatGPT versions | `26.803.61601` (build `6396`), `26.810.52044` (build `6662`), `26.814.41407` (build `6720`) |
 | Go | 1.26 or newer |
 | Node.js | 22.12 or newer |
 
@@ -81,6 +81,10 @@ The patcher verifies the official version, build, ASAR hash, renderer anchors,
 and native binary constants before changing anything. An unknown upstream build
 is rejected by default rather than being partially patched. See
 [Compatibility](docs/COMPATIBILITY.md) for the recorded hash and test details.
+
+The build `6720` installation used for this compatibility update is ad-hoc
+signed; it does not prove that Appshots or Computer Use work under that
+signature. Use a team-backed signing identity for those macOS integrations.
 
 ## Requirements
 
