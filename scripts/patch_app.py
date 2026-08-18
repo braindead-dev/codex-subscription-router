@@ -111,7 +111,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--allow-untested-source",
         action="store_true",
-        help="Continue after an explicit version, build, or ASAR hash mismatch.",
+        help=(
+            "Diagnostic only: allow an ASAR hash mismatch for a known version/build "
+            "variant; unknown versions and builds remain rejected."
+        ),
     )
     parser.add_argument(
         "--allow-signing-team-change",

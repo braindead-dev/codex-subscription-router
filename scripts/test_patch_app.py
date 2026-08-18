@@ -96,6 +96,56 @@ class RequestClient {
             {"$n": "Xn", "sr": "ec", "TE": "mb", "zE": "TE", "K": "Z"},
         )
 
+    def test_legacy_renderer_variants_keep_their_native_targets(self):
+        expected = {
+            "6396": {
+                "component_anchor": "function wXc({sidebarFooter:e,triggerButton:t})",
+                "component_identifiers": {},
+                "usage_anchor": "usageItems:Ge",
+                "plugin_bundle_glob": "plugins-settings-*.js",
+                "thread_component_anchor": "function bE(){let e=(0,wE.c)(57)",
+                "thread_identifiers": {},
+                "thread_summary_component": "zE",
+            },
+            "6662": {
+                "component_anchor": "function Icl(e){let t=(0,Vcl.c)(248),",
+                "component_identifiers": {
+                    "e7": "$5",
+                    "kXc": "Hcl",
+                    "Lo": "Fo",
+                    "BW": "RU",
+                    "QLs": "E$s",
+                    "_H": "GV",
+                    "S2": "E0",
+                    "CH": "ZV",
+                    "jLa": "x$a",
+                    "lt": "ct",
+                },
+                "usage_anchor": "usageItems:Ct",
+                "plugin_bundle_glob": "plugins-page-*.js",
+                "thread_component_anchor": "function bE(){let e=(0,SE.c)(1)",
+                "thread_identifiers": {
+                    "$n": "jf",
+                    "sr": "Pa",
+                    "TE": "jy",
+                    "zE": "CE",
+                    "K": "q",
+                },
+                "thread_summary_component": "CE",
+            },
+        }
+
+        for variant, expected_values in expected.items():
+            with self.subTest(variant=variant):
+                config = patch_app.renderer_variant_config(variant)
+                self.assertEqual(
+                    {key: config[key] for key in expected_values}, expected_values
+                )
+
+    def test_renderer_configuration_rejects_unknown_variant(self):
+        with self.assertRaisesRegex(RuntimeError, "unsupported ChatGPT build variant"):
+            patch_app.renderer_variant_config("future")
+
     def test_build_6720_config_guards_unique_direct_request_callsites(self):
         config = patch_app.renderer_variant_config("6720")
         self.assertIn("plugin_rpc_mapping_anchors", config)

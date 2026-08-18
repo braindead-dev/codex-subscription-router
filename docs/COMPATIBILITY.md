@@ -16,11 +16,13 @@ stops instead of applying a partial patch.
 | --- | --- |
 | Architecture | Apple silicon (`arm64`) |
 
-A different official version may work when all anchors remain identical, but
-it is unverified. The patcher rejects a version, build, or ASAR hash mismatch by
-default; `--allow-untested-source` is an explicit diagnostic override. Never
-weaken an anchor-count or binary-constant check merely to make a new build
-complete. Review the upstream change and update the patch deliberately.
+A changed `app.asar` from one of the listed version/build pairs may retain all
+anchors, but is unverified. The patcher rejects unknown versions and builds, and
+rejects an ASAR hash mismatch by default. `--allow-untested-source` is a
+diagnostic override only for an ASAR hash mismatch on a known version/build
+variant; it never bypasses unknown version/build rejection. Never weaken an
+anchor-count or binary-constant check merely to make a new build complete.
+Review the upstream change and update the patch deliberately.
 
 The local build-`6720` installation for this update uses an ad-hoc signature.
 This record covers exact fail-closed patch compatibility only. The task did not
