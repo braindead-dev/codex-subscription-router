@@ -23,5 +23,6 @@ weaken an anchor-count or binary-constant check merely to make a new build
 complete. Review the upstream change and update the patch deliberately.
 
 The local build-`6720` installation for this update uses an ad-hoc signature.
-Its Appshots and Computer Use behavior is therefore unverified; this record
-does not imply support for future ChatGPT builds.
+This record covers exact fail-closed patch compatibility only. The task did not
+execute or prove multi-account OAuth, account switching, Appshots, or Computer
+Use, and does not imply support for future ChatGPT builds.

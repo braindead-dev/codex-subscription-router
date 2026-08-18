@@ -68,7 +68,7 @@ Read [the architecture](docs/ARCHITECTURE.md) for the request flow and
 
 ## Compatibility
 
-Codex Subscription Router currently targets:
+Codex Subscription Router currently has exact fail-closed patch compatibility for:
 
 | Component | Supported value |
 | --- | --- |
@@ -83,8 +83,9 @@ is rejected by default rather than being partially patched. See
 [Compatibility](docs/COMPATIBILITY.md) for the recorded hash and test details.
 
 The build `6720` installation used for this compatibility update is ad-hoc
-signed; it does not prove that Appshots or Computer Use work under that
-signature. Use a team-backed signing identity for those macOS integrations.
+signed. This task did not execute or prove multi-account OAuth, account
+switching, Appshots, or Computer Use under that signature. Use a team-backed
+signing identity for the latter macOS integrations.
 
 ## Requirements
 

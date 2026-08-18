@@ -7,9 +7,11 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Exact compatibility with official ChatGPT `26.814.41407` (build `6720`),
-  selected through an explicit build variant with updated renderer and
-  bootstrap anchors. Future ChatGPT builds require separate verification.
+- Exact fail-closed patch compatibility with official ChatGPT `26.814.41407`
+  (build `6720`), selected through an explicit build variant with updated
+  renderer and bootstrap anchors. This task did not execute or prove
+  multi-account OAuth, account switching, Appshots, or Computer Use; future
+  ChatGPT builds require separate verification.
 - Compatibility with official ChatGPT `26.810.52044` (build `6662`).
 - One-command installer with safe source updates, prerequisite checks, signed
   rebuilds, recoverable upgrades, and automatic launch.
