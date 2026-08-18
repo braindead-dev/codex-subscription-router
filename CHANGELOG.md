@@ -38,7 +38,9 @@ this project uses [Semantic Versioning](https://semver.org/).
   itself with an unpatched official build.
 - Thread listings no longer reassign a moved thread back to the account whose
   history still contains it, so steering and follow-ups stay on the
-  subscription that is running the turn. Moved threads are also listed once.
+  subscription that is running the turn. Moved threads are listed once, with
+  activity from the most recently updated copy and the title from the account
+  whose Codex home stores the thread, so they keep their place and name.
 
 ## [0.1.0] - 2026-08-15
 

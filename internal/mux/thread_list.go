@@ -3,7 +3,9 @@ package mux
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/b-nnett/codex-subscription-router/internal/protocol"
@@ -41,7 +43,7 @@ func (m *Multiplexer) aggregateThreadList(request protocol.Message) {
 		}
 		return listings[i].accountID < listings[j].accountID
 	})
-	threads, learned := mergeThreadListings(listings, m.store.ThreadOwner)
+	threads, learned := mergeThreadListings(listings, m.store.ThreadOwner, m.threadOriginatesFrom)
 	for threadID, accountID := range learned {
 		_ = m.store.SetThreadOwner(threadID, accountID)
 	}
@@ -59,17 +61,25 @@ type threadListing struct {
 	threads   []map[string]any
 }
 
+// threadTitleFields are authored where a thread was created and are not
+// carried along when another account resumes its history.
+var threadTitleFields = []string{"name", "preview"}
+
 // mergeThreadListings combines per-account thread lists into one view. A
 // thread that has been moved between subscriptions exists in more than one
-// account's history, so only the assigned owner's copy is kept and existing
-// assignments are never changed by a listing; threads without an assignment
-// are attributed to the first account that lists them (the controller first).
+// account's history, so it is listed once: activity comes from the most
+// recently updated copy, while the title fields come from the copy held by
+// the account whose Codex home stores the thread. Existing assignments are
+// never changed by a listing; threads without an assignment are attributed
+// to the first account that lists them (the controller first).
 func mergeThreadListings(
 	listings []threadListing,
 	owner func(threadID string) (string, bool),
+	originatesFrom func(accountID string, thread map[string]any) bool,
 ) ([]map[string]any, map[string]string) {
 	learned := make(map[string]string)
 	position := make(map[string]int)
+	titles := make(map[string]map[string]any)
 	threads := make([]map[string]any, 0)
 	for _, listing := range listings {
 		for _, thread := range listing.threads {
@@ -78,25 +88,52 @@ func mergeThreadListings(
 				threads = append(threads, thread)
 				continue
 			}
-			assigned, known := owner(threadID)
-			if !known {
-				assigned, known = learned[threadID]
+			if _, known := owner(threadID); !known {
+				if _, seen := learned[threadID]; !seen {
+					learned[threadID] = listing.accountID
+				}
 			}
-			if !known {
-				learned[threadID] = listing.accountID
-				assigned = listing.accountID
+			if originatesFrom(listing.accountID, thread) {
+				titles[threadID] = thread
 			}
 			index, seen := position[threadID]
 			switch {
 			case !seen:
 				position[threadID] = len(threads)
 				threads = append(threads, thread)
-			case listing.accountID == assigned:
+			case numericField(thread, "updatedAt", "createdAt") >
+				numericField(threads[index], "updatedAt", "createdAt"):
 				threads[index] = thread
 			}
 		}
 	}
+	for threadID, origin := range titles {
+		index := position[threadID]
+		merged := make(map[string]any, len(threads[index]))
+		for key, value := range threads[index] {
+			merged[key] = value
+		}
+		for _, key := range threadTitleFields {
+			if value, ok := origin[key]; ok {
+				merged[key] = value
+			}
+		}
+		threads[index] = merged
+	}
 	return threads, learned
+}
+
+func (m *Multiplexer) threadOriginatesFrom(accountID string, thread map[string]any) bool {
+	account, ok := m.store.Account(accountID)
+	if !ok || account.CodexHome == "" {
+		return false
+	}
+	path, _ := thread["path"].(string)
+	if path == "" {
+		return false
+	}
+	home := filepath.Clean(account.CodexHome) + string(filepath.Separator)
+	return strings.HasPrefix(filepath.Clean(path)+string(filepath.Separator), home)
 }
 
 func (m *Multiplexer) listAllThreads(entry childEntry, originalParams json.RawMessage) []map[string]any {
