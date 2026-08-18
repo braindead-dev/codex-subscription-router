@@ -73,7 +73,7 @@ BUILD_6720: "8fba32f8baa6d984b0f0f4149d3da46221e3adb3b52836f85fe65e31e655a8c0"
 and these verified counts/layouts:
 
 ```python
-EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD[BUILD_6720] = 107
+EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD[BUILD_6720] = 99  # 删除 8 个 profile 后；原始总计 107
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD[BUILD_6720] = 20
 EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD[BUILD_6720] = (
     ("Codex Computer Use.app", 17),
@@ -178,7 +178,7 @@ Confirm the build-specific values added in Task 1 feed both native package rewri
 ```text
 cua_node/lib/node_modules/@oai/sky/Codex Computer Use.app                  17 service references
 cua_node/lib/node_modules/@oai/sky/bin/mac/normal/Codex Computer Use.app   13 service references
-all @oai/sky native bundle-ID references                                  107
+all @oai/sky native bundle-ID references                                  99（删除 8 个 profile 后；原始总计 107）
 ASAR bundle-ID references                                                   20
 ```
 

@@ -54,6 +54,11 @@ const CODEX_MUX_ACCOUNT_SCOPED_PLUGIN_METHODS = new Set([
   "read-apps",
   "list-mcp-server-status",
   "login-mcp-server",
+  "app/list",
+  "app/installed",
+  "app/read",
+  "mcpServer/oauth/login",
+  "mcpServerStatus/list",
 ]);
 
 function codexMuxScopePluginRequest(method, params) {
