@@ -226,6 +226,10 @@ func (s *Server) accountAction(response http.ResponseWriter, request *http.Reque
 		writeRawJSON(response, http.StatusOK, result)
 		return
 	}
+	if len(parts) >= 2 && parts[1] == "remote-control" {
+		s.remoteControl(response, request, ctx, accountID, parts[2:])
+		return
+	}
 	if len(parts) == 3 && parts[1] == "rate-limit-resets" && parts[2] == "consume" && request.Method == http.MethodPost {
 		var input struct {
 			CreditID        *string `json:"creditId"`
@@ -275,6 +279,35 @@ func (s *Server) accountAction(response http.ResponseWriter, request *http.Reque
 	default:
 		http.NotFound(response, request)
 	}
+}
+
+func (s *Server) remoteControl(
+	response http.ResponseWriter,
+	request *http.Request,
+	ctx context.Context,
+	accountID string,
+	action []string,
+) {
+	var result json.RawMessage
+	var err error
+	switch {
+	case len(action) == 0 && request.Method == http.MethodGet:
+		result, err = s.mux.RemoteControlStatus(ctx, accountID)
+	case len(action) == 1 && action[0] == "enable" && request.Method == http.MethodPost:
+		result, err = s.mux.SetRemoteControl(ctx, accountID, true)
+	case len(action) == 1 && action[0] == "disable" && request.Method == http.MethodPost:
+		result, err = s.mux.SetRemoteControl(ctx, accountID, false)
+	case len(action) == 1 && action[0] == "pairing" && request.Method == http.MethodPost:
+		result, err = s.mux.StartRemoteControlPairing(ctx, accountID)
+	default:
+		http.NotFound(response, request)
+		return
+	}
+	if err != nil {
+		writeJSON(response, http.StatusBadGateway, map[string]any{"error": err.Error()})
+		return
+	}
+	writeRawJSON(response, http.StatusOK, result)
 }
 
 func (s *Server) events(response http.ResponseWriter, request *http.Request) {

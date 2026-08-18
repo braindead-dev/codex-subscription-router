@@ -187,6 +187,16 @@ The profile menu displays combined weekly usage followed by one row per
 subscription. Email addresses remain masked until hovered. The final row always
 starts another sign-in.
 
+## Pair a phone or another computer
+
+Remote control is enrolled per ChatGPT account, and the native
+**Settings → Connections** page only pairs the Primary account. To control this
+Mac as another subscription, open the profile menu and select that
+subscription's row: the router enables remote control for it and shows a
+short-lived pairing code to enter on the device. Selecting the code copies it.
+OpenAI requires multi-factor authentication on the account before it can be
+enrolled; the row explains this when it applies.
+
 ## Routing behavior
 
 | Situation | Behaviour |

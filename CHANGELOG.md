@@ -12,6 +12,9 @@ this project uses [Semantic Versioning](https://semver.org/).
   rebuilds, recoverable upgrades, and automatic launch.
 - Reset-aware routing that prioritizes weekly quota at risk of expiring and
   gives a bounded boost to subscriptions with banked usage resets.
+- Remote-control pairing per subscription: selecting an account row in the
+  profile menu enables remote control for that account and shows its pairing
+  code, backed by `/v1/accounts/{id}/remote-control` control routes.
 
 ### Fixed
 

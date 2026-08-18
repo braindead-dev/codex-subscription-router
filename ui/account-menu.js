@@ -167,6 +167,26 @@ async function codexMuxConsumeRateLimitReset(accountId, input) {
   );
 }
 
+async function codexMuxRemoteControlStatus(accountId) {
+  return codexMuxRequest(
+    `/accounts/${encodeURIComponent(accountId)}/remote-control`,
+  );
+}
+
+async function codexMuxEnableRemoteControl(accountId) {
+  return codexMuxRequest(
+    `/accounts/${encodeURIComponent(accountId)}/remote-control/enable`,
+    { method: "POST" },
+  );
+}
+
+async function codexMuxStartRemoteControlPairing(accountId) {
+  return codexMuxRequest(
+    `/accounts/${encodeURIComponent(accountId)}/remote-control/pairing`,
+    { method: "POST" },
+  );
+}
+
 function CodexMuxUsageModal({
   onClose,
 }) {
@@ -330,6 +350,7 @@ function CodexMuxAccountMenu() {
   const [error, setError] = kXc.useState("");
   const [login, setLogin] = kXc.useState(null);
   const [codeCopied, setCodeCopied] = kXc.useState(false);
+  const [pairing, setPairing] = kXc.useState(null);
   const loginAccountId = login?.accountId || null;
 
   const refresh = kXc.useCallback(async () => {
@@ -454,6 +475,44 @@ function CodexMuxAccountMenu() {
     }
   }
 
+  async function pairDevice(account, event) {
+    event.preventDefault();
+    if (pairing?.accountId === account.id && pairing.status !== "error") {
+      setPairing(null);
+      return;
+    }
+    setPairing({ accountId: account.id, status: "loading" });
+    try {
+      const status = await codexMuxRemoteControlStatus(account.id);
+      if (status.status !== "enabled") {
+        await codexMuxEnableRemoteControl(account.id);
+      }
+      const code = await codexMuxStartRemoteControlPairing(account.id);
+      setPairing({
+        accountId: account.id,
+        status: "ready",
+        code: code.manualPairingCode || code.pairingCode || "",
+        expiresAt: code.expiresAt ?? null,
+        copied: false,
+      });
+    } catch (requestError) {
+      setPairing({
+        accountId: account.id,
+        status: "error",
+        message: codexMuxPairingErrorMessage(requestError.message),
+      });
+    }
+  }
+
+  async function copyPairingCode(event) {
+    event.preventDefault();
+    if (!pairing?.code) return;
+    try {
+      await navigator.clipboard.writeText(pairing.code);
+      setPairing({ ...pairing, copied: true });
+    } catch {}
+  }
+
   const rows = [];
   rows.push(
     (0, e7.jsx)(
@@ -506,6 +565,7 @@ function CodexMuxAccountMenu() {
             className: "text-token-description-foreground tabular-nums",
             children: remaining == null ? "–" : `${Math.round(remaining)}%`,
           }),
+          onSelect: (event) => pairDevice(account, event),
           children: account.planLabel
             ? `${account.label} · ${account.planLabel}`
             : account.label,
@@ -513,6 +573,9 @@ function CodexMuxAccountMenu() {
         `codex-mux-account-${account.id}`,
       ),
     );
+    if (pairing?.accountId === account.id) {
+      rows.push(codexMuxPairingRow(pairing, copyPairingCode));
+    }
   }
 
   if (login) {
@@ -566,6 +629,66 @@ function CodexMuxAccountMenu() {
   }
   rows.push((0, e7.jsx)(CH.Separator, {}, "codex-mux-separator"));
   return (0, e7.jsx)(e7.Fragment, { children: rows });
+}
+
+function codexMuxPairingRow(pairing, onCopy) {
+  if (pairing.status === "loading") {
+    return (0, e7.jsx)(
+      _H,
+      {
+        LeftIcon: CodexMuxCopyIcon,
+        SubText: "Enabling remote control and requesting a code",
+        children: "Pair a device…",
+      },
+      "codex-mux-pairing",
+    );
+  }
+  if (pairing.status === "error") {
+    return (0, e7.jsx)(
+      _H,
+      {
+        LeftIcon: S2,
+        SubText: pairing.message,
+        tone: "danger",
+        allowWrap: true,
+        subTextAllowWrap: true,
+        children: "Pairing unavailable",
+      },
+      "codex-mux-pairing",
+    );
+  }
+  const expiresAt =
+    pairing.expiresAt == null
+      ? null
+      : pairing.expiresAt < 1e12
+        ? pairing.expiresAt * 1000
+        : pairing.expiresAt;
+  const expiry =
+    expiresAt == null
+      ? ""
+      : ` · Expires ${new Date(expiresAt).toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })}`;
+  return (0, e7.jsx)(
+    _H,
+    {
+      LeftIcon: CodexMuxCopyIcon,
+      SubText: pairing.copied
+        ? `Code ${pairing.code} copied${expiry}`
+        : `Code ${pairing.code} · Click to copy${expiry}`,
+      onSelect: onCopy,
+      children: "Enter this code on your phone or other computer",
+    },
+    "codex-mux-pairing",
+  );
+}
+
+function codexMuxPairingErrorMessage(message) {
+  if (/multi-factor authentication required/i.test(message)) {
+    return "This ChatGPT account needs multi-factor authentication before it can be controlled remotely. Turn it on at chatgpt.com under Settings › Security, then try again.";
+  }
+  return message;
 }
 
 function codexMuxWeeklyWindow(rateLimits) {
