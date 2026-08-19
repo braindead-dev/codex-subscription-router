@@ -18,6 +18,9 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Isolated subscriptions now inherit the Primary account's project trust
+  (their own entries win), so threads created on another subscription in a
+  trusted folder no longer fall back to read-only, ask-for-approval turns.
 - Profile menus now dismiss normally on outside clicks and Escape after an
   additional subscription sign-in.
 - Native usage surfaces (limit banner, sidebar usage alert, reset prompts)

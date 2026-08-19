@@ -11,8 +11,9 @@ import (
 const isolatedCredentialConfig = `cli_auth_credentials_store = "file"
 mcp_oauth_credentials_store = "file"`
 
-// syncIsolatedConfig shares desktop-managed settings and MCP servers with an
-// isolated subscription while keeping its credentials and project trust local.
+// syncIsolatedConfig shares desktop-managed settings, MCP servers, and project
+// trust with an isolated subscription while keeping its credentials local.
+// Trust decisions the isolated account recorded itself take precedence.
 func syncIsolatedConfig(primaryCodexHome, isolatedCodexHome string) error {
 	if isolatedCodexHome == "" {
 		return errors.New("isolated Codex home is required")
@@ -38,7 +39,10 @@ func syncIsolatedConfig(primaryCodexHome, isolatedCodexHome string) error {
 		return !isProjectSection(section)
 	})
 	managed = removeTopLevelCredentialSettings(managed)
-	projects := filterConfig(isolatedConfig, isProjectSection)
+	projects := mergeProjectSections(
+		filterConfig(isolatedConfig, isProjectSection),
+		filterConfig(primaryConfig, isProjectSection),
+	)
 
 	parts := []string{isolatedCredentialConfig}
 	if managed = strings.TrimSpace(managed); managed != "" {
@@ -101,6 +105,45 @@ func removeTopLevelCredentialSettings(contents string) string {
 		builder.WriteByte('\n')
 	}
 	return builder.String()
+}
+
+// mergeProjectSections appends project sections from shared that the local
+// configuration does not define. Sections are compared by header, so a
+// trust level recorded by the isolated account is never overridden.
+func mergeProjectSections(local, shared string) string {
+	defined := make(map[string]struct{})
+	for _, header := range projectSectionHeaders(local) {
+		defined[header] = struct{}{}
+	}
+	var builder strings.Builder
+	builder.WriteString(local)
+	section := ""
+	for _, line := range strings.Split(shared, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			section = trimmed
+		}
+		if section == "" {
+			continue
+		}
+		if _, skip := defined[section]; skip {
+			continue
+		}
+		builder.WriteString(line)
+		builder.WriteByte('\n')
+	}
+	return builder.String()
+}
+
+func projectSectionHeaders(contents string) []string {
+	headers := make([]string, 0)
+	for _, line := range strings.Split(contents, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			headers = append(headers, trimmed)
+		}
+	}
+	return headers
 }
 
 func isProjectSection(section string) bool {

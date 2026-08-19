@@ -44,7 +44,7 @@ func TestStoreBootstrapsPrimaryAndPersistsThreadAffinity(t *testing.T) {
 	}
 }
 
-func TestAccountConfigInheritsManagedMCPAndPreservesLocalProjects(t *testing.T) {
+func TestAccountConfigInheritsManagedMCPAndProjectTrust(t *testing.T) {
 	root := t.TempDir()
 	primaryHome := filepath.Join(root, "primary")
 	if err := os.MkdirAll(primaryHome, 0o700); err != nil {
@@ -91,8 +91,8 @@ trust_level = "trusted"
 			t.Fatalf("account config is missing %q:\n%s", expected, text)
 		}
 	}
-	if strings.Contains(text, "/primary-only") {
-		t.Fatalf("primary project trust leaked into account config:\n%s", text)
+	if !strings.Contains(text, `[projects."/primary-only"]`) {
+		t.Fatalf("primary project trust was not shared with the account config:\n%s", text)
 	}
 
 	text += `
