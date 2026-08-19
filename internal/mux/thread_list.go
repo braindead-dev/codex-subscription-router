@@ -61,17 +61,14 @@ type threadListing struct {
 	threads   []map[string]any
 }
 
-// threadTitleFields are authored where a thread was created and are not
-// carried along when another account resumes its history.
-var threadTitleFields = []string{"name", "preview"}
-
 // mergeThreadListings combines per-account thread lists into one view. A
 // thread that has been moved between subscriptions exists in more than one
 // account's history, so it is listed once: activity comes from the most
-// recently updated copy, while the title fields come from the copy held by
-// the account whose Codex home stores the thread. Existing assignments are
-// never changed by a listing; threads without an assignment are attributed
-// to the first account that lists them (the controller first).
+// recently updated copy, the generated preview from the copy held by the
+// account whose Codex home stores the thread, and a user-assigned name from
+// whichever copy received it. Existing assignments are never changed by a
+// listing; threads without an assignment are attributed to the first account
+// that lists them (the controller first).
 func mergeThreadListings(
 	listings []threadListing,
 	owner func(threadID string) (string, bool),
@@ -79,7 +76,8 @@ func mergeThreadListings(
 ) ([]map[string]any, map[string]string) {
 	learned := make(map[string]string)
 	position := make(map[string]int)
-	titles := make(map[string]map[string]any)
+	copies := make(map[string][]map[string]any)
+	previews := make(map[string]any)
 	threads := make([]map[string]any, 0)
 	for _, listing := range listings {
 		for _, thread := range listing.threads {
@@ -93,8 +91,10 @@ func mergeThreadListings(
 					learned[threadID] = listing.accountID
 				}
 			}
-			if originatesFrom(listing.accountID, thread) {
-				titles[threadID] = thread
+			copies[threadID] = append(copies[threadID], thread)
+			if preview, ok := nonEmptyString(thread["preview"]); ok &&
+				originatesFrom(listing.accountID, thread) {
+				previews[threadID] = preview
 			}
 			index, seen := position[threadID]
 			switch {
@@ -107,20 +107,36 @@ func mergeThreadListings(
 			}
 		}
 	}
-	for threadID, origin := range titles {
-		index := position[threadID]
+	for threadID, index := range position {
+		if len(copies[threadID]) < 2 {
+			continue
+		}
 		merged := make(map[string]any, len(threads[index]))
 		for key, value := range threads[index] {
 			merged[key] = value
 		}
-		for _, key := range threadTitleFields {
-			if value, ok := origin[key]; ok {
-				merged[key] = value
+		if preview, ok := previews[threadID]; ok {
+			merged["preview"] = preview
+		}
+		if _, ok := nonEmptyString(merged["name"]); !ok {
+			for _, copy := range copies[threadID] {
+				if name, ok := nonEmptyString(copy["name"]); ok {
+					merged["name"] = name
+					break
+				}
 			}
 		}
 		threads[index] = merged
 	}
 	return threads, learned
+}
+
+func nonEmptyString(value any) (string, bool) {
+	text, ok := value.(string)
+	if !ok || text == "" {
+		return "", false
+	}
+	return text, true
 }
 
 func (m *Multiplexer) threadOriginatesFrom(accountID string, thread map[string]any) bool {

@@ -52,10 +52,10 @@ func TestMergeThreadListingsAttributesUnknownThreadOnce(t *testing.T) {
 func TestMergeThreadListingsKeepsTitleFromOriginatingAccount(t *testing.T) {
 	listings := []threadListing{
 		{accountID: "primary", threads: []map[string]any{
-			{"id": "moved", "updatedAt": 1.0, "path": "/home/primary/sessions/moved.jsonl", "preview": "clickhouse search", "name": "CH"},
+			{"id": "moved", "updatedAt": 1.0, "path": "/home/primary/sessions/moved.jsonl", "preview": "clickhouse search", "name": nil},
 		}},
 		{accountID: "secondary", threads: []map[string]any{
-			{"id": "moved", "updatedAt": 3.0, "path": "/home/primary/sessions/moved.jsonl", "preview": "look into our search service", "name": nil, "status": "active"},
+			{"id": "moved", "updatedAt": 3.0, "path": "/home/primary/sessions/moved.jsonl", "preview": "look into our search service", "name": "CH", "status": "active"},
 		}},
 	}
 	threads, _ := mergeThreadListings(
@@ -72,10 +72,32 @@ func TestMergeThreadListingsKeepsTitleFromOriginatingAccount(t *testing.T) {
 	if merged["updatedAt"] != 3.0 || merged["status"] != "active" {
 		t.Fatalf("expected activity from the freshest copy, got %#v", merged)
 	}
-	if merged["preview"] != "clickhouse search" || merged["name"] != "CH" {
-		t.Fatalf("expected title fields from the originating account, got %#v", merged)
+	if merged["preview"] != "clickhouse search" {
+		t.Fatalf("expected the preview from the originating account, got %#v", merged)
+	}
+	if merged["name"] != "CH" {
+		t.Fatalf("expected the user-assigned name from whichever copy holds it, got %#v", merged)
 	}
 	if listings[1].threads[0]["preview"] != "look into our search service" {
 		t.Fatal("merging must not mutate the source listing")
+	}
+}
+
+func TestMergeThreadListingsKeepsNameSetOnOriginatingCopy(t *testing.T) {
+	listings := []threadListing{
+		{accountID: "primary", threads: []map[string]any{
+			{"id": "moved", "updatedAt": 1.0, "path": "/home/primary/x.jsonl", "preview": "generated", "name": "Renamed"},
+		}},
+		{accountID: "secondary", threads: []map[string]any{
+			{"id": "moved", "updatedAt": 2.0, "path": "/home/primary/x.jsonl", "preview": "raw", "name": nil},
+		}},
+	}
+	threads, _ := mergeThreadListings(
+		listings,
+		func(string) (string, bool) { return "primary", true },
+		func(accountID string, _ map[string]any) bool { return accountID == "primary" },
+	)
+	if threads[0]["name"] != "Renamed" || threads[0]["preview"] != "generated" || threads[0]["updatedAt"] != 2.0 {
+		t.Fatalf("unexpected merge: %#v", threads[0])
 	}
 }
