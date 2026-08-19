@@ -859,13 +859,13 @@ function CodexMuxProfileAvatarStack({ onSelect }) {
       ? "Selected subscription profile"
       : `${accounts.length} connected subscriptions`,
     children: (0, e7.jsx)("div", {
-      className: "flex items-center justify-center",
+      className: "mx-auto flex w-max items-center justify-center",
       children: visibleAccounts.map((account, index) =>
         (0, e7.jsx)(
           "button",
           {
             type: "button",
-            className: `${index === 0 ? "" : "-ml-5"} rounded-full border-4 border-token-bg-primary transition-transform hover:z-10 hover:scale-105 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-token-focus-border`,
+            className: `${index === 0 ? "" : "-ml-5"} size-20 shrink-0 rounded-full border-4 border-token-bg-primary transition-transform hover:z-10 hover:scale-105 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-token-focus-border`,
             style: {
               marginLeft: index === 0 ? 0 : -20,
               zIndex: index,
@@ -885,7 +885,7 @@ function CodexMuxProfileAvatarStack({ onSelect }) {
             children: (0, e7.jsx)(CodexMuxAccountAvatar, {
               imageUrl: account.profileImageUrl,
               label: account.label,
-              className: "size-20",
+              className: "size-full",
             }),
           },
           account.id,
