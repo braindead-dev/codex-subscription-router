@@ -142,6 +142,11 @@ CODEX_MUX_SIGNING_IDENTITY="Developer ID Application: Example Corp (TEAMID1234)"
   python3 scripts/patch_app.py
 ```
 
+To show a different name in the Dock and menu bar without moving any state,
+set `CODEX_MUX_DISPLAY_NAME` (for example `CODEX_MUX_DISPLAY_NAME="Codex (router)"`)
+when running the patcher. Bundle paths, identifiers, and the desktop profile
+are unaffected.
+
 Reuse the same Apple team for every rebuild. Changing teams changes the app's
 designated requirement and can invalidate existing macOS privacy consent. The
 patcher refuses an unexpected team change unless you deliberately pass

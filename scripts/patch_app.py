@@ -26,6 +26,12 @@ DEFAULT_DESTINATION = Path.home() / "Applications" / "Codex Subscription Router.
 DEFAULT_STATE_ROOT = Path.home() / ".codex-mux"
 CONTROL_PORT = 48123
 DESKTOP_PROFILE_NAME = "Codex Subscription Router"
+# The name shown in the Dock, menu bar, and app switcher. Paths, identifiers,
+# and the desktop profile keep DESKTOP_PROFILE_NAME so a rename never moves
+# state or invalidates macOS privacy grants.
+DESKTOP_DISPLAY_NAME = (
+    os.environ.get("CODEX_MUX_DISPLAY_NAME", "").strip() or DESKTOP_PROFILE_NAME
+)
 DESKTOP_BUNDLE_IDENTIFIER = "app.cdxmux.multi"
 OPENAI_DESKTOP_CODE_IDENTIFIER = "com.openai.codex"
 OPENAI_COMPUTER_USE_BUNDLE_IDENTIFIER = "com.openai.sky.CUAService"
@@ -1417,8 +1423,8 @@ def patch_info_plist(
     plist_path = app / "Contents" / "Info.plist"
     with plist_path.open("rb") as handle:
         info = plistlib.load(handle)
-    info["CFBundleDisplayName"] = "Codex Subscription Router"
-    info["CFBundleName"] = "Codex Subscription Router"
+    info["CFBundleDisplayName"] = DESKTOP_DISPLAY_NAME
+    info["CFBundleName"] = DESKTOP_DISPLAY_NAME
     # A distinct identifier keeps Launch Services and external Computer Use from
     # confusing this independently signed copy with the official ChatGPT app.
     info["CFBundleIdentifier"] = DESKTOP_BUNDLE_IDENTIFIER
