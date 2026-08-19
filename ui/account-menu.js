@@ -367,6 +367,8 @@ function CodexMuxAccountMenu() {
   const [login, setLogin] = kXc.useState(null);
   const [codeCopied, setCodeCopied] = kXc.useState(false);
   const [pairing, setPairing] = kXc.useState(null);
+  const [expandedAccountId, setExpandedAccountId] = kXc.useState(null);
+  const [emailCopied, setEmailCopied] = kXc.useState(false);
   const loginAccountId = login?.accountId || null;
 
   const refresh = kXc.useCallback(async () => {
@@ -491,12 +493,26 @@ function CodexMuxAccountMenu() {
     }
   }
 
+  function toggleAccount(account, event) {
+    event.preventDefault();
+    const next = expandedAccountId === account.id ? null : account.id;
+    setExpandedAccountId(next);
+    setEmailCopied(false);
+    if (next !== pairing?.accountId) setPairing(null);
+  }
+
+  async function copyEmail(account, event) {
+    event.preventDefault();
+    if (!account.email) return;
+    try {
+      await navigator.clipboard.writeText(account.email);
+      setEmailCopied(true);
+    } catch {}
+  }
+
   async function pairDevice(account, event) {
     event.preventDefault();
-    if (pairing?.accountId === account.id && pairing.status !== "error") {
-      setPairing(null);
-      return;
-    }
+    if (pairing?.accountId === account.id && pairing.status === "loading") return;
     setPairing({ accountId: account.id, status: "loading" });
     try {
       const status = await codexMuxRemoteControlStatus(account.id);
@@ -577,7 +593,7 @@ function CodexMuxAccountMenu() {
             className: "text-token-description-foreground tabular-nums",
             children: remaining == null ? "–" : `${Math.round(remaining)}%`,
           }),
-          onSelect: (event) => pairDevice(account, event),
+          onSelect: (event) => toggleAccount(account, event),
           children: account.planLabel
             ? `${account.label} · ${account.planLabel}`
             : account.label,
@@ -585,8 +601,39 @@ function CodexMuxAccountMenu() {
         `codex-mux-account-${account.id}`,
       ),
     );
-    if (pairing?.accountId === account.id) {
-      rows.push(codexMuxPairingRow(pairing, copyPairingCode));
+    if (expandedAccountId === account.id) {
+      rows.push(
+        (0, e7.jsx)(
+          _H,
+          {
+            LeftIcon: CodexMuxCopyIcon,
+            SubText: account.email
+              ? emailCopied
+                ? "Copied"
+                : account.email
+              : "No email on this account",
+            onSelect: (event) => copyEmail(account, event),
+            children: "Copy email address",
+          },
+          `codex-mux-account-${account.id}-email`,
+        ),
+      );
+      if (pairing?.accountId === account.id) {
+        rows.push(codexMuxPairingRow(pairing, copyPairingCode));
+      } else {
+        rows.push(
+          (0, e7.jsx)(
+            _H,
+            {
+              LeftIcon: CodexMuxPlusIcon,
+              SubText: "Control this Mac from a phone or another computer as this subscription",
+              onSelect: (event) => pairDevice(account, event),
+              children: "Pair a device…",
+            },
+            `codex-mux-account-${account.id}-pair`,
+          ),
+        );
+      }
     }
   }
 

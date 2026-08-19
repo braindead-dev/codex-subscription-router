@@ -118,8 +118,9 @@ missing). These are separate rows from the official app's.
 subscription* → finish the device-code sign-in in the browser. The menu shows
 pooled weekly usage, then one row per account.
 
-**Pair a device** — select an account's row in the profile menu. The router
-enables remote control for that account and shows a short-lived pairing code
+**Account actions** — select an account's row in the profile menu to reveal
+*Copy email address* and *Pair a device…*. Pairing enables remote control for
+that account and shows a short-lived code to enter on the phone or computer
 (selecting it copies). OpenAI requires multi-factor authentication on the
 account; the row says so if it is missing.
 
