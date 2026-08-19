@@ -34,8 +34,24 @@ function codexMuxCachedAccounts() {
   return [];
 }
 
+// Profile images are kept decoded between menu opens so rows render with
+// their avatars on the first frame instead of after a network round-trip.
+const codexMuxWarmAvatars = new Map();
+
+function codexMuxWarmAvatar(imageUrl) {
+  if (!imageUrl || codexMuxWarmAvatars.has(imageUrl)) return;
+  const image = new Image();
+  image.referrerPolicy = "no-referrer";
+  image.decoding = "sync";
+  image.src = imageUrl;
+  codexMuxWarmAvatars.set(imageUrl, image);
+}
+
 function codexMuxRememberAccounts(accounts) {
   globalThis.__codexMuxAccounts = accounts;
+  for (const account of accounts) {
+    codexMuxWarmAvatar(jLa(account.profileImageUrl || null));
+  }
   try {
     localStorage.setItem(CODEX_MUX_ACCOUNTS_CACHE_KEY, JSON.stringify(accounts));
   } catch {}
@@ -519,11 +535,7 @@ function CodexMuxAccountMenu() {
       _H,
       {
         LeftIcon: S2,
-        SubText: loading
-          ? "Connecting subscriptions…"
-          : connected.length === 1
-            ? "1 connected subscription"
-            : `${connected.length} connected subscriptions`,
+        SubText: loading ? "Connecting subscriptions…" : undefined,
         rightIcon: (0, e7.jsx)("span", {
           className: "text-token-description-foreground tabular-nums",
           children: loading
@@ -773,11 +785,13 @@ function CodexMuxAccountAvatar({ imageUrl, label, className }) {
   const [failed, setFailed] = kXc.useState(false);
   const resolvedImageUrl = jLa(imageUrl || null);
   if (resolvedImageUrl && !failed) {
+    codexMuxWarmAvatar(resolvedImageUrl);
     return (0, e7.jsx)("img", {
       src: resolvedImageUrl,
       alt: "",
       className: `${className || "icon-sm"} rounded-full object-cover`,
       referrerPolicy: "no-referrer",
+      decoding: "sync",
       onError: () => setFailed(true),
     });
   }
