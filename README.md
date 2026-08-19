@@ -2,122 +2,85 @@
 
 ![Multi-subscription account menu](screenshots/account-menu.png)
 
-Use multiple ChatGPT subscriptions from one independent macOS desktop app.
+Use several ChatGPT subscriptions from one macOS Codex app.
 
-Codex Subscription Router creates a locally patched copy of the official
-ChatGPT app, balances new chats across connected subscriptions, and keeps every
-thread on one subscription so follow-up turns retain conversation context and
-benefit from account-level caching.
+The router builds a locally patched copy of the official ChatGPT app, spreads
+new chats across your connected subscriptions, fails a depleted thread over to
+one with quota, and keeps every thread pinned to one account so context and
+caching survive. The official install is read, never modified.
 
-The official ChatGPT installation is used only as build input and is never
-modified. This repository contains source code and build tooling—not OpenAI
-binaries or a prebuilt application.
+This is the maintained continuation of the original
+[codex-subscription-router](https://github.com/b-nnett/codex-subscription-router),
+which is archived.
 
 > [!WARNING]
-> This is an unofficial, version-sensitive project. It is not affiliated with
-> or supported by OpenAI. Review the source and ensure your use complies with
-> the terms governing every connected subscription.
+> Unofficial and version-sensitive. Not affiliated with OpenAI. Make sure your
+> use complies with the terms of every connected subscription.
 
 ![Combined multi-account profile](screenshots/combined-profile-20px.png)
 
-## Highlights
+## What you get
 
-- **Quota-aware routing.** New chats favour weekly allowance that will expire
-  sooner, with a bounded boost for accounts holding banked usage resets.
-- **Sticky conversations.** Once a thread is assigned, every follow-up returns
-  to the same subscription unless that subscription is depleted.
-- **Automatic failover.** A depleted thread continues through another account
-  with quota; if the whole pool is empty, the app shows one combined alert.
-- **Native account management.** The existing profile menu shows pooled usage,
-  profile photos, plan names, masked emails, and device-code sign-in.
-- **Account-aware settings.** Profile statistics can be viewed together or per
-  subscription, while the Plugins page can switch Apps and MCP connections
-  between accounts.
-- **Per-account resets.** The native rate-limit sheet shows and consumes resets
-  for the selected subscription.
-- **Working macOS integrations.** The copied Appshots and Computer Use helper is
-  independently identified and signed so it can receive its own privacy grants.
+- **Quota-aware routing** — new chats go to the subscription whose weekly
+  allowance is most at risk of going unused, with a bounded boost for banked
+  resets.
+- **Sticky threads with failover** — follow-ups stay on their account; a
+  depleted owner hands the thread to one with capacity. Only when the whole
+  pool is empty does the app show a limit.
+- **Pooled usage everywhere** — the profile menu, usage banners, sidebar
+  alert, and reset prompts describe the pool, not just the Primary account.
+- **Native account management** — add subscriptions with device-code sign-in,
+  see per-account usage and plan, pick an account for rate-limit resets,
+  Apps and MCP connections, and Profile statistics.
+- **Remote control per subscription** — pair a phone or another computer to
+  any account, not only Primary.
+- **Independent app** — its own bundle ID, desktop profile, and signed
+  Computer Use helper, so it coexists with the official app and holds its own
+  macOS privacy grants.
 
 ## How it works
 
-The patched desktop still opens one app-server connection. A small Go
-multiplexer fans that connection out to one official Codex child per account.
-Each child has an isolated Codex home, while the multiplexer records the owner
-of every thread.
-
 ```text
 Codex Subscription Router.app
-        │
-        │ one app-server connection
+        │  one app-server connection
         ▼
     codex-mux
-    ├── Primary       → ~/.codex
-    ├── Subscription 2 → isolated Codex home
-    └── Subscription 3 → isolated Codex home
-             │
+    ├── Primary        → ~/.codex
+    ├── Subscription 2 → ~/.codex-mux/accounts/<id>/codex-home
+    └── Subscription 3 → ~/.codex-mux/accounts/<id>/codex-home
              └── thread ID → persistent account owner
 ```
 
-New-thread routing compares the quota burn rate needed before each weekly reset,
-then applies a capped banked-reset boost. Short-window usage, pinned-thread
-count, and stable account order break close results. Existing threads do not
-migrate merely for load balancing.
-
-Read [the architecture](docs/ARCHITECTURE.md) for the request flow and
-[the security model](docs/SECURITY-MODEL.md) for trust boundaries.
-
-## Compatibility
-
-Codex Subscription Router currently targets:
-
-| Component | Supported value |
-| --- | --- |
-| Platform | macOS on Apple silicon |
-| Official ChatGPT versions | `26.803.61601` (build `6396`), `26.810.52044` (build `6662`) |
-| Go | 1.26 or newer |
-| Node.js | 22.12 or newer |
-
-The patcher verifies the official version, build, ASAR hash, renderer anchors,
-and native binary constants before changing anything. An unknown upstream build
-is rejected by default rather than being partially patched. See
-[Compatibility](docs/COMPATIBILITY.md) for the recorded hash and test details.
+A small Go multiplexer sits between the desktop and one official Codex
+app-server per account. Each account has an isolated Codex home; the
+multiplexer records which account owns each thread and routes accordingly.
+Details: [architecture](docs/ARCHITECTURE.md), [security model](docs/SECURITY-MODEL.md).
 
 ## Requirements
 
-- The official ChatGPT app installed at `/Applications/ChatGPT.app`
-- Xcode Command Line Tools
-- Go 1.26+
-- Node.js 22.12+ and npm
-- An Apple Development or Developer ID Application signing identity
+- macOS on Apple silicon, with the official ChatGPT app at `/Applications/ChatGPT.app`
+  — supported builds are listed in [COMPATIBILITY.md](docs/COMPATIBILITY.md)
+- Xcode Command Line Tools, Go 1.26+, Node.js 22.12+ with npm
+- An Apple Development or Developer ID Application identity. Ad-hoc signing
+  (`--allow-adhoc-signing`) works for routing but Appshots and Computer Use may
+  not get their privacy grants.
 
-A team-backed signing identity is required for reliable Appshots and Computer
-Use permissions. Ad-hoc signing is intended only for diagnostics.
+The patcher verifies the official version, build, ASAR hash, and every code
+anchor before changing anything, and refuses unknown builds rather than
+half-patching them.
 
 ## Install
-
-Run one command. It downloads or updates the source, installs the locked build
-dependency, creates the independently signed app, and launches it:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/braindead-dev/codex-subscription-router/main/install.sh | /bin/bash
 ```
 
-The installer keeps its source checkout in
-`~/.codex-subscription-router/source`. On an existing installation it uses the
-same account state, creates a recoverable backup, and requires signing-team
-continuity so macOS privacy grants remain valid. It stops with a clear message
-instead of making a partial installation when a prerequisite or upstream
-compatibility check fails.
+The installer keeps its checkout in `~/.codex-subscription-router/source`,
+reuses existing account state on upgrades, backs up the previous build, and
+requires the same signing team across rebuilds so privacy grants stay valid.
+Read [`install.sh`](install.sh) first if you prefer.
 
-> [!TIP]
-> To inspect the installer before running it, open
-> [`install.sh`](install.sh) or download it without piping it into a shell.
-
-### Install via prompt
-
-> Install Codex Subscription Router from `https://github.com/braindead-dev/codex-subscription-router` on this Mac using the repository's supported one-command installer, without modifying the official ChatGPT app or deleting any existing router state. Verify the resulting app and Computer Use helper signatures, launch the app, and ask me only if a prerequisite or macOS permission requires interaction.
-
-### Install from a clone
+From a clone:
 
 ```sh
 git clone https://github.com/braindead-dev/codex-subscription-router.git
@@ -127,183 +90,99 @@ python3 scripts/patch_app.py
 open "$HOME/Applications/Codex Subscription Router.app"
 ```
 
-This creates:
+Useful options:
 
-- `~/Applications/Codex Subscription Router.app`
-- `~/Applications/Codex Subscription Router Computer Use.app`
-- an independent desktop profile under
-  `~/Library/Application Support/Codex Subscription Router`
-
-The first valid Developer ID Application identity is selected, falling back to
-an Apple Development identity. Select a certificate explicitly when needed:
-
-```sh
-CODEX_MUX_SIGNING_IDENTITY="Developer ID Application: Example Corp (TEAMID1234)" \
-  python3 scripts/patch_app.py
-```
-
-To show a different name in the Dock and menu bar without moving any state,
-set `CODEX_MUX_DISPLAY_NAME` (for example `CODEX_MUX_DISPLAY_NAME="Codex (router)"`)
-when running the patcher. Bundle paths, identifiers, and the desktop profile
-are unaffected.
-
-Reuse the same Apple team for every rebuild. Changing teams changes the app's
-designated requirement and can invalidate existing macOS privacy consent. The
-patcher refuses an unexpected team change unless you deliberately pass
-`--allow-signing-team-change`.
-
-For diagnostic builds without a certificate:
-
-```sh
-python3 scripts/patch_app.py --allow-adhoc-signing
-```
-
-Appshots and Computer Use may not function with an ad-hoc signature.
-
-## Grant macOS permissions
-
-Open **System Settings → Privacy & Security** and grant:
-
-| Permission | Application |
+| Setting | Effect |
 | --- | --- |
-| Accessibility | Codex Subscription Router |
-| Screen & System Audio Recording | Codex Subscription Router Computer Use |
+| `CODEX_MUX_SIGNING_IDENTITY="Developer ID Application: … (TEAMID)"` | Pick a certificate explicitly |
+| `CODEX_MUX_DISPLAY_NAME="Codex (router)"` | Dock and menu bar name; paths and identifiers are unchanged |
+| `--allow-adhoc-signing` | Build without a certificate |
+| `--force` | Rebuild over an existing install (previous copy goes to `~/.codex-mux/backups`) |
+| `--allow-signing-team-change` | Deliberately rebuild under a different Apple team |
 
-When macOS offers **Quit & Reopen**, use it. If the app does not relaunch,
-reopen Codex Subscription Router manually. If the Computer Use row does not
-appear, press the plus button and choose
-`~/Applications/Codex Subscription Router Computer Use.app`.
+The build creates `~/Applications/Codex Subscription Router.app`, its Computer
+Use helper, and a desktop profile under
+`~/Library/Application Support/Codex Subscription Router`. Bundles embed
+per-user paths; build them on the machine that runs them.
 
-Do not select the official ChatGPT or Codex Computer Use helper for this build;
-the independent app has its own identity and permission rows. macOS may also
-request Automation access the first time Computer Use controls another app.
+### macOS permissions
 
-## Add subscriptions
+**System Settings → Privacy & Security**: grant **Accessibility** to
+*Codex Subscription Router* and **Screen & System Audio Recording** to
+*Codex Subscription Router Computer Use* (add it with **+** if the row is
+missing). These are separate rows from the official app's.
 
-1. Open the profile menu at the bottom of the sidebar.
-2. Select **Add another subscription**.
-3. Complete the displayed device-code sign-in in your browser.
-4. Return to Codex Subscription Router and wait for the account row to appear.
+## Use
 
-While the code is visible, clicking away does not dismiss the menu. Clicking
-the code copies it and opens the verification page.
+**Add a subscription** — profile menu (bottom of the sidebar) → *Add another
+subscription* → finish the device-code sign-in in the browser. The menu shows
+pooled weekly usage, then one row per account.
 
-The profile menu displays combined weekly usage followed by one row per
-subscription. Email addresses remain masked until hovered. The final row always
-starts another sign-in.
+**Pair a device** — select an account's row in the profile menu. The router
+enables remote control for that account and shows a short-lived pairing code
+(selecting it copies). OpenAI requires multi-factor authentication on the
+account; the row says so if it is missing.
 
-## Pair a phone or another computer
+**Usage and resets** — the native usage sheet gets an account picker so a
+reset is consumed only for the chosen subscription. Profile statistics can be
+viewed pooled or per account; Settings → Plugins can scope Apps and MCP
+connections to an account.
 
-Remote control is enrolled per ChatGPT account, and the native
-**Settings → Connections** page only pairs the Primary account. To control this
-Mac as another subscription, open the profile menu and select that
-subscription's row: the router enables remote control for it and shows a
-short-lived pairing code to enter on the device. Selecting the code copies it.
-OpenAI requires multi-factor authentication on the account before it can be
-enrolled; the row explains this when it applies.
-
-## Routing behavior
+**Routing**
 
 | Situation | Behaviour |
 | --- | --- |
-| New chat | Assigned by quota-at-risk, banked resets, and short-window pressure |
-| Follow-up | Sent to the thread's persisted account owner |
-| Primary depleted | Native usage surfaces show pooled usage; limit banners wait for the whole pool |
-| Owner depleted | Continued through another account with capacity |
-| Every account depleted | Combined quota alert with the next known reset |
-| Account disabled | Excluded from routing and pooled usable quota |
+| New chat | Assigned by quota at risk, banked resets, short-window pressure |
+| Follow-up, steer, rename | Sent to the thread's account |
+| Owner depleted | Continued on another account with capacity |
+| Every account depleted | One combined limit notice with the next reset |
+| Account disabled | Excluded from routing and pooled usage |
 
-The subscription assigned to the current thread appears in its pinned summary.
-
-## Profiles, plugins, and resets
-
-**Profile statistics** begin in a combined view with overlapping account
-photos. Select a photo to see only that subscription's identity and statistics;
-select it again to return to the combined view.
-
-**Settings → Plugins** includes a subscription picker. Plugin definitions and
-managed MCP configuration are shared, while Apps, connection status, and OAuth
-login are scoped to the selected subscription.
-
-**Rate-limit resets** remain native to the app, with an account picker added to
-the sheet. Selecting a subscription changes the displayed balance and ensures
-the reset is consumed only for that account.
-
-![Account-scoped plugin connections](screenshots/plugin-account-picker-secondary-final.png)
+The thread's subscription appears in its pinned summary.
 
 ## Update or rebuild
 
-The copied app's updater is disabled so an official update cannot overwrite the
-patch. Update `/Applications/ChatGPT.app`, verify that the new build is listed
-as compatible, then rebuild:
+The copy never self-updates. Update `/Applications/ChatGPT.app`, check the new
+build is listed in [COMPATIBILITY.md](docs/COMPATIBILITY.md), quit the router
+and its Computer Use helper, then `python3 scripts/patch_app.py --force`.
+Account state and credentials live outside the bundle and are untouched.
 
-```sh
-python3 scripts/patch_app.py --force
-```
-
-Quit Codex Subscription Router and its Computer Use helper first. Existing
-destinations are moved to timestamped directories under `~/.codex-mux/backups`;
-account state and credentials are stored outside the app bundle and remain
-intact. Delete old backups manually after the rebuilt app passes the smoke test.
-
-Build separately for each macOS user. Generated bundles contain user-specific
-helper and socket paths and are not relocatable or intended for redistribution.
-
-## Local data and security
+## Local data
 
 | Path | Purpose |
 | --- | --- |
-| `~/.codex` | Primary credentials, conversations, and cache |
-| `~/.codex-mux/state.json` | Account metadata and sticky thread ownership |
-| `~/.codex-mux/accounts/<id>/codex-home` | Isolated secondary account data |
-| `~/.codex-mux/control-token` | Token for the loopback-only control service |
-| `~/.codex-mux/backups` | Recoverable app and helper backups |
-| `~/Library/Application Support/Codex Subscription Router` | Independent desktop profile |
+| `~/.codex` | Primary account (shared with the official app) |
+| `~/.codex-mux/accounts/<id>/codex-home` | Isolated secondary accounts |
+| `~/.codex-mux/state.json` | Accounts and thread ownership |
+| `~/.codex-mux/control-token` | Token for the loopback-only control API |
+| `~/.codex-mux/backups` | Previous builds and recovery copies |
+| `~/Library/Application Support/Codex Subscription Router` | Desktop profile |
 
-The control service binds only to `127.0.0.1` and protects private routes with a
-random 256-bit token. OAuth tokens stay inside their account's Codex home and
-are never returned by the control API. Account directories are owner-only.
+The control API binds to `127.0.0.1` only and never returns OAuth tokens.
+Managed config (MCP servers, plugins, project trust) is synchronized from the
+Primary home to each account home; credentials are not. Account homes are
+therefore not a secret boundary for inline MCP secrets.
 
-Plugin configuration is intentionally synchronized from the Primary account.
-Inline secrets inside shared MCP configuration are therefore copied to each
-isolated account home; the account homes are not separate secret boundaries.
-
-See [SECURITY.md](SECURITY.md) before reporting a credential, signing, or local
-control-service issue.
-
-## Development and verification
+## Development
 
 ```sh
 npm ci --ignore-scripts
-npm run check
+npm run check          # go test/vet, JS, Python, shell
 npm run release:check
 ```
 
-The Go backend and injected renderer have no runtime third-party dependencies.
-`@electron/asar` is build-only. Deterministic UI preview routes are enabled only
-when `CODEX_MUX_UI_TESTS=1` is present at launch and remain token-authenticated.
-
-The signed-app test procedure is in [SMOKE-TEST.md](docs/SMOKE-TEST.md). The
-latest completed run is recorded in
-[E2E-REPORT-0.1.0.md](docs/E2E-REPORT-0.1.0.md).
+No runtime third-party dependencies; `@electron/asar` is build-only. See
+[CONTRIBUTING.md](CONTRIBUTING.md), [SMOKE-TEST.md](docs/SMOKE-TEST.md), and
+[RELEASING.md](docs/RELEASING.md).
 
 ## Known limitations
 
-- Upstream ChatGPT updates can require new, reviewed patch anchors.
-- The initial merged history fetch is limited to 500 threads per account.
-- Combined “skills explored” totals can count the same skill once per account
-  because the upstream profile response exposes counts rather than skill IDs.
-- Generated app bundles are tied to one macOS user and signing team.
-- Releases are source-only; patched OpenAI binaries are never distributed.
-
-## Contributing and releases
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Releases use
-the source-only process in [RELEASING.md](docs/RELEASING.md) and require a
-completed signed-app smoke test for the exact tagged commit.
+- New official builds usually need reviewed anchor updates.
+- Initial merged history is capped at 500 threads per account.
+- Pooled "skills explored" can count a skill once per account.
+- Builds are tied to one macOS user and signing team; releases are source-only.
 
 ## License
 
-Project source is available under the [MIT License](LICENSE). ChatGPT, Codex,
-and the official macOS application are OpenAI products and are not covered by
-this license.
+[MIT](LICENSE) for this project's source. ChatGPT, Codex, and the official app
+are OpenAI products and are not covered.
