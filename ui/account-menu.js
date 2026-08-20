@@ -36,6 +36,8 @@ function codexMuxCachedAccounts() {
 
 // Profile images are kept decoded between menu opens so rows render with
 // their avatars on the first frame instead of after a network round-trip.
+// Warming happens from the avatar component because resolving the URL is a
+// React hook.
 const codexMuxWarmAvatars = new Map();
 
 function codexMuxWarmAvatar(imageUrl) {
@@ -49,9 +51,6 @@ function codexMuxWarmAvatar(imageUrl) {
 
 function codexMuxRememberAccounts(accounts) {
   globalThis.__codexMuxAccounts = accounts;
-  for (const account of accounts) {
-    codexMuxWarmAvatar(jLa(account.profileImageUrl || null));
-  }
   try {
     localStorage.setItem(CODEX_MUX_ACCOUNTS_CACHE_KEY, JSON.stringify(accounts));
   } catch {}
