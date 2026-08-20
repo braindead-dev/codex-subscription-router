@@ -36,7 +36,9 @@ The Primary account uses `~/.codex`. Added accounts use
 `~/.codex-mux/accounts/<id>/codex-home`. Managed configuration is copied from
 the Primary account, excluding credential-store settings. Project trust is
 shared as a union: entries the isolated account recorded itself take
-precedence over the Primary account's.
+precedence over the Primary account's. `AGENTS.md`, `agents/`, `hooks.json`,
+and `skills/` are symlinked from the Primary home unless the isolated account
+already has its own copy.
 Each isolated account forces file-backed CLI and MCP OAuth credentials.
 
 ## Desktop integration

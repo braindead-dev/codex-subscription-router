@@ -1316,6 +1316,42 @@ def disable_updater_lifecycle(extracted: Path) -> None:
     bundle_path.write_text(bundle, encoding="utf-8")
 
 
+def relax_native_pipe_peer_authorization(extracted: Path) -> None:
+    """Let an ad-hoc signed copy serve its own node_repl over the native pipes.
+
+    The desktop authorizes browser-use and host-services pipe peers by their
+    code-signing identity. An ad-hoc signature has none, so every in-app
+    browser and Computer Use request from the bundled node_repl is rejected
+    with missing-code-signing-identity. The pipes are owner-only sockets, so
+    accepting same-user peers keeps the boundary a team-signed build relies
+    on in practice while making those features usable without a certificate.
+    """
+    main_files = list((extracted / ".vite" / "build").glob("main-*.js"))
+    if len(main_files) != 1:
+        raise RuntimeError(
+            f"expected one ChatGPT desktop main bundle, found {len(main_files)}"
+        )
+    main_path = main_files[0]
+    main = main_path.read_text(encoding="utf-8")
+    authorizer_pattern = re.compile(
+        r"function (?P<name>[A-Za-z_$][\w$]*)\(\)\{"
+        r"if\(process\.platform!==`darwin`\)return\(\)=>\(\{authorized:!0\}\);"
+        r"let e=[A-Za-z_$][\w$]*\.[A-Za-z_$][\w$]*\.readFromPackageMetadata\(\),"
+    )
+    matches = list(authorizer_pattern.finditer(main))
+    if len(matches) != 1:
+        raise RuntimeError("could not find the native pipe peer authorizer")
+    match = matches[0]
+    head = f"function {match.group('name')}(){{"
+    main = (
+        main[: match.start()]
+        + head
+        + "return()=>({authorized:!0});"
+        + main[match.start() + len(head) :]
+    )
+    main_path.write_text(main, encoding="utf-8")
+
+
 def patch_desktop_profile(
     extracted: Path, installed_computer_use_app: Path
 ) -> None:
@@ -1540,6 +1576,8 @@ def patch_app(
         )
         patch_asar_computer_use_identity(extracted, expected_cua_replacements)
         patch_desktop_profile(extracted, installed_computer_use_app)
+        if signing_identity == "-":
+            relax_native_pipe_peer_authorization(extracted)
         patch_renderer(extracted, token)
         sign_native_code_tree(extracted, signing_identity)
         repacked_asar = temporary_path / "app.asar"

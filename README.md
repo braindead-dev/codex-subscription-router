@@ -62,8 +62,9 @@ Details: [architecture](docs/ARCHITECTURE.md), [security model](docs/SECURITY-MO
   — supported builds are listed in [COMPATIBILITY.md](docs/COMPATIBILITY.md)
 - Xcode Command Line Tools, Go 1.26+, Node.js 22.12+ with npm
 - An Apple Development or Developer ID Application identity. Ad-hoc signing
-  (`--allow-adhoc-signing`) works for routing but Appshots and Computer Use may
-  not get their privacy grants.
+  (`--allow-adhoc-signing`) works too: the copy then accepts its own
+  unsigned `node_repl` on the owner-only browser and Computer Use pipes, but
+  macOS may not persist Appshots and Computer Use privacy grants.
 
 The patcher verifies the official version, build, ASAR hash, and every code
 anchor before changing anything, and refuses unknown builds rather than
@@ -161,7 +162,8 @@ Account state and credentials live outside the bundle and are untouched.
 
 The control API binds to `127.0.0.1` only and never returns OAuth tokens.
 Managed config (MCP servers, plugins, project trust) is synchronized from the
-Primary home to each account home; credentials are not. Account homes are
+Primary home to each account home, and `AGENTS.md`, `agents/`, `hooks.json`,
+and `skills/` are linked to the Primary copies; credentials are not shared. Account homes are
 therefore not a secret boundary for inline MCP secrets.
 
 ## Development

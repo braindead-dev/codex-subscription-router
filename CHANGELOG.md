@@ -32,6 +32,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ### Fixed
 
+- Ad-hoc signed builds can use the in-app Browser and Computer Use: the
+  desktop rejected the unsigned bundled `node_repl` on its native pipes with
+  `missing-code-signing-identity`, so every subscription saw zero browsers.
+- Isolated subscriptions see the Primary home's `AGENTS.md`, `agents/`,
+  `hooks.json`, and `skills/`.
+
 - Thread listings no longer flip a moved thread's owner back to the account
   whose history still contains it, so steers and follow-ups reach the account
   running the turn. Moved threads are listed once, with activity from the

@@ -62,7 +62,64 @@ func syncIsolatedConfig(primaryCodexHome, isolatedCodexHome string) error {
 	if err := os.Rename(temporaryPath, configPath); err != nil {
 		return fmt.Errorf("commit config: %w", err)
 	}
+	return linkSharedHomeContent(primaryCodexHome, isolatedCodexHome)
+}
+
+// sharedHomeEntries are user-authored Codex home entries that describe how
+// the user works rather than who they are signed in as, so every subscription
+// should see the same copy.
+var sharedHomeEntries = []string{"AGENTS.md", "agents", "hooks.json", "skills"}
+
+// linkSharedHomeContent points each shared entry of the isolated home at the
+// Primary home's copy. An entry the isolated account already has as a real
+// file or directory with its own content is left alone; an empty directory or
+// one holding only Codex's managed `.system` folder is replaced by the link.
+func linkSharedHomeContent(primaryCodexHome, isolatedCodexHome string) error {
+	for _, name := range sharedHomeEntries {
+		source := filepath.Join(primaryCodexHome, name)
+		if _, err := os.Lstat(source); err != nil {
+			continue
+		}
+		target := filepath.Join(isolatedCodexHome, name)
+		info, err := os.Lstat(target)
+		switch {
+		case err == nil && info.Mode()&os.ModeSymlink != 0:
+			if current, readErr := os.Readlink(target); readErr == nil && current == source {
+				continue
+			}
+			if err := os.Remove(target); err != nil {
+				return fmt.Errorf("replace shared link %s: %w", name, err)
+			}
+		case err == nil && info.IsDir():
+			if !isManagedOnlyDirectory(target) {
+				continue
+			}
+			if err := os.RemoveAll(target); err != nil {
+				return fmt.Errorf("replace empty %s: %w", name, err)
+			}
+		case err == nil:
+			continue
+		case !errors.Is(err, os.ErrNotExist):
+			return fmt.Errorf("inspect %s: %w", name, err)
+		}
+		if err := os.Symlink(source, target); err != nil {
+			return fmt.Errorf("link shared %s: %w", name, err)
+		}
+	}
 	return nil
+}
+
+func isManagedOnlyDirectory(path string) bool {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if entry.Name() != ".system" {
+			return false
+		}
+	}
+	return true
 }
 
 func readConfig(path string) ([]byte, error) {
