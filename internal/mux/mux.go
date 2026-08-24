@@ -129,6 +129,7 @@ func (m *Multiplexer) Start(ctx context.Context) error {
 	}
 	go m.inboundLoop(ctx)
 	go m.syncManagedConfigLoop(ctx)
+	go m.reconcileUnifiedCatalogLoop(ctx)
 	return nil
 }
 

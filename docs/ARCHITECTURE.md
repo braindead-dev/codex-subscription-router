@@ -39,6 +39,14 @@ shared as a union: entries the isolated account recorded itself take
 precedence over the Primary account's. `AGENTS.md`, `agents/`, `hooks.json`,
 and `skills/` are symlinked from the Primary home unless the isolated account
 already has its own copy.
+
+With `~/.codex-mux/unified-catalog.enabled` present, a reconciler also mirrors
+each account's threads into every other connected account's index as pointer
+rows (cloned insert-only, referencing the owner's rollout path), so remote
+control from a phone signed into any account can see and resume any pooled
+session. A turn still runs on the connected account and shares the owner's
+rollout writer lock through the common absolute path, so no turn is billed
+twice.
 Each isolated account forces file-backed CLI and MCP OAuth credentials.
 
 ## Desktop integration

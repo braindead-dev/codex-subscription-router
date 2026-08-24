@@ -17,6 +17,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - `CODEX_MUX_DISPLAY_NAME` sets the Dock and menu bar name of the copied app
   without changing its paths, identifiers, or desktop profile.
 
+### Added
+
+- Optional unified thread catalog (flag `~/.codex-mux/unified-catalog.enabled`,
+  default off): every connected subscription's index lists the pool's threads,
+  so remote control from a phone signed into any account can see and resume any
+  session. Turns still run on, and bill, the connected account only. The
+  reconciler clones existing rows insert-only and never modifies another
+  account's data.
+
 ### Changed
 
 - Native usage surfaces (limit banner, sidebar alert, reset prompts) reflect
