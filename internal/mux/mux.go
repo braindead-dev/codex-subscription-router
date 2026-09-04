@@ -175,6 +175,8 @@ func (m *Multiplexer) HandleClient(message protocol.Message) {
 		go m.routeNewThread(message)
 	case "account/rateLimits/read":
 		go m.routeAggregatedRateLimits(message)
+	case "experimentalFeature/enablement/set":
+		go m.broadcastRequest(message)
 	default:
 		m.routeExistingRequest(message)
 	}
@@ -206,6 +208,39 @@ func (m *Multiplexer) initialize(message protocol.Message) {
 		return
 	}
 	m.write(protocol.Success(message.ID, firstResult))
+}
+
+// broadcastRequest applies an account-agnostic setting to every child and
+// answers with the controller's result. The desktop enables features such as
+// thread history migrations at runtime, and each app-server keeps its own
+// enablement, so a request delivered to one account would leave the others
+// behind.
+func (m *Multiplexer) broadcastRequest(message protocol.Message) {
+	controllerID := ""
+	if controller, ok := m.store.Controller(); ok {
+		controllerID = controller.ID
+	}
+	var result json.RawMessage
+	var firstErr error
+	for _, entry := range m.childEntries() {
+		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+		response, err := entry.child.Request(ctx, message.Method, message.Params)
+		cancel()
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if result == nil || entry.account.ID == controllerID {
+			result = response.Result
+		}
+	}
+	if result == nil {
+		m.write(protocol.Failure(message.ID, -32029, fmt.Sprintf("%s: %v", message.Method, firstErr)))
+		return
+	}
+	m.write(protocol.Success(message.ID, result))
 }
 
 func (m *Multiplexer) handleClientNotification(message protocol.Message) {
@@ -397,10 +432,18 @@ func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourc
 	if readResult.Thread.ID == "" || readResult.Thread.Path == "" {
 		return errors.New("existing chat has no resumable history path")
 	}
+	targetAccount, ok := m.store.Account(targetAccountID)
+	if !ok {
+		return fmt.Errorf("target subscription is unavailable")
+	}
+	path, err := linkRolloutIntoHome(readResult.Thread.Path, targetAccount.CodexHome)
+	if err != nil {
+		return fmt.Errorf("share chat history: %w", err)
+	}
 	resumeParams, _ := json.Marshal(map[string]any{
 		"threadId":      threadID,
 		"history":       nil,
-		"path":          readResult.Thread.Path,
+		"path":          path,
 		"cwd":           readResult.Thread.CWD,
 		"model":         nil,
 		"modelProvider": readResult.Thread.ModelProvider,

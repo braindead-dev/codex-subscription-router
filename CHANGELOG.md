@@ -40,6 +40,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ### Fixed
 
+- Codex 0.153 resumes a thread only from a rollout inside the account's own
+  sessions directory, so moving a chat to another subscription now hard-links
+  the rollout there instead of resuming it by its original path.
+- Features the desktop enables at runtime, such as the paginated thread
+  history migration, reach every subscription instead of the controller only;
+  without it other accounts answered `list_turns is not supported yet`.
 - Ad-hoc signed builds can use the in-app Browser and Computer Use: the
   desktop rejected the unsigned bundled `node_repl` on its native pipes with
   `missing-code-signing-identity`, so every subscription saw zero browsers.
