@@ -12,6 +12,7 @@ import re
 import secrets
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -1542,6 +1543,16 @@ def patch_desktop_profile(
     main_path.write_text(main, encoding="utf-8")
 
 
+def asar_header_digest(asar_path: Path) -> str:
+    """Hash the ASAR header the way Electron's integrity check does."""
+    with asar_path.open("rb") as handle:
+        _, _, _, header_length = struct.unpack("<IIII", handle.read(16))
+        header = handle.read(header_length)
+    if len(header) != header_length:
+        raise RuntimeError("could not read the repacked ASAR header")
+    return hashlib.sha256(header).hexdigest()
+
+
 def patch_info_plist(
     app: Path,
     asar_path: Path,
@@ -1569,9 +1580,11 @@ def patch_info_plist(
         url_type["CFBundleURLSchemes"] = [
             "codex-subscription-router" if value == "codex" else value for value in schemes
         ]
-    digest = hashlib.sha256(asar_path.read_bytes()).hexdigest()
     info["ElectronAsarIntegrity"] = {
-        "Resources/app.asar": {"algorithm": "SHA256", "hash": digest}
+        "Resources/app.asar": {
+            "algorithm": "SHA256",
+            "hash": asar_header_digest(asar_path),
+        }
     }
     with plist_path.open("wb") as handle:
         plistlib.dump(info, handle, fmt=plistlib.FMT_BINARY, sort_keys=False)
