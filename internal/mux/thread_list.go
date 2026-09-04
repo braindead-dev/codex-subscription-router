@@ -48,13 +48,26 @@ func (m *Multiplexer) aggregateThreadList(request protocol.Message) {
 		_ = m.store.SetThreadOwner(threadID, accountID)
 	}
 	m.rememberSectionHomes(sectionHomes)
-	sortThreads(threads)
+	if !listsBySectionPosition(request.Params) {
+		sortThreads(threads)
+	}
 	encoded, err := json.Marshal(map[string]any{"data": threads, "nextCursor": nil})
 	if err != nil {
 		m.write(protocol.Failure(request.ID, -32603, "failed to merge thread list"))
 		return
 	}
 	m.write(protocol.Success(request.ID, encoded))
+}
+
+// listsBySectionPosition reports a listing whose order is the answer: the
+// desktop reads a pinned section with sortKey section_position and shows the
+// threads in the order returned, so the controller's order comes first and
+// other accounts' pinned threads follow in theirs.
+func listsBySectionPosition(params json.RawMessage) bool {
+	var decoded struct {
+		SortKey string `json:"sortKey"`
+	}
+	return json.Unmarshal(params, &decoded) == nil && decoded.SortKey == "section_position"
 }
 
 type threadListing struct {

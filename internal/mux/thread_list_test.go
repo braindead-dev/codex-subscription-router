@@ -127,3 +127,12 @@ func TestMergeThreadListingsKeepsSectionFromFirstListing(t *testing.T) {
 		t.Fatalf("expected section homes from the first listing of each thread, got %#v", homes)
 	}
 }
+
+func TestListsBySectionPositionRecognizesSectionListings(t *testing.T) {
+	if !listsBySectionPosition([]byte(`{"sectionId":"sec","sortKey":"section_position"}`)) {
+		t.Fatal("expected a section_position listing to keep its order")
+	}
+	if listsBySectionPosition([]byte(`{"sortKey":"updated_at"}`)) || listsBySectionPosition(nil) {
+		t.Fatal("expected recency listings to be sorted by the multiplexer")
+	}
+}

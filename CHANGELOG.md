@@ -47,8 +47,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
   history migration, reach every subscription instead of the controller only;
   without it other accounts answered `list_turns is not supported yet`.
 - Pinned chats reorder again: section moves are applied in the account whose
-  copy the sidebar shows, and the merged listing keeps that copy's section
-  even when another subscription holds a fresher copy.
+  copy the sidebar shows, the merged listing keeps that copy's section even
+  when another subscription holds a fresher copy, and a section listing keeps
+  the order each account returns instead of being re-sorted by recency.
 - Ad-hoc signed builds can use the in-app Browser and Computer Use: the
   desktop rejected the unsigned bundled `node_repl` on its native pipes with
   `missing-code-signing-identity`, so every subscription saw zero browsers.
