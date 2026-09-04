@@ -15,7 +15,7 @@ func TestMergeThreadListingsKeepsFreshestCopy(t *testing.T) {
 			{"id": "moved", "updatedAt": 3.0, "source": "secondary"},
 		}},
 	}
-	threads, learned := mergeThreadListings(listings, func(id string) (string, bool) {
+	threads, learned, _ := mergeThreadListings(listings, func(id string) (string, bool) {
 		owner, ok := owners[id]
 		return owner, ok
 	}, neverOriginates)
@@ -40,7 +40,7 @@ func TestMergeThreadListingsAttributesUnknownThreadOnce(t *testing.T) {
 		{accountID: "secondary", threads: []map[string]any{{"id": "shared", "source": "secondary"}}},
 		{accountID: "primary", threads: []map[string]any{{"id": "shared", "source": "primary"}}},
 	}
-	threads, learned := mergeThreadListings(listings, func(string) (string, bool) { return "", false }, neverOriginates)
+	threads, learned, _ := mergeThreadListings(listings, func(string) (string, bool) { return "", false }, neverOriginates)
 	if len(threads) != 1 || threads[0]["source"] != "secondary" {
 		t.Fatalf("expected equally fresh copies to keep the first listing, got %#v", threads)
 	}
@@ -58,7 +58,7 @@ func TestMergeThreadListingsKeepsTitleFromOriginatingAccount(t *testing.T) {
 			{"id": "moved", "updatedAt": 3.0, "path": "/home/primary/sessions/moved.jsonl", "preview": "look into our search service", "name": "CH", "status": "active"},
 		}},
 	}
-	threads, _ := mergeThreadListings(
+	threads, _, _ := mergeThreadListings(
 		listings,
 		func(string) (string, bool) { return "primary", true },
 		func(accountID string, thread map[string]any) bool {
@@ -92,12 +92,38 @@ func TestMergeThreadListingsKeepsNameSetOnOriginatingCopy(t *testing.T) {
 			{"id": "moved", "updatedAt": 2.0, "path": "/home/primary/x.jsonl", "preview": "raw", "name": nil},
 		}},
 	}
-	threads, _ := mergeThreadListings(
+	threads, _, _ := mergeThreadListings(
 		listings,
 		func(string) (string, bool) { return "primary", true },
 		func(accountID string, _ map[string]any) bool { return accountID == "primary" },
 	)
 	if threads[0]["name"] != "Renamed" || threads[0]["preview"] != "generated" || threads[0]["updatedAt"] != 2.0 {
 		t.Fatalf("unexpected merge: %#v", threads[0])
+	}
+}
+
+func TestMergeThreadListingsKeepsSectionFromFirstListing(t *testing.T) {
+	pinned := map[string]any{"id": "sec", "name": "Pinned"}
+	listings := []threadListing{
+		{accountID: "primary", threads: []map[string]any{
+			{"id": "moved", "updatedAt": 1.0, "section": pinned, "sectionEnteredAt": 5.0},
+		}},
+		{accountID: "secondary", threads: []map[string]any{
+			{"id": "moved", "updatedAt": 3.0, "section": nil, "sectionEnteredAt": nil},
+			{"id": "own", "updatedAt": 3.0, "section": pinned, "sectionEnteredAt": 7.0},
+		}},
+	}
+	threads, _, homes := mergeThreadListings(
+		listings,
+		func(string) (string, bool) { return "secondary", true },
+		neverOriginates,
+	)
+	for _, thread := range threads {
+		if thread["id"] == "moved" && (thread["updatedAt"] != 3.0 || thread["sectionEnteredAt"] != 5.0) {
+			t.Fatalf("expected the freshest copy with the first listing's section, got %#v", thread)
+		}
+	}
+	if homes["moved"] != "primary" || homes["own"] != "secondary" {
+		t.Fatalf("expected section homes from the first listing of each thread, got %#v", homes)
 	}
 }

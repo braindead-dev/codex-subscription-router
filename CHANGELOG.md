@@ -46,6 +46,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Features the desktop enables at runtime, such as the paginated thread
   history migration, reach every subscription instead of the controller only;
   without it other accounts answered `list_turns is not supported yet`.
+- Pinned chats reorder again: section moves are applied in the account whose
+  copy the sidebar shows, and the merged listing keeps that copy's section
+  even when another subscription holds a fresher copy.
 - Ad-hoc signed builds can use the in-app Browser and Computer Use: the
   desktop rejected the unsigned bundled `node_repl` on its native pipes with
   `missing-code-signing-identity`, so every subscription saw zero browsers.

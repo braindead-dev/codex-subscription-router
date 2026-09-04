@@ -67,6 +67,8 @@ type Multiplexer struct {
 
 	externalMu     sync.Mutex
 	externalRoutes map[string]externalRoute
+	sectionMu      sync.RWMutex
+	sectionHomes   map[string]string
 	serverMu       sync.Mutex
 	serverRoutes   map[string]serverRequestRoute
 	serverSequence atomic.Uint64
@@ -296,6 +298,11 @@ func (m *Multiplexer) routeExistingRequest(message protocol.Message) {
 	threadID := threadIDFromParams(message.Params)
 	if threadID != "" {
 		accountID, _ = m.store.ThreadOwner(threadID)
+		if message.Method == "thread/section/move" {
+			if home, ok := m.sectionHome(threadID); ok {
+				accountID = home
+			}
+		}
 	}
 	if accountID == "" {
 		if controller, ok := m.store.Controller(); ok {
@@ -640,6 +647,19 @@ func (m *Multiplexer) childEntries() []childEntry {
 		}
 	}
 	return entries
+}
+
+func (m *Multiplexer) rememberSectionHomes(homes map[string]string) {
+	m.sectionMu.Lock()
+	defer m.sectionMu.Unlock()
+	m.sectionHomes = homes
+}
+
+func (m *Multiplexer) sectionHome(threadID string) (string, bool) {
+	m.sectionMu.RLock()
+	defer m.sectionMu.RUnlock()
+	home, ok := m.sectionHomes[threadID]
+	return home, ok
 }
 
 func (m *Multiplexer) child(accountID string) (*backend.Child, bool) {

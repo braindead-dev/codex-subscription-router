@@ -43,10 +43,11 @@ func (m *Multiplexer) aggregateThreadList(request protocol.Message) {
 		}
 		return listings[i].accountID < listings[j].accountID
 	})
-	threads, learned := mergeThreadListings(listings, m.store.ThreadOwner, m.threadOriginatesFrom)
+	threads, learned, sectionHomes := mergeThreadListings(listings, m.store.ThreadOwner, m.threadOriginatesFrom)
 	for threadID, accountID := range learned {
 		_ = m.store.SetThreadOwner(threadID, accountID)
 	}
+	m.rememberSectionHomes(sectionHomes)
 	sortThreads(threads)
 	encoded, err := json.Marshal(map[string]any{"data": threads, "nextCursor": nil})
 	if err != nil {
@@ -68,13 +69,18 @@ type threadListing struct {
 // account whose Codex home stores the thread, and a user-assigned name from
 // whichever copy received it. Existing assignments are never changed by a
 // listing; threads without an assignment are attributed to the first account
-// that lists them (the controller first).
+// that lists them (the controller first). Pins are section membership in one
+// account's index, so the section shown is the one held by the first account
+// that lists the thread, and that account is returned as the thread's section
+// home so section moves are applied where the sidebar reads them.
 func mergeThreadListings(
 	listings []threadListing,
 	owner func(threadID string) (string, bool),
 	originatesFrom func(accountID string, thread map[string]any) bool,
-) ([]map[string]any, map[string]string) {
+) ([]map[string]any, map[string]string, map[string]string) {
 	learned := make(map[string]string)
+	sectionHomes := make(map[string]string)
+	sectionCopies := make(map[string]map[string]any)
 	position := make(map[string]int)
 	copies := make(map[string][]map[string]any)
 	previews := make(map[string]any)
@@ -92,6 +98,10 @@ func mergeThreadListings(
 				}
 			}
 			copies[threadID] = append(copies[threadID], thread)
+			if _, ok := sectionHomes[threadID]; !ok {
+				sectionHomes[threadID] = listing.accountID
+				sectionCopies[threadID] = thread
+			}
 			if preview, ok := nonEmptyString(thread["preview"]); ok &&
 				originatesFrom(listing.accountID, thread) {
 				previews[threadID] = preview
@@ -118,6 +128,11 @@ func mergeThreadListings(
 		if preview, ok := previews[threadID]; ok {
 			merged["preview"] = preview
 		}
+		for _, key := range []string{"section", "sectionEnteredAt"} {
+			if value, ok := sectionCopies[threadID][key]; ok {
+				merged[key] = value
+			}
+		}
 		if _, ok := nonEmptyString(merged["name"]); !ok {
 			for _, copy := range copies[threadID] {
 				if name, ok := nonEmptyString(copy["name"]); ok {
@@ -128,7 +143,7 @@ func mergeThreadListings(
 		}
 		threads[index] = merged
 	}
-	return threads, learned
+	return threads, learned, sectionHomes
 }
 
 func nonEmptyString(value any) (string, bool) {
