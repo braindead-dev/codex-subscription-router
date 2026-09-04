@@ -34,6 +34,7 @@ type externalRoute struct {
 	method    string
 	message   protocol.Message
 	excluded  map[string]struct{}
+	section   *sectionMove
 }
 
 type serverRequestRoute struct {
@@ -69,6 +70,7 @@ type Multiplexer struct {
 	externalRoutes map[string]externalRoute
 	sectionMu      sync.RWMutex
 	sectionHomes   map[string]string
+	listedThreads  map[string]map[string]struct{}
 	serverMu       sync.Mutex
 	serverRoutes   map[string]serverRequestRoute
 	serverSequence atomic.Uint64
@@ -298,10 +300,20 @@ func (m *Multiplexer) routeExistingRequest(message protocol.Message) {
 	threadID := threadIDFromParams(message.Params)
 	if threadID != "" {
 		accountID, _ = m.store.ThreadOwner(threadID)
-		if message.Method == "thread/section/move" {
-			if home, ok := m.sectionHome(threadID); ok {
+	}
+	var move *sectionMove
+	if message.Method == "thread/section/move" {
+		if parsed, ok := parseSectionMove(message.Params); ok {
+			move = &parsed
+			if home, ok := m.sectionHome(parsed.ThreadID); ok {
 				accountID = home
 			}
+			message.Params = scopeBeforeThread(
+				message.Params,
+				parsed,
+				m.store.SectionOrder(parsed.SectionID),
+				func(id string) bool { return m.listedBy(id, accountID) },
+			)
 		}
 	}
 	if accountID == "" {
@@ -317,7 +329,7 @@ func (m *Multiplexer) routeExistingRequest(message protocol.Message) {
 		go m.routeTurnStart(message, threadID, accountID)
 		return
 	}
-	if err := m.forward(accountID, message); err != nil {
+	if err := m.forwardRoute(externalRoute{accountID: accountID, method: message.Method, message: message, section: move}); err != nil {
 		m.write(protocol.Failure(message.ID, -32023, err.Error()))
 	}
 }
@@ -327,18 +339,23 @@ func (m *Multiplexer) forward(accountID string, message protocol.Message) error 
 }
 
 func (m *Multiplexer) forwardWithExclusions(accountID string, message protocol.Message, excluded map[string]struct{}) error {
+	return m.forwardRoute(externalRoute{
+		accountID: accountID,
+		method:    message.Method,
+		message:   message,
+		excluded:  cloneAccountSet(excluded),
+	})
+}
+
+func (m *Multiplexer) forwardRoute(route externalRoute) error {
+	accountID, message := route.accountID, route.message
 	child, ok := m.child(accountID)
 	if !ok {
 		return fmt.Errorf("account %s is unavailable", accountID)
 	}
 	key := protocol.RequestIDKey(message.ID)
 	m.externalMu.Lock()
-	m.externalRoutes[key] = externalRoute{
-		accountID: accountID,
-		method:    message.Method,
-		message:   message,
-		excluded:  cloneAccountSet(excluded),
-	}
+	m.externalRoutes[key] = route
 	m.externalMu.Unlock()
 	if err := child.Send(message); err != nil {
 		m.externalMu.Lock()
@@ -506,6 +523,7 @@ func (m *Multiplexer) handleInbound(inbound backend.Inbound) {
 				return
 			}
 			m.learnThreadOwner(route, inbound.AccountID, message.Result)
+			m.learnSectionMove(route, message)
 			m.writeRaw(inbound.Raw)
 		}
 		return
@@ -616,6 +634,20 @@ func (m *Multiplexer) learnThreadOwner(route externalRoute, accountID string, re
 	}
 }
 
+// learnSectionMove records a pin or reorder the account accepted in the one
+// order the sidebar shows.
+func (m *Multiplexer) learnSectionMove(route externalRoute, message protocol.Message) {
+	if route.section == nil || message.Error != nil {
+		return
+	}
+	move := *route.section
+	if move.SectionID == "" {
+		_ = m.store.RemoveFromSections(move.ThreadID)
+		return
+	}
+	_ = m.store.MoveInSection(move.SectionID, move.ThreadID, move.BeforeThreadID)
+}
+
 func (m *Multiplexer) write(message protocol.Message) {
 	encoded, err := protocol.Encode(message)
 	if err != nil {
@@ -649,10 +681,18 @@ func (m *Multiplexer) childEntries() []childEntry {
 	return entries
 }
 
-func (m *Multiplexer) rememberSectionHomes(homes map[string]string) {
+func (m *Multiplexer) rememberListings(homes map[string]string, listed map[string]map[string]struct{}) {
 	m.sectionMu.Lock()
 	defer m.sectionMu.Unlock()
 	m.sectionHomes = homes
+	m.listedThreads = listed
+}
+
+func (m *Multiplexer) listedBy(threadID, accountID string) bool {
+	m.sectionMu.RLock()
+	defer m.sectionMu.RUnlock()
+	_, ok := m.listedThreads[threadID][accountID]
+	return ok
 }
 
 func (m *Multiplexer) sectionHome(threadID string) (string, bool) {

@@ -26,9 +26,10 @@ type Account struct {
 }
 
 type persistedState struct {
-	Version     int               `json:"version"`
-	Accounts    []Account         `json:"accounts"`
-	ThreadOwner map[string]string `json:"threadOwner"`
+	Version      int                 `json:"version"`
+	Accounts     []Account           `json:"accounts"`
+	ThreadOwner  map[string]string   `json:"threadOwner"`
+	SectionOrder map[string][]string `json:"sectionOrder,omitempty"`
 }
 
 // Store persists only routing metadata. OAuth credentials and conversation
@@ -40,6 +41,7 @@ type Store struct {
 	primaryCodexHome string
 	accounts         []Account
 	owners           map[string]string
+	sections         map[string][]string
 }
 
 func Open(root, primaryCodexHome string) (*Store, error) {
@@ -58,6 +60,7 @@ func Open(root, primaryCodexHome string) (*Store, error) {
 		path:             filepath.Join(root, "state.json"),
 		primaryCodexHome: primaryCodexHome,
 		owners:           make(map[string]string),
+		sections:         make(map[string][]string),
 	}
 	data, err := os.ReadFile(store.path)
 	switch {
@@ -72,6 +75,9 @@ func Open(root, primaryCodexHome string) (*Store, error) {
 		store.accounts = persisted.Accounts
 		if persisted.ThreadOwner != nil {
 			store.owners = persisted.ThreadOwner
+		}
+		if persisted.SectionOrder != nil {
+			store.sections = persisted.SectionOrder
 		}
 	case errors.Is(err, os.ErrNotExist):
 		store.accounts = []Account{{
@@ -237,6 +243,68 @@ func (s *Store) SetThreadOwner(threadID, accountID string) error {
 	return s.saveLocked()
 }
 
+// SectionOrder is the pinned order of a section across every subscription.
+// Each account's index orders only its own threads, so the multiplexer keeps
+// the one order the sidebar shows.
+func (s *Store) SectionOrder(sectionID string) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]string(nil), s.sections[sectionID]...)
+}
+
+// SetSectionOrder replaces a section's order with the threads a listing
+// actually contains.
+func (s *Store) SetSectionOrder(sectionID string, threadIDs []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if slices.Equal(s.sections[sectionID], threadIDs) {
+		return nil
+	}
+	s.sections[sectionID] = append([]string(nil), threadIDs...)
+	return s.saveLocked()
+}
+
+// MoveInSection places a thread before another thread of a section, or at
+// its end when beforeThreadID is empty, removing it from every other section.
+func (s *Store) MoveInSection(sectionID, threadID, beforeThreadID string) error {
+	if sectionID == "" || threadID == "" {
+		return errors.New("section and thread IDs are required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.removeFromSectionsLocked(threadID)
+	order := s.sections[sectionID]
+	index := len(order)
+	if beforeThreadID != "" {
+		if at := slices.Index(order, beforeThreadID); at >= 0 {
+			index = at
+		}
+	}
+	s.sections[sectionID] = slices.Insert(order, index, threadID)
+	return s.saveLocked()
+}
+
+// RemoveFromSections drops an unpinned thread from every section order.
+func (s *Store) RemoveFromSections(threadID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.removeFromSectionsLocked(threadID) {
+		return nil
+	}
+	return s.saveLocked()
+}
+
+func (s *Store) removeFromSectionsLocked(threadID string) bool {
+	removed := false
+	for sectionID, order := range s.sections {
+		if at := slices.Index(order, threadID); at >= 0 {
+			s.sections[sectionID] = slices.Delete(order, at, at+1)
+			removed = true
+		}
+	}
+	return removed
+}
+
 func (s *Store) ThreadCounts() map[string]int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -249,9 +317,10 @@ func (s *Store) ThreadCounts() map[string]int {
 
 func (s *Store) saveLocked() error {
 	persisted := persistedState{
-		Version:     stateVersion,
-		Accounts:    s.accounts,
-		ThreadOwner: s.owners,
+		Version:      stateVersion,
+		Accounts:     s.accounts,
+		ThreadOwner:  s.owners,
+		SectionOrder: s.sections,
 	}
 	data, err := json.MarshalIndent(persisted, "", "  ")
 	if err != nil {

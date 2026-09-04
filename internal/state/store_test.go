@@ -3,6 +3,7 @@ package state
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -170,5 +171,35 @@ func TestUpdateAccountPreservesController(t *testing.T) {
 	}
 	if account.Label != label || account.Enabled || !account.Controller {
 		t.Fatalf("unexpected updated account: %#v", account)
+	}
+}
+
+func TestSectionOrderFollowsMoves(t *testing.T) {
+	root := t.TempDir()
+	store, err := Open(root, filepath.Join(root, "primary"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SetSectionOrder("pinned", []string{"a", "b", "c"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.MoveInSection("pinned", "c", "a"); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.SectionOrder("pinned"); !slices.Equal(got, []string{"c", "a", "b"}) {
+		t.Fatalf("expected c before a, got %v", got)
+	}
+	if err := store.MoveInSection("pinned", "new", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RemoveFromSections("a"); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := Open(root, filepath.Join(root, "primary"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := reopened.SectionOrder("pinned"); !slices.Equal(got, []string{"c", "b", "new"}) {
+		t.Fatalf("expected the persisted order c, b, new, got %v", got)
 	}
 }

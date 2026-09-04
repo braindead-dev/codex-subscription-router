@@ -47,8 +47,13 @@ func (m *Multiplexer) aggregateThreadList(request protocol.Message) {
 	for threadID, accountID := range learned {
 		_ = m.store.SetThreadOwner(threadID, accountID)
 	}
-	m.rememberSectionHomes(sectionHomes)
-	if !listsBySectionPosition(request.Params) {
+	m.rememberListings(sectionHomes, listedThreads(listings))
+	switch sectionID := sectionListingID(request.Params); {
+	case sectionID != "" && listsBySectionPosition(request.Params):
+		var order []string
+		threads, order = orderSection(threads, m.store.SectionOrder(sectionID))
+		_ = m.store.SetSectionOrder(sectionID, order)
+	case !listsBySectionPosition(request.Params):
 		sortThreads(threads)
 	}
 	encoded, err := json.Marshal(map[string]any{"data": threads, "nextCursor": nil})
@@ -61,13 +66,30 @@ func (m *Multiplexer) aggregateThreadList(request protocol.Message) {
 
 // listsBySectionPosition reports a listing whose order is the answer: the
 // desktop reads a pinned section with sortKey section_position and shows the
-// threads in the order returned, so the controller's order comes first and
-// other accounts' pinned threads follow in theirs.
+// threads in the order returned, which the multiplexer keeps across accounts.
 func listsBySectionPosition(params json.RawMessage) bool {
 	var decoded struct {
 		SortKey string `json:"sortKey"`
 	}
 	return json.Unmarshal(params, &decoded) == nil && decoded.SortKey == "section_position"
+}
+
+// listedThreads records which accounts list each thread.
+func listedThreads(listings []threadListing) map[string]map[string]struct{} {
+	listed := make(map[string]map[string]struct{})
+	for _, listing := range listings {
+		for _, thread := range listing.threads {
+			id, ok := thread["id"].(string)
+			if !ok || id == "" {
+				continue
+			}
+			if listed[id] == nil {
+				listed[id] = make(map[string]struct{})
+			}
+			listed[id][listing.accountID] = struct{}{}
+		}
+	}
+	return listed
 }
 
 type threadListing struct {
