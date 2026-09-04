@@ -7,7 +7,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ### Added
 
-- Compatibility with official ChatGPT `26.810.52044` (build `6662`).
+- Compatibility with official ChatGPT `26.810.52044` (build `6662`) and
+  `26.901.22334` (build `7746`), whose renderer splits data access and UI
+  across bundles.
 - One-command installer with prerequisite checks, signed rebuilds, recoverable
   upgrades, and automatic launch.
 - Reset-aware routing that prioritizes weekly quota at risk of expiring and
@@ -16,9 +18,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
   `/v1/accounts/{id}/remote-control` control routes.
 - `CODEX_MUX_DISPLAY_NAME` sets the Dock and menu bar name of the copied app
   without changing its paths, identifiers, or desktop profile.
-
-### Added
-
 - Optional unified thread catalog (flag `~/.codex-mux/unified-catalog.enabled`,
   default off): every connected subscription's index lists the pool's threads,
   so remote control from a phone signed into any account can see and resume any
@@ -46,7 +45,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
   `missing-code-signing-identity`, so every subscription saw zero browsers.
 - Isolated subscriptions see the Primary home's `AGENTS.md`, `agents/`,
   `hooks.json`, and `skills/`.
-
 - Thread listings no longer flip a moved thread's owner back to the account
   whose history still contains it, so steers and follow-ups reach the account
   running the turn. Moved threads are listed once, with activity from the

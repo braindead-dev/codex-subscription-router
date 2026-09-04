@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -60,11 +61,16 @@ TESTED_SOURCE_BUILDS = {
         "26.810.52044",
         "6662",
     ): "6e7e8791b8bf69a586ff994721fff518af391d9efdc66cd2e620dd2a4aedc90f",
+    (
+        "26.901.22334",
+        "7746",
+    ): "405f0e1600fc63851abe4c763ec0546f56c32da312c2c2745e2b997c579ce0d0",
 }
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS = 49
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
     ("26.803.61601", "6396"): 49,
     ("26.810.52044", "6662"): 99,
+    ("26.901.22334", "7746"): 49,
 }
 DEFAULT_CUA_SERVICE_LAYOUT = (("Codex Computer Use.app", 17),)
 EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
@@ -73,11 +79,13 @@ EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
         ("Codex Computer Use.app", 17),
         ("bin/mac/normal/Codex Computer Use.app", 13),
     ),
+    ("26.901.22334", "7746"): DEFAULT_CUA_SERVICE_LAYOUT,
 }
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS = 17
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
     ("26.803.61601", "6396"): 17,
     ("26.810.52044", "6662"): 20,
+    ("26.901.22334", "7746"): 16,
 }
 
 
@@ -798,6 +806,442 @@ def replace_javascript_identifiers(source: str, replacements: dict[str, str]) ->
     return source
 
 
+@dataclass(frozen=True)
+class RendererBuild:
+    """Anchors and minified identifiers of one official renderer layout.
+
+    Every anchor must match exactly once so a build that moves any of them
+    fails closed instead of producing a partially patched renderer. Pairs are
+    (anchor, replacement).
+    """
+
+    marker: str
+    ui_bundle_glob: str
+    data_anchor: str
+    menu_identifiers: dict[str, str]
+    menu_anchor: str
+    usage_slot: tuple[str, str]
+    plugin_request: tuple[str, str]
+    plugin_request_checks: tuple[str, ...]
+    reset_query: tuple[str, str]
+    reset_mutation: tuple[str, str]
+    usage_modal: str
+    usage_header: tuple[str, str]
+    profile_avatar: tuple[str, str]
+    profile_name: tuple[str, str]
+    profile_identity: tuple[str, str]
+    plugin_bundle_glob: str
+    plugin_scope: tuple[str, str]
+    thread_identifiers: dict[str, str]
+    thread_anchor: str
+    thread_sections: tuple[str, str]
+
+
+RENDERER_BUILD_6396 = RendererBuild(
+    marker="function wXc({sidebarFooter:e,triggerButton:t})",
+    ui_bundle_glob="app-initial-*.js",
+    data_anchor="function wXc({sidebarFooter:e,triggerButton:t})",
+    menu_identifiers={},
+    menu_anchor="function wXc({sidebarFooter:e,triggerButton:t})",
+    usage_slot=("usageItems:Ge", "usageItems:(0,e7.jsx)(CodexMuxAccountMenu,{})"),
+    plugin_request=(
+        "function gm(e,t,n){return n==null?h6e.sendRequest(e,t):"
+        "h6e.sendRequest(e,t,n)}",
+        "function gm(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
+        "return n==null?h6e.sendRequest(e,r):h6e.sendRequest(e,r,n)}",
+    ),
+    plugin_request_checks=(
+        '"list-apps":q9((e,{priority:t,source:n,timeoutMs:r,'
+        "trace:i,...a})=>e.sendRequest(`app/list`,a,",
+        '"list-installed-apps":q9((e,t)=>e.sendRequest(`app/installed`,t))',
+        '"read-apps":q9((e,t)=>e.sendRequest(`app/read`,t))',
+        '"login-mcp-server":q9((e,t)=>e.sendRequest(`mcpServer/oauth/login`,t))',
+        '"list-mcp-server-status":K9((e,{priority:t,'
+        "source:n,timeoutMs:r,trace:i,...a})=>e.listMcpServers(a,",
+        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
+        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
+    ),
+    reset_query=(
+        "function l6r(){let e=(0,$F.c)(1),t;return "
+        "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
+        "(t={queryKey:[`rate-limit-reset-credits`],queryFn:u6r,"
+        "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS},e[0]=t):"
+        "t=e[0],Lt(t)}",
+        "function l6r(){let e=window.__codexMuxResetAccountId;return Lt({"
+        "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
+        "queryFn:e?()=>codexMuxRateLimitResets(e):u6r,"
+        "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function d6r(){let e=(0,$F.c)(3),t=lt(),n=zO(),r;return "
+        "e[0]!==n||e[1]!==t?(r={mutationFn:f6r,onSuccess:(e,r)=>{"
+        "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
+        "let n=e.code===`reset`?e.credit?.id??i:i;"
+        "t.setQueryData([`rate-limit-reset-credits`],e=>F3r(e,a,n))}"
+        "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
+        "e[0]=n,e[1]=t,e[2]=r):r=e[2],$t(r)}",
+        "function d6r(){let e=lt(),t=zO(),n=window.__codexMuxResetAccountId,"
+        "r=[`rate-limit-reset-credits`,n??`primary`];return $t({"
+        "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):f6r,"
+        "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
+        "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
+        "n.credit?.id??a:a;e.setQueryData(r,e=>F3r(e,o,t))}"
+        "Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    usage_modal="QLs",
+    usage_header=(
+        "let ve;t[46]===ge?ve=t[47]:"
+        "(ve=(0,k2.jsxs)(LL,{children:[ge,_e]}),t[46]=ge,t[47]=ve);",
+        "let ve=(0,k2.jsxs)(LL,{children:[ge,_e,"
+        "window.__codexMuxResetAccountSelector??null]});",
+    ),
+    profile_avatar=(
+        "children:[(0,$.jsxs)(`div`,{className:`relative mb-4 size-20`,"
+        "children:[",
+        "children:[globalThis.CodexMuxProfileAvatarStack?.("
+        "{onSelect:()=>A.refetch()})??null,"
+        "(0,$.jsxs)(`div`,{className:"
+        "globalThis.CodexMuxProfileAvatarStack?"
+        "`hidden`:`relative mb-4 size-20`,children:[",
+    ),
+    profile_name=(
+        "className:`flex w-full justify-center`",
+        "className:globalThis.__codexMuxSelectedProfileAccountId&&"
+        "!A.isFetching?`flex w-full justify-center`:`hidden`",
+    ),
+    profile_identity=(
+        "className:`mt-1 flex min-h-7 items-center gap-1.5 text-base leading-5 "
+        "font-normal text-token-text-tertiary`",
+        "className:globalThis.__codexMuxSelectedProfileAccountId&&"
+        "!A.isFetching?`mt-1 flex min-h-7 items-center gap-1.5 text-base "
+        "leading-5 font-normal text-token-text-tertiary`:`hidden`",
+    ),
+    plugin_bundle_glob="plugins-settings-*.js",
+    plugin_scope=(
+        "action:F,children:w})",
+        "action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
+    ),
+    thread_identifiers={},
+    thread_anchor="function bE(){let e=(0,wE.c)(57)",
+    thread_sections=(
+        "children:[c,l,u,d,f,p,m,h,g,_,v,y,b,x]",
+        "children:[c,l,u,d,f,(0,zE.jsx)(CodexMuxThreadSubscription,{}),"
+        "p,m,h,g,_,v,y,b,x]",
+    ),
+)
+
+RENDERER_BUILD_6662 = RendererBuild(
+    marker="function Icl(e){let t=(0,Vcl.c)(248),",
+    ui_bundle_glob="app-initial-*.js",
+    data_anchor="function Icl(e){let t=(0,Vcl.c)(248),",
+    menu_identifiers={
+        "e7": "$5",
+        "kXc": "Hcl",
+        "Lo": "Fo",
+        "BW": "RU",
+        "QLs": "E$s",
+        "_H": "GV",
+        "S2": "E0",
+        "CH": "ZV",
+        "jLa": "x$a",
+        "lt": "ct",
+    },
+    menu_anchor="function Icl(e){let t=(0,Vcl.c)(248),",
+    usage_slot=("usageItems:Ct", "usageItems:(0,$5.jsx)(CodexMuxAccountMenu,{})"),
+    plugin_request=(
+        "function Bp(e,t,n){return n==null?N8e.sendRequest(e,t):"
+        "N8e.sendRequest(e,t,n)}",
+        "function Bp(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
+        "return n==null?N8e.sendRequest(e,r):N8e.sendRequest(e,r,n)}",
+    ),
+    plugin_request_checks=(
+        '"list-apps":J9((e,{priority:t,source:n,timeoutMs:r,'
+        "trace:i,...a})=>e.sendRequest(`app/list`,a,",
+        '"list-installed-apps":J9((e,t)=>e.sendRequest(`app/installed`,t))',
+        '"read-apps":J9((e,t)=>e.sendRequest(`app/read`,t))',
+        '"login-mcp-server":J9((e,t)=>e.sendRequest(`mcpServer/oauth/login`,t))',
+        '"list-mcp-server-status":q9((e,{priority:t,'
+        "source:n,timeoutMs:r,trace:i,...a})=>e.listMcpServers(a,",
+        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
+        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
+    ),
+    reset_query=(
+        "function Ooi(){let e=(0,SI.c)(1),t;return "
+        "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
+        "(t={queryKey:[`rate-limit-reset-credits`],queryFn:koi,"
+        "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS},e[0]=t):"
+        "t=e[0],It(t)}",
+        "function Ooi(){let e=window.__codexMuxResetAccountId;return It({"
+        "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
+        "queryFn:e?()=>codexMuxRateLimitResets(e):koi,"
+        "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function Aoi(){let e=(0,SI.c)(3),t=ct(),n=Uw(),r;return "
+        "e[0]!==n||e[1]!==t?(r={mutationFn:joi,onSuccess:(e,r)=>{"
+        "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
+        "let n=e.code===`reset`?e.credit?.id??i:i;"
+        "t.setQueryData([`rate-limit-reset-credits`],e=>eoi(e,a,n))}"
+        "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
+        "e[0]=n,e[1]=t,e[2]=r):r=e[2],Qt(r)}",
+        "function Aoi(){let e=ct(),t=Uw(),n=window.__codexMuxResetAccountId,"
+        "r=[`rate-limit-reset-credits`,n??`primary`];return Qt({"
+        "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):joi,"
+        "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
+        "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
+        "n.credit?.id??a:a;e.setQueryData(r,e=>eoi(e,o,t))}"
+        "Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    usage_modal="E$s",
+    usage_header=(
+        "let _e;t[46]===he?_e=t[47]:"
+        "(_e=(0,I0.jsxs)(WL,{children:[he,ge]}),t[46]=he,t[47]=_e);",
+        "let _e=(0,I0.jsxs)(WL,{children:[he,ge,"
+        "window.__codexMuxResetAccountSelector??null]});",
+    ),
+    profile_avatar=(
+        "avatar:(0,$.jsxs)($.Fragment,{children:["
+        "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
+        "className:Le(`group relative flex size-20 rounded-full outline-none "
+        "focus-within:ring-1 focus-within:ring-ring`,",
+        "avatar:(0,$.jsxs)($.Fragment,{children:["
+        "globalThis.CodexMuxProfileAvatarStack?.("
+        "{onSelect:()=>M.refetch()})??null,"
+        "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
+        "className:Le(globalThis.CodexMuxProfileAvatarStack?`hidden`:"
+        "`group relative flex size-20 rounded-full outline-none "
+        "focus-within:ring-1 focus-within:ring-ring`,",
+    ),
+    profile_name=(
+        "displayName:Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
+        "defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
+        "displayName:globalThis.__codexMuxSelectedProfileAccountId?"
+        "(Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
+        "defaultMessage:`ChatGPT user`,"
+        "description:`Fallback profile display name`})):null",
+    ),
+    profile_identity=(
+        "username:Ke==null?null:(0,$.jsx)(o,{id:`profile.usernameValue`,"
+        "defaultMessage:`@{username}`,"
+        "description:`Profile username shown with an at-sign prefix`,"
+        "values:{username:Ke}})",
+        "username:globalThis.__codexMuxSelectedProfileAccountId&&Ke!=null?"
+        "(0,$.jsx)(o,{id:`profile.usernameValue`,"
+        "defaultMessage:`@{username}`,"
+        "description:`Profile username shown with an at-sign prefix`,"
+        "values:{username:Ke}}):null",
+    ),
+    plugin_bundle_glob="plugins-page-*.js",
+    plugin_scope=(
+        "ee=(0,tc.jsxs)(tc.Fragment,{children:[H,U]})",
+        "ee=(0,tc.jsxs)(tc.Fragment,{children:["
+        "globalThis.CodexMuxPluginScope?.()??null,H,U]})",
+    ),
+    thread_identifiers={
+        "$n": "jf",
+        "sr": "Pa",
+        "TE": "jy",
+        "zE": "CE",
+        "K": "q",
+    },
+    thread_anchor="function bE(){let e=(0,SE.c)(1)",
+    thread_sections=(
+        "children:[c,l,u,d,f,p,m,h,g,_,v,y,b,x]",
+        "children:[c,l,u,d,f,(0,CE.jsx)(CodexMuxThreadSubscription,{}),"
+        "p,m,h,g,_,v,y,b,x]",
+    ),
+)
+
+# Build 7746 splits the renderer: data access and RPC live in app-initial,
+# while the menu, usage, and alert surfaces render from app-primary.
+RENDERER_BUILD_7746 = RendererBuild(
+    marker=(
+        "function wb(e,t){let n=e.get(Tb);"
+        "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
+        "return n.forHost(t)}"
+    ),
+    ui_bundle_glob="app-primary-*.js",
+    data_anchor=(
+        "function wb(e,t){let n=e.get(Tb);"
+        "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
+        "return n.forHost(t)}"
+    ),
+    menu_identifiers={
+        "e7": "Pq",
+        "kXc": "lgn",
+        "Lo": "DO",
+        "Q": "_S",
+        "BW": "ru",
+        "QLs": "jG",
+        "_H": "fa",
+        "S2": "sK",
+        "CH": "Oo",
+        "jLa": "jB",
+        "lt": "Su",
+    },
+    menu_anchor="function $hn(e){let t=(0,tgn.c)(35),",
+    usage_slot=("usageItems:Tt", "usageItems:(0,Iq.jsx)(CodexMuxAccountMenu,{})"),
+    plugin_request=(
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
+        "`AppServerRequestClient is missing a message dispatcher`);"
+        "return e===`config/read`?",
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
+        "`AppServerRequestClient is missing a message dispatcher`);"
+        "t=codexMuxScopePluginRequest(e,t);return e===`config/read`?",
+    ),
+    plugin_request_checks=(
+        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
+        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
+    ),
+    reset_query=(
+        "function l2i(){let e=(0,RK.c)(1);HR(),lb(null);let t;return "
+        "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
+        "(t={queryKey:[`rate-limit-reset-credits`],queryFn:d2i,select:u2i,"
+        "refetchInterval:gD.ONE_MINUTE,staleTime:gD.FIVE_SECONDS},e[0]=t):"
+        "t=e[0],vb(t)}",
+        "function l2i(){HR(),lb(null);let e=window.__codexMuxResetAccountId;"
+        "return vb({queryKey:[`rate-limit-reset-credits`,e??`primary`],"
+        "queryFn:e?()=>codexMuxRateLimitResets(e):d2i,select:u2i,"
+        "refetchInterval:gD.ONE_MINUTE,staleTime:gD.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function f2i(){let e=(0,RK.c)(3),t=mb(),n=mD(),r;return "
+        "e[0]!==n||e[1]!==t?(r={mutationFn:p2i,onSuccess:(e,r)=>{"
+        "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
+        "let n=e.code===`reset`?e.credit?.id??i:i;"
+        "t.setQueryData([`rate-limit-reset-credits`],e=>Y1i(e,a,n))}"
+        "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
+        "e[0]=n,e[1]=t,e[2]=r):r=e[2],xb(r)}",
+        "function f2i(){let e=mb(),t=mD(),n=window.__codexMuxResetAccountId,"
+        "r=[`rate-limit-reset-credits`,n??`primary`];return xb({"
+        "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):p2i,"
+        "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
+        "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
+        "n.credit?.id??a:a;e.setQueryData(r,e=>Y1i(e,o,t))}"
+        "Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    usage_modal="jG",
+    usage_header=(
+        "let ge;t[46]===me?ge=t[47]:"
+        "(ge=(0,AG.jsxs)(Gv,{children:[me,he]}),t[46]=me,t[47]=ge);",
+        "let ge=(0,AG.jsxs)(Gv,{children:[me,he,"
+        "window.__codexMuxResetAccountSelector??null]});",
+    ),
+    profile_avatar=(
+        "avatar:(0,$.jsxs)($.Fragment,{children:["
+        "(0,$.jsxs)(`label`,{\"aria-disabled\":L.isPending,"
+        "className:re(`group relative flex size-20 rounded-full outline-none "
+        "focus-within:ring-1 focus-within:ring-ring`,",
+        "avatar:(0,$.jsxs)($.Fragment,{children:["
+        "globalThis.CodexMuxProfileAvatarStack?.("
+        "{onSelect:()=>j.refetch()})??null,"
+        "(0,$.jsxs)(`label`,{\"aria-disabled\":L.isPending,"
+        "className:re(globalThis.CodexMuxProfileAvatarStack?`hidden`:"
+        "`group relative flex size-20 rounded-full outline-none "
+        "focus-within:ring-1 focus-within:ring-ring`,",
+    ),
+    profile_name=(
+        "displayName:Re??(0,$.jsx)(J,{id:`profile.nameFallback`,"
+        "defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
+        "displayName:globalThis.__codexMuxSelectedProfileAccountId?"
+        "(Re??(0,$.jsx)(J,{id:`profile.nameFallback`,"
+        "defaultMessage:`ChatGPT user`,"
+        "description:`Fallback profile display name`})):null",
+    ),
+    profile_identity=(
+        "username:Ie==null?null:(0,$.jsx)(J,{id:`profile.usernameValue`,"
+        "defaultMessage:`@{username}`,"
+        "description:`Profile username shown with an at-sign prefix`,"
+        "values:{username:Ie}})",
+        "username:globalThis.__codexMuxSelectedProfileAccountId&&Ie!=null?"
+        "(0,$.jsx)(J,{id:`profile.usernameValue`,"
+        "defaultMessage:`@{username}`,"
+        "description:`Profile username shown with an at-sign prefix`,"
+        "values:{username:Ie}}):null",
+    ),
+    plugin_bundle_glob="plugins-page-*.js",
+    plugin_scope=(
+        "action:ee,children:oe})",
+        "action:ee,children:[globalThis.CodexMuxPluginScope?.()??null,oe]})",
+    ),
+    thread_identifiers={
+        "$n": "zd",
+        "sr": "Gi",
+        "TE": "nT",
+        "zE": "mT",
+        "K": "Q",
+    },
+    thread_anchor="function dT(){let e=(0,pT.c)(1),",
+    thread_sections=(
+        "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,w,T,E,D]",
+        "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,"
+        "(0,mT.jsx)(CodexMuxThreadSubscription,{}),w,T,E,D]",
+    ),
+)
+
+RENDERER_BUILDS = (RENDERER_BUILD_6396, RENDERER_BUILD_6662, RENDERER_BUILD_7746)
+
+USAGE_QUERY_PATTERN = re.compile(
+    r"queryKey:\[`rate-limit-status`\],(?P<select>select:e=>e,)?"
+    r"queryFn:async\(\)=>\{try\{(?P<lead>return |let e=)await "
+    r"(?P<call>[A-Za-z_$][\w$]*\.safeGet\(`/wham/usage`"
+    r"(?:,\{additionalHeaders:\{\"OAI-App-Brand\":[A-Za-z_$][\w$]*"
+    r"\.toLowerCase\(\)\}\})?\))"
+)
+PROFILE_QUERY_PATTERN = re.compile(
+    r"let e=await [A-Za-z_$][\w$]*\.safeGet\(`/wham/profiles/me`\)"
+)
+DEPLETED_ALERT_ANCHORS = (
+    "defaultMessage:`You’re out of Codex and Work usage`",
+    "defaultMessage:`You’ve used all Codex and Work usage`",
+    "defaultMessage:`You’ve reached your usage limit`",
+)
+
+
+class RendererBundle:
+    """One renderer file whose anchors are each replaced exactly once."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.text = path.read_text(encoding="utf-8")
+
+    def replace(self, anchor: str, replacement: str, description: str) -> None:
+        if self.text.count(anchor) != 1:
+            raise RuntimeError(f"could not find {description}")
+        self.text = self.text.replace(anchor, replacement, 1)
+
+    def substitute(
+        self, pattern: re.Pattern[str], replacement: str, description: str
+    ) -> None:
+        self.text, count = pattern.subn(replacement, self.text, count=1)
+        if count != 1:
+            raise RuntimeError(f"could not find {description}")
+
+    def inject(self, anchor: str, source: str, description: str) -> None:
+        self.replace(anchor, source + "\n" + anchor, description)
+
+    def save(self) -> None:
+        self.path.write_text(self.text, encoding="utf-8")
+
+
+def single_bundle(assets: Path, glob: str, anchor: str, description: str) -> Path:
+    matches = [
+        path
+        for path in assets.glob(glob)
+        if anchor in path.read_text(encoding="utf-8")
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(f"expected one {description}, found {len(matches)}")
+    return matches[0]
+
+
+def injected_source(name: str, token: str, identifiers: dict[str, str]) -> str:
+    source = (PROJECT_ROOT / "ui" / name).read_text(encoding="utf-8")
+    source = source.replace("__CODEX_MUX_CONTROL_PORT__", str(CONTROL_PORT))
+    source = source.replace("__CODEX_MUX_CONTROL_TOKEN__", token)
+    return replace_javascript_identifiers(source, identifiers)
+
+
 def patch_renderer(extracted: Path, token: str) -> None:
     webview = extracted / "webview"
     index_path = webview / "index.html"
@@ -813,478 +1257,125 @@ def patch_renderer(extracted: Path, token: str) -> None:
     )
     index_path.write_text(index, encoding="utf-8")
 
-    initial_bundles = list((webview / "assets").glob("app-initial-*.js"))
+    assets = webview / "assets"
+    initial_bundles = list(assets.glob("app-initial-*.js"))
     if len(initial_bundles) != 1:
         raise RuntimeError(
             f"expected one ChatGPT initial renderer bundle, found {len(initial_bundles)}"
         )
-    bundle_path = initial_bundles[0]
-    bundle = bundle_path.read_text(encoding="utf-8")
-    if "function CodexMuxAccountMenu(" in bundle:
-        raise RuntimeError("source app already contains the Codex multiplexer menu")
-
-    component = (PROJECT_ROOT / "ui" / "account-menu.js").read_text(encoding="utf-8")
-    component = component.replace("__CODEX_MUX_CONTROL_PORT__", str(CONTROL_PORT))
-    component = component.replace("__CODEX_MUX_CONTROL_TOKEN__", token)
-    build_6662 = "function Icl(e){let t=(0,Vcl.c)(248)," in bundle
-    if build_6662:
-        component = replace_javascript_identifiers(
-            component,
-            {
-                "e7": "$5",
-                "kXc": "Hcl",
-                "Lo": "Fo",
-                "BW": "RU",
-                "QLs": "E$s",
-                "_H": "GV",
-                "S2": "E0",
-                "CH": "ZV",
-                "jLa": "x$a",
-                "lt": "ct",
-            },
-        )
-        component_anchor = "function Icl(e){let t=(0,Vcl.c)(248),"
-    else:
-        component_anchor = "function wXc({sidebarFooter:e,triggerButton:t})"
-    if bundle.count(component_anchor) != 1:
-        raise RuntimeError("could not find the native ChatGPT profile menu component")
-    bundle = bundle.replace(component_anchor, component + "\n" + component_anchor, 1)
-
-    rpc_wrapper = "J9" if build_6662 else "q9"
-    status_rpc_wrapper = "q9" if build_6662 else "K9"
-    plugin_rpc_mapping_anchors = (
-        f'"list-apps":{rpc_wrapper}((e,{{priority:t,source:n,timeoutMs:r,'
-        "trace:i,...a})=>e.sendRequest(`app/list`,a,",
-        f'"list-installed-apps":{rpc_wrapper}((e,t)=>'
-        "e.sendRequest(`app/installed`,t))",
-        f'"read-apps":{rpc_wrapper}((e,t)=>e.sendRequest(`app/read`,t))',
-        f'"login-mcp-server":{rpc_wrapper}((e,t)=>'
-        "e.sendRequest(`mcpServer/oauth/login`,t))",
-        f'"list-mcp-server-status":{status_rpc_wrapper}((e,{{priority:t,'
-        "source:n,timeoutMs:r,trace:i,...a})=>e.listMcpServers(a,",
-        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
-        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
+    data = RendererBundle(initial_bundles[0])
+    if "function codexMuxRequest(" in data.text:
+        raise RuntimeError("source app already contains the Codex multiplexer")
+    build = next(
+        (candidate for candidate in RENDERER_BUILDS if candidate.marker in data.text),
+        None,
     )
-    for mapping_anchor in plugin_rpc_mapping_anchors:
-        if bundle.count(mapping_anchor) != 1:
+    if build is None:
+        raise RuntimeError("the ChatGPT renderer layout is not supported")
+    ui = (
+        data
+        if build.ui_bundle_glob == "app-initial-*.js"
+        else RendererBundle(
+            single_bundle(
+                assets, build.ui_bundle_glob, build.menu_anchor, "ChatGPT UI bundle"
+            )
+        )
+    )
+
+    data.inject(
+        build.data_anchor,
+        injected_source("account-data.js", token, {}),
+        "the native app-server RPC accessor",
+    )
+    for check in build.plugin_request_checks:
+        if data.text.count(check) != 1:
             raise RuntimeError(
                 "could not verify the native Plugins request-to-RPC mapping"
             )
-
-    if build_6662:
-        app_server_request_anchor = (
-            "function Bp(e,t,n){return n==null?N8e.sendRequest(e,t):"
-            "N8e.sendRequest(e,t,n)}"
-        )
-        app_server_request_replacement = (
-            "function Bp(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
-            "return n==null?N8e.sendRequest(e,r):N8e.sendRequest(e,r,n)}"
-        )
-    else:
-        app_server_request_anchor = (
-            "function gm(e,t,n){return n==null?h6e.sendRequest(e,t):"
-            "h6e.sendRequest(e,t,n)}"
-        )
-        app_server_request_replacement = (
-            "function gm(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
-            "return n==null?h6e.sendRequest(e,r):h6e.sendRequest(e,r,n)}"
-        )
-    if bundle.count(app_server_request_anchor) != 1:
-        raise RuntimeError("could not find the native app-server request bridge")
-    bundle = bundle.replace(
-        app_server_request_anchor,
-        app_server_request_replacement,
-        1,
+    data.replace(*build.plugin_request, "the native app-server request bridge")
+    data.substitute(
+        USAGE_QUERY_PATTERN,
+        r"queryKey:[`rate-limit-status`],\g<select>queryFn:async()=>{try{"
+        r"\g<lead>await codexMuxFilterUsageStatus(await \g<call>)",
+        "the native rate-limit status query",
     )
-
-    usage_query_pattern = re.compile(
-        r"queryKey:\[`rate-limit-status`\],queryFn:async\(\)=>\{try\{return await "
-        r"(?P<client>[A-Za-z_$][A-Za-z0-9_$]*)\.safeGet\(`/wham/usage`\)\}"
-    )
-    usage_query_matches = list(usage_query_pattern.finditer(bundle))
-    if len(usage_query_matches) != 1:
-        raise RuntimeError("could not find the native rate-limit status query")
-    usage_query = usage_query_matches[0]
-    bundle = (
-        bundle[: usage_query.start()]
-        + "queryKey:[`rate-limit-status`],queryFn:async()=>{try{return await "
-        "codexMuxFilterUsageStatus(await "
-        f"{usage_query.group('client')}.safeGet(`/wham/usage`))}}"
-        + bundle[usage_query.end() :]
-    )
-
-    profile_query_anchor = (
-        "let e=await c_.safeGet(`/wham/profiles/me`)"
-        if build_6662
-        else "let e=await T_.safeGet(`/wham/profiles/me`)"
-    )
-    if bundle.count(profile_query_anchor) != 1:
-        raise RuntimeError("could not find the native profile stats request")
-    bundle = bundle.replace(
-        profile_query_anchor,
+    data.substitute(
+        PROFILE_QUERY_PATTERN,
         "let e=await codexMuxProfileData("
         "globalThis.__codexMuxSelectedProfileAccountId??null)",
-        1,
+        "the native profile stats request",
     )
+    data.replace(*build.reset_query, "the native reset-credit query")
+    data.replace(*build.reset_mutation, "the native reset-credit mutation")
 
-    native_usage_modal_name = "E$s" if build_6662 else "QLs"
-    native_usage_modal_anchor = f"function {native_usage_modal_name}(e){{"
-    if bundle.count(native_usage_modal_anchor) != 1:
-        raise RuntimeError("could not find the native Usage modal component")
-    bundle = bundle.replace(
-        native_usage_modal_anchor,
-        f"function {native_usage_modal_name}(e){{CodexMuxUseResetAccountState();",
-        1,
+    ui.inject(
+        build.menu_anchor,
+        injected_source("account-menu.js", token, build.menu_identifiers),
+        "the native ChatGPT profile menu component",
     )
-
-    if build_6662:
-        reset_query_anchor = (
-            "function Ooi(){let e=(0,SI.c)(1),t;return "
-            "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
-            "(t={queryKey:[`rate-limit-reset-credits`],queryFn:koi,"
-            "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS},e[0]=t):"
-            "t=e[0],It(t)}"
-        )
-        reset_query_replacement = (
-            "function Ooi(){let e=window.__codexMuxResetAccountId;return It({"
-            "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
-            "queryFn:e?()=>codexMuxRateLimitResets(e):koi,"
-            "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS})}"
-        )
-    else:
-        reset_query_anchor = (
-            "function l6r(){let e=(0,$F.c)(1),t;return "
-            "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
-            "(t={queryKey:[`rate-limit-reset-credits`],queryFn:u6r,"
-            "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS},e[0]=t):"
-            "t=e[0],Lt(t)}"
-        )
-        reset_query_replacement = (
-            "function l6r(){let e=window.__codexMuxResetAccountId;return Lt({"
-            "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
-            "queryFn:e?()=>codexMuxRateLimitResets(e):u6r,"
-            "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS})}"
-        )
-    if bundle.count(reset_query_anchor) != 1:
-        raise RuntimeError("could not find the native reset-credit query")
-    bundle = bundle.replace(
-        reset_query_anchor,
-        reset_query_replacement,
-        1,
+    ui.replace(*build.usage_slot, "the native ChatGPT usage menu slot")
+    ui.replace(
+        f"function {build.usage_modal}(e){{",
+        f"function {build.usage_modal}(e){{CodexMuxUseResetAccountState();",
+        "the native Usage modal component",
     )
-
-    if build_6662:
-        reset_mutation_anchor = (
-            "function Aoi(){let e=(0,SI.c)(3),t=ct(),n=Uw(),r;return "
-            "e[0]!==n||e[1]!==t?(r={mutationFn:joi,onSuccess:(e,r)=>{"
-            "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
-            "let n=e.code===`reset`?e.credit?.id??i:i;"
-            "t.setQueryData([`rate-limit-reset-credits`],e=>eoi(e,a,n))}"
-            "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
-            "e[0]=n,e[1]=t,e[2]=r):r=e[2],Qt(r)}"
-        )
-        reset_mutation_replacement = (
-            "function Aoi(){let e=ct(),t=Uw(),n=window.__codexMuxResetAccountId,"
-            "r=[`rate-limit-reset-credits`,n??`primary`];return Qt({"
-            "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):joi,"
-            "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
-            "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
-            "n.credit?.id??a:a;e.setQueryData(r,e=>eoi(e,o,t))}"
-            "Promise.all([t([`rate-limit-status`]),t(r)])}})}"
-        )
-    else:
-        reset_mutation_anchor = (
-            "function d6r(){let e=(0,$F.c)(3),t=lt(),n=zO(),r;return "
-            "e[0]!==n||e[1]!==t?(r={mutationFn:f6r,onSuccess:(e,r)=>{"
-            "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
-            "let n=e.code===`reset`?e.credit?.id??i:i;"
-            "t.setQueryData([`rate-limit-reset-credits`],e=>F3r(e,a,n))}"
-            "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
-            "e[0]=n,e[1]=t,e[2]=r):r=e[2],$t(r)}"
-        )
-        reset_mutation_replacement = (
-            "function d6r(){let e=lt(),t=zO(),n=window.__codexMuxResetAccountId,"
-            "r=[`rate-limit-reset-credits`,n??`primary`];return $t({"
-            "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):f6r,"
-            "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
-            "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
-            "n.credit?.id??a:a;e.setQueryData(r,e=>F3r(e,o,t))}"
-            "Promise.all([t([`rate-limit-status`]),t(r)])}})}"
-        )
-    if bundle.count(reset_mutation_anchor) != 1:
-        raise RuntimeError("could not find the native reset-credit mutation")
-    bundle = bundle.replace(
-        reset_mutation_anchor,
-        reset_mutation_replacement,
-        1,
-    )
-
-    selected_usage_anchor = "let y=v;if(g!=null){"
-    if bundle.count(selected_usage_anchor) != 1:
-        raise RuntimeError("could not find the native usage-window selection")
-    bundle = bundle.replace(
-        selected_usage_anchor,
+    ui.replace(
+        "let y=v;if(g!=null){",
         "let y=window.__codexMuxSelectedUsageWindows??v;if(g!=null){",
-        1,
+        "the native usage-window selection",
     )
-
-    if build_6662:
-        usage_header_anchor = (
-            "let _e;t[46]===he?_e=t[47]:"
-            "(_e=(0,I0.jsxs)(WL,{children:[he,ge]}),t[46]=he,t[47]=_e);"
-        )
-        usage_header_replacement = (
-            "let _e=(0,I0.jsxs)(WL,{children:[he,ge,"
-            "window.__codexMuxResetAccountSelector??null]});"
-        )
-    else:
-        usage_header_anchor = (
-            "let ve;t[46]===ge?ve=t[47]:"
-            "(ve=(0,k2.jsxs)(LL,{children:[ge,_e]}),t[46]=ge,t[47]=ve);"
-        )
-        usage_header_replacement = (
-            "let ve=(0,k2.jsxs)(LL,{children:[ge,_e,"
-            "window.__codexMuxResetAccountSelector??null]});"
-        )
-    if bundle.count(usage_header_anchor) != 1:
-        raise RuntimeError("could not find the native Usage sheet header")
-    bundle = bundle.replace(
-        usage_header_anchor,
-        usage_header_replacement,
-        1,
-    )
-
-    usage_anchor = "usageItems:Ct" if build_6662 else "usageItems:Ge"
-    if bundle.count(usage_anchor) != 1:
-        raise RuntimeError("could not find the native ChatGPT usage menu slot")
-    bundle = bundle.replace(
-        usage_anchor,
-        (
-            "usageItems:(0,$5.jsx)(CodexMuxAccountMenu,{})"
-            if build_6662
-            else "usageItems:(0,e7.jsx)(CodexMuxAccountMenu,{})"
-        ),
-        1,
-    )
-
-    if build_6662:
-        open_change_anchors = (
-            "triggerButton:Dt,onOpenChange:l,children:P",
-            "open:s,onOpenChange:l,contentWidth:`panel`,triggerButton:Dt",
-        )
-        open_change_name = "l"
-    else:
-        open_change_anchors = (
-            "triggerButton:Ke,onOpenChange:o,children:(0,e7.jsx)(bXc",
-            "return(0,e7.jsx)(vH,{open:a,onOpenChange:o,contentWidth:`panel`",
-        )
-        open_change_name = "o"
-    for anchor in open_change_anchors:
-        if bundle.count(anchor) != 1:
-            raise RuntimeError("could not find a native profile menu open-state hook")
-        bundle = bundle.replace(
-            anchor,
-            anchor.replace(
-                f"onOpenChange:{open_change_name}",
-                "onOpenChange:CodexMuxProfileMenuOpenChange("
-                f"{open_change_name})",
-            ),
-            1,
-        )
-
-    depleted_alert_anchors = (
-        "defaultMessage:`You’re out of Codex and Work usage`",
-        "defaultMessage:`You’ve used all Codex and Work usage`",
-        "defaultMessage:`You’ve reached your usage limit`",
-    )
-    for depleted_anchor in depleted_alert_anchors:
-        if bundle.count(depleted_anchor) != 1:
-            raise RuntimeError("could not find a native subscription depletion alert")
-        bundle = bundle.replace(
+    ui.replace(*build.usage_header, "the native Usage sheet header")
+    for depleted_anchor in DEPLETED_ALERT_ANCHORS:
+        ui.replace(
             depleted_anchor,
             "defaultMessage:`All connected subscriptions are depleted`",
-            1,
+            "a native subscription depletion alert",
         )
-    bundle_path.write_text(bundle, encoding="utf-8")
+    data.save()
+    if ui is not data:
+        ui.save()
 
-    profile_bundles = list((webview / "assets").glob("profile-*.js"))
-    if len(profile_bundles) != 1:
-        raise RuntimeError(
-            f"expected one native Profile settings bundle, found {len(profile_bundles)}"
+    profile = RendererBundle(
+        single_bundle(
+            assets,
+            "profile-*.js",
+            build.profile_avatar[0],
+            "native Profile settings bundle",
         )
-    profile_bundle_path = profile_bundles[0]
-    profile_bundle = profile_bundle_path.read_text(encoding="utf-8")
-    if build_6662:
-        profile_avatar_anchor = (
-            "avatar:(0,$.jsxs)($.Fragment,{children:["
-            "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
-            "className:Le(`group relative flex size-20 rounded-full outline-none "
-            "focus-within:ring-1 focus-within:ring-ring`,"
-        )
-        profile_avatar_replacement = (
-            "avatar:(0,$.jsxs)($.Fragment,{children:["
-            "globalThis.CodexMuxProfileAvatarStack?.("
-            "{onSelect:()=>M.refetch()})??null,"
-            "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
-            "className:Le(globalThis.CodexMuxProfileAvatarStack?`hidden`:"
-            "`group relative flex size-20 rounded-full outline-none "
-            "focus-within:ring-1 focus-within:ring-ring`,"
-        )
-    else:
-        profile_avatar_anchor = (
-            "children:[(0,$.jsxs)(`div`,{className:`relative mb-4 size-20`,"
-            "children:["
-        )
-        profile_avatar_replacement = (
-            "children:[globalThis.CodexMuxProfileAvatarStack?.("
-            "{onSelect:()=>A.refetch()})??null,"
-            "(0,$.jsxs)(`div`,{className:"
-            "globalThis.CodexMuxProfileAvatarStack?"
-            "`hidden`:`relative mb-4 size-20`,children:["
-        )
-    if profile_bundle.count(profile_avatar_anchor) != 1:
-        raise RuntimeError("could not find the native Profile avatar")
-    profile_bundle = profile_bundle.replace(
-        profile_avatar_anchor,
-        profile_avatar_replacement,
-        1,
     )
+    profile.replace(*build.profile_avatar, "the native Profile avatar")
+    profile.replace(*build.profile_name, "the native Profile display name")
+    profile.replace(
+        *build.profile_identity, "the native Profile username and plan badge"
+    )
+    profile.save()
 
-    profile_name_anchor = (
-        "displayName:Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
-        "defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})"
-        if build_6662
-        else "className:`flex w-full justify-center`"
+    plugins = RendererBundle(
+        single_bundle(
+            assets,
+            build.plugin_bundle_glob,
+            build.plugin_scope[0],
+            "native Plugins settings bundle",
+        )
     )
-    if profile_bundle.count(profile_name_anchor) != 1:
-        raise RuntimeError("could not find the native Profile display name")
-    profile_bundle = profile_bundle.replace(
-        profile_name_anchor,
-        (
-            "displayName:globalThis.__codexMuxSelectedProfileAccountId?"
-            "(Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
-            "defaultMessage:`ChatGPT user`,"
-            "description:`Fallback profile display name`})):null"
-            if build_6662
-            else "className:globalThis.__codexMuxSelectedProfileAccountId&&"
-            "!A.isFetching?`flex w-full justify-center`:`hidden`"
-        ),
-        1,
-    )
-    profile_identity_anchor = (
-        "username:Ke==null?null:(0,$.jsx)(o,{id:`profile.usernameValue`,"
-        "defaultMessage:`@{username}`,"
-        "description:`Profile username shown with an at-sign prefix`,"
-        "values:{username:Ke}})"
-        if build_6662
-        else "className:`mt-1 flex min-h-7 items-center gap-1.5 text-base leading-5 "
-        "font-normal text-token-text-tertiary`"
-    )
-    if profile_bundle.count(profile_identity_anchor) != 1:
-        raise RuntimeError("could not find the native Profile username and plan badge")
-    profile_bundle = profile_bundle.replace(
-        profile_identity_anchor,
-        (
-            "username:globalThis.__codexMuxSelectedProfileAccountId&&Ke!=null?"
-            "(0,$.jsx)(o,{id:`profile.usernameValue`,"
-            "defaultMessage:`@{username}`,"
-            "description:`Profile username shown with an at-sign prefix`,"
-            "values:{username:Ke}}):null"
-            if build_6662
-            else "className:globalThis.__codexMuxSelectedProfileAccountId&&"
-            "!A.isFetching?`mt-1 flex min-h-7 items-center gap-1.5 text-base "
-            "leading-5 font-normal text-token-text-tertiary`:`hidden`"
-        ),
-        1,
-    )
-    profile_bundle_path.write_text(profile_bundle, encoding="utf-8")
+    plugins.replace(*build.plugin_scope, "the native Plugins settings content")
+    plugins.save()
 
-    plugin_scope_anchor = (
-        "ee=(0,tc.jsxs)(tc.Fragment,{children:[H,U]})"
-        if build_6662
-        else "action:F,children:w})"
-    )
-    plugin_scope_replacement = (
-        "ee=(0,tc.jsxs)(tc.Fragment,{children:[globalThis.CodexMuxPluginScope?.()??null,H,U]})"
-        if build_6662
-        else "action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})"
-    )
-    plugin_bundle_glob = "plugins-page-*.js" if build_6662 else "plugins-settings-*.js"
-    plugin_bundles = [
-        path
-        for path in (webview / "assets").glob(plugin_bundle_glob)
-        if plugin_scope_anchor in path.read_text(encoding="utf-8")
-    ]
-    if len(plugin_bundles) != 1:
-        raise RuntimeError(
-            f"expected one native Plugins settings bundle, found {len(plugin_bundles)}"
+    thread = RendererBundle(
+        single_bundle(
+            assets,
+            "local-conversation-thread-*.js",
+            build.thread_anchor,
+            "local conversation renderer bundle",
         )
-    plugin_bundle_path = plugin_bundles[0]
-    plugin_bundle = plugin_bundle_path.read_text(encoding="utf-8")
-    if plugin_bundle.count(plugin_scope_anchor) != 1:
-        raise RuntimeError("could not find the native Plugins settings content")
-    plugin_bundle = plugin_bundle.replace(
-        plugin_scope_anchor,
-        plugin_scope_replacement,
-        1,
     )
-    plugin_bundle_path.write_text(plugin_bundle, encoding="utf-8")
-
-    thread_component_anchor = (
-        "function bE(){let e=(0,SE.c)(1)"
-        if build_6662
-        else "function bE(){let e=(0,wE.c)(57)"
+    thread.inject(
+        build.thread_anchor,
+        injected_source("thread-subscription.js", token, build.thread_identifiers),
+        "the native thread summary sources component",
     )
-    thread_bundles = [
-        path
-        for path in (webview / "assets").glob("local-conversation-thread-*.js")
-        if thread_component_anchor in path.read_text(encoding="utf-8")
-    ]
-    if len(thread_bundles) != 1:
-        raise RuntimeError(
-            f"expected one local conversation renderer bundle, found {len(thread_bundles)}"
-        )
-    thread_bundle_path = thread_bundles[0]
-    thread_bundle = thread_bundle_path.read_text(encoding="utf-8")
-    thread_component = (PROJECT_ROOT / "ui" / "thread-subscription.js").read_text(
-        encoding="utf-8"
-    )
-    thread_component = thread_component.replace(
-        "__CODEX_MUX_CONTROL_PORT__", str(CONTROL_PORT)
-    )
-    thread_component = thread_component.replace("__CODEX_MUX_CONTROL_TOKEN__", token)
-    if build_6662:
-        thread_component = replace_javascript_identifiers(
-            thread_component,
-            {
-                "$n": "jf",
-                "sr": "Pa",
-                "TE": "jy",
-                "zE": "CE",
-                "K": "q",
-            },
-        )
-        summary_component = "CE"
-    else:
-        summary_component = "zE"
-    if thread_bundle.count(thread_component_anchor) != 1:
-        raise RuntimeError("could not find the native thread summary sources component")
-    thread_bundle = thread_bundle.replace(
-        thread_component_anchor,
-        thread_component + "\n" + thread_component_anchor,
-        1,
-    )
-    summary_children_anchor = "children:[c,l,u,d,f,p,m,h,g,_,v,y,b,x]"
-    if thread_bundle.count(summary_children_anchor) != 1:
-        raise RuntimeError("could not find the native thread summary section list")
-    thread_bundle = thread_bundle.replace(
-        summary_children_anchor,
-        "children:[c,l,u,d,f,(0,"
-        f"{summary_component}.jsx)(CodexMuxThreadSubscription,{{}}),"
-        "p,m,h,g,_,v,y,b,x]",
-        1,
-    )
-    thread_bundle_path.write_text(thread_bundle, encoding="utf-8")
+    thread.replace(*build.thread_sections, "the native thread summary section list")
+    thread.save()
 
 
 def disable_updater_lifecycle(extracted: Path) -> None:
@@ -1391,7 +1482,7 @@ def patch_desktop_profile(
     # The copied app must never replace itself with an unpatched official update.
     updater_pattern = re.compile(
         r"await [A-Za-z_$][\w$]*\.initialize\(\);"
-        r"(?=try\{let\{runMainAppStartup:)"
+        r"(?=(?:try\{)?let\{runMainAppStartup:)"
     )
     bootstrap, updater_replacements = updater_pattern.subn("", bootstrap, count=1)
     if updater_replacements != 1:
