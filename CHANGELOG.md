@@ -48,9 +48,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
   without it other accounts answered `list_turns is not supported yet`.
 - Pinned chats reorder again, across subscriptions: the multiplexer keeps
   the one pinned order the sidebar shows, applies each move in the account
-  whose copy is listed with an anchor that account knows, and the merged
-  listing keeps that copy's section even when another subscription holds a
-  fresher copy.
+  whose copy is listed with an anchor that account knows, the merged listing
+  keeps that copy's section even when another subscription holds a fresher
+  copy, and a thread read reports that same pin so the desktop lets the drag
+  start.
 - Ad-hoc signed builds can use the in-app Browser and Computer Use: the
   desktop rejected the unsigned bundled `node_repl` on its native pipes with
   `missing-code-signing-identity`, so every subscription saw zero browsers.

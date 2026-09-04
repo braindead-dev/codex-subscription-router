@@ -69,8 +69,7 @@ type Multiplexer struct {
 	externalMu     sync.Mutex
 	externalRoutes map[string]externalRoute
 	sectionMu      sync.RWMutex
-	sectionHomes   map[string]string
-	listedThreads  map[string]map[string]struct{}
+	sections       sectionView
 	serverMu       sync.Mutex
 	serverRoutes   map[string]serverRequestRoute
 	serverSequence atomic.Uint64
@@ -524,6 +523,10 @@ func (m *Multiplexer) handleInbound(inbound backend.Inbound) {
 			}
 			m.learnThreadOwner(route, inbound.AccountID, message.Result)
 			m.learnSectionMove(route, message)
+			if patched, ok := m.applySectionView(route, inbound.AccountID, message); ok {
+				m.write(patched)
+				return
+			}
 			m.writeRaw(inbound.Raw)
 		}
 		return
@@ -681,25 +684,36 @@ func (m *Multiplexer) childEntries() []childEntry {
 	return entries
 }
 
-func (m *Multiplexer) rememberListings(homes map[string]string, listed map[string]map[string]struct{}) {
+func (m *Multiplexer) rememberListings(view sectionView) {
 	m.sectionMu.Lock()
 	defer m.sectionMu.Unlock()
-	m.sectionHomes = homes
-	m.listedThreads = listed
+	m.sections = view
 }
 
 func (m *Multiplexer) listedBy(threadID, accountID string) bool {
 	m.sectionMu.RLock()
 	defer m.sectionMu.RUnlock()
-	_, ok := m.listedThreads[threadID][accountID]
+	_, ok := m.sections.listed[threadID][accountID]
 	return ok
 }
 
 func (m *Multiplexer) sectionHome(threadID string) (string, bool) {
 	m.sectionMu.RLock()
 	defer m.sectionMu.RUnlock()
-	home, ok := m.sectionHomes[threadID]
+	home, ok := m.sections.homes[threadID]
 	return home, ok
+}
+
+// sectionFields returns the section of the copy the sidebar shows when it is
+// held by an account other than the one answering.
+func (m *Multiplexer) sectionFields(threadID, answeringAccountID string) (map[string]any, bool) {
+	m.sectionMu.RLock()
+	defer m.sectionMu.RUnlock()
+	home, ok := m.sections.homes[threadID]
+	if !ok || home == answeringAccountID {
+		return nil, false
+	}
+	return m.sections.copies[threadID], true
 }
 
 func (m *Multiplexer) child(accountID string) (*backend.Child, bool) {

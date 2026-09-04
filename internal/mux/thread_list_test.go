@@ -113,7 +113,7 @@ func TestMergeThreadListingsKeepsSectionFromFirstListing(t *testing.T) {
 			{"id": "own", "updatedAt": 3.0, "section": pinned, "sectionEnteredAt": 7.0},
 		}},
 	}
-	threads, _, homes := mergeThreadListings(
+	threads, _, view := mergeThreadListings(
 		listings,
 		func(string) (string, bool) { return "secondary", true },
 		neverOriginates,
@@ -123,8 +123,11 @@ func TestMergeThreadListingsKeepsSectionFromFirstListing(t *testing.T) {
 			t.Fatalf("expected the freshest copy with the first listing's section, got %#v", thread)
 		}
 	}
-	if homes["moved"] != "primary" || homes["own"] != "secondary" {
-		t.Fatalf("expected section homes from the first listing of each thread, got %#v", homes)
+	if view.homes["moved"] != "primary" || view.homes["own"] != "secondary" {
+		t.Fatalf("expected section homes from the first listing of each thread, got %#v", view.homes)
+	}
+	if view.copies["moved"]["sectionEnteredAt"] != 5.0 {
+		t.Fatalf("expected the displayed copy to be remembered, got %#v", view.copies["moved"])
 	}
 }
 

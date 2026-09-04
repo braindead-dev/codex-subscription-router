@@ -3,7 +3,20 @@ package mux
 import (
 	"encoding/json"
 	"slices"
+
+	"github.com/b-nnett/codex-subscription-router/internal/protocol"
 )
+
+// sectionView is what the last listing established about sections: which
+// account's copy of each thread the sidebar shows, that copy, and which
+// accounts list each thread at all.
+type sectionView struct {
+	homes  map[string]string
+	copies map[string]map[string]any
+	listed map[string]map[string]struct{}
+}
+
+var sectionFieldKeys = []string{"section", "sectionEnteredAt"}
 
 // sectionMove is the desktop's thread/section/move request. A null sectionId
 // unpins the thread; a null beforeThreadId places it last.
@@ -117,4 +130,38 @@ func scopeBeforeThread(
 		return params
 	}
 	return encoded
+}
+
+// applySectionView makes a thread/read answer agree with the sidebar. The
+// desktop reads a thread before moving it and only moves one whose copy is
+// pinned, but the account that owns a thread's turns may not be the one
+// holding its pin.
+func (m *Multiplexer) applySectionView(route externalRoute, accountID string, message protocol.Message) (protocol.Message, bool) {
+	if route.method != "thread/read" || message.Error != nil {
+		return message, false
+	}
+	threadID := threadIDFromParams(route.message.Params)
+	fields, ok := m.sectionFields(threadID, accountID)
+	if !ok {
+		return message, false
+	}
+	var result map[string]any
+	if json.Unmarshal(message.Result, &result) != nil {
+		return message, false
+	}
+	thread, _ := result["thread"].(map[string]any)
+	if thread == nil {
+		return message, false
+	}
+	for _, key := range sectionFieldKeys {
+		if value, ok := fields[key]; ok {
+			thread[key] = value
+		}
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		return message, false
+	}
+	message.Result = encoded
+	return message, true
 }

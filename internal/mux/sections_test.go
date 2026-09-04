@@ -3,6 +3,8 @@ package mux
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/b-nnett/codex-subscription-router/internal/protocol"
 )
 
 func TestOrderSectionFollowsKnownOrderThenListing(t *testing.T) {
@@ -48,5 +50,31 @@ func TestScopeBeforeThreadPicksNextThreadTheAccountLists(t *testing.T) {
 	unpin, ok := parseSectionMove(json.RawMessage(`{"threadId":"x","sectionId":null,"beforeThreadId":null}`))
 	if !ok || unpin.SectionID != "" || unpin.BeforeThreadID != "" {
 		t.Fatalf("unexpected unpin %#v", unpin)
+	}
+}
+
+func TestApplySectionViewReportsTheSidebarPin(t *testing.T) {
+	pinned := map[string]any{"id": "sec", "name": "Pinned"}
+	m := &Multiplexer{sections: sectionView{
+		homes:  map[string]string{"moved": "primary"},
+		copies: map[string]map[string]any{"moved": {"section": pinned, "sectionEnteredAt": 5.0}},
+	}}
+	route := externalRoute{method: "thread/read", message: protocol.Request("thread/read", protocol.StringID("1"), json.RawMessage(`{"threadId":"moved"}`))}
+	answer := protocol.Message{Result: json.RawMessage(`{"thread":{"id":"moved","section":null,"sectionEnteredAt":null}}`)}
+	patched, ok := m.applySectionView(route, "secondary", answer)
+	if !ok {
+		t.Fatal("expected the owner's answer to be patched")
+	}
+	var decoded struct {
+		Thread map[string]any `json:"thread"`
+	}
+	if err := json.Unmarshal(patched.Result, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if section, _ := decoded.Thread["section"].(map[string]any); section["id"] != "sec" || decoded.Thread["sectionEnteredAt"] != 5.0 {
+		t.Fatalf("expected the sidebar's section, got %#v", decoded.Thread)
+	}
+	if _, ok := m.applySectionView(route, "primary", answer); ok {
+		t.Fatal("the account holding the pin answers for itself")
 	}
 }
