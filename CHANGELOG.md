@@ -42,7 +42,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 - Codex 0.153 resumes a thread only from a rollout inside the account's own
   sessions directory, so moving a chat to another subscription now hard-links
-  the rollout there instead of resuming it by its original path.
+  the rollout there instead of resuming it by its original path. A
+  subscription that already indexes the chat gets its copy brought up to date
+  (current rollout segment and history projection) and resumes it by id, as
+  Codex requires.
 - Features the desktop enables at runtime, such as the paginated thread
   history migration, reach every subscription instead of the controller only;
   without it other accounts answered `list_turns is not supported yet`.

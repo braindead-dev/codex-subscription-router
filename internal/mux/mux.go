@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -455,26 +456,60 @@ func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourc
 	if readResult.Thread.ID == "" || readResult.Thread.Path == "" {
 		return errors.New("existing chat has no resumable history path")
 	}
+	resume := map[string]any{
+		"threadId":      threadID,
+		"history":       nil,
+		"cwd":           readResult.Thread.CWD,
+		"model":         nil,
+		"modelProvider": readResult.Thread.ModelProvider,
+	}
+	sourceAccount, ok := m.store.Account(sourceAccountID)
+	if !ok {
+		return fmt.Errorf("source subscription is unavailable")
+	}
 	targetAccount, ok := m.store.Account(targetAccountID)
 	if !ok {
 		return fmt.Errorf("target subscription is unavailable")
 	}
-	path, err := linkRolloutIntoHome(readResult.Thread.Path, targetAccount.CodexHome)
-	if err != nil {
-		return fmt.Errorf("share chat history: %w", err)
+	// An account that already indexes the thread must resume it by id: Codex
+	// refuses a path that differs from the one it holds. Its copy is first
+	// brought up to date with the source's. An account that has never seen
+	// the thread needs the rollout linked into its home and resumes by path.
+	probeParams, _ := json.Marshal(map[string]any{"threadId": threadID, "includeTurns": false})
+	if _, err := target.Request(ctx, "thread/read", probeParams); err == nil {
+		if !threadLoadedOn(ctx, target, threadID) {
+			if err := syncThreadCopy(sourceAccount.CodexHome, targetAccount.CodexHome, threadID); err != nil {
+				return fmt.Errorf("share chat history: %w", err)
+			}
+		}
+	} else {
+		path, err := linkRolloutIntoHome(readResult.Thread.Path, targetAccount.CodexHome)
+		if err != nil {
+			return fmt.Errorf("share chat history: %w", err)
+		}
+		resume["path"] = path
 	}
-	resumeParams, _ := json.Marshal(map[string]any{
-		"threadId":      threadID,
-		"history":       nil,
-		"path":          path,
-		"cwd":           readResult.Thread.CWD,
-		"model":         nil,
-		"modelProvider": readResult.Thread.ModelProvider,
-	})
+	resumeParams, _ := json.Marshal(resume)
 	if _, err := target.Request(ctx, "thread/resume", resumeParams); err != nil {
 		return fmt.Errorf("resume existing chat: %w", err)
 	}
 	return nil
+}
+
+// threadLoadedOn reports whether an app-server holds a live session for the
+// thread; its index and projection must not change underneath one.
+func threadLoadedOn(ctx context.Context, child *backend.Child, threadID string) bool {
+	response, err := child.Request(ctx, "thread/loaded/list", json.RawMessage(`{}`))
+	if err != nil {
+		return true
+	}
+	var decoded struct {
+		Data []string `json:"data"`
+	}
+	if json.Unmarshal(response.Result, &decoded) != nil {
+		return true
+	}
+	return slices.Contains(decoded.Data, threadID)
 }
 
 func (m *Multiplexer) handleServerRequestResponse(message protocol.Message) {
