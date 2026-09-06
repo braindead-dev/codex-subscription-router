@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -409,6 +408,10 @@ func (m *Multiplexer) failoverTurn(
 		return
 	}
 	if err := m.resumeThreadOnAccount(ctx, threadID, sourceAccountID, fallback.ID); err != nil {
+		if errors.Is(err, errAlreadyIndexed) {
+			m.write(m.chatSubscriptionDepleted(ctx, message.ID, sourceAccountID, fallback.Label))
+			return
+		}
 		m.write(protocol.Failure(message.ID, -32027, fmt.Sprintf("move chat to %s: %v", fallback.Label, err)))
 		return
 	}
@@ -427,6 +430,8 @@ func (m *Multiplexer) failoverTurn(
 		Data:      map[string]any{"threadId": threadID, "previousAccountId": sourceAccountID},
 	})
 }
+
+var errAlreadyIndexed = errors.New("the chat already exists on that subscription")
 
 func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourceAccountID, targetAccountID string) error {
 	source, ok := m.child(sourceAccountID)
@@ -463,53 +468,28 @@ func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourc
 		"model":         nil,
 		"modelProvider": readResult.Thread.ModelProvider,
 	}
-	sourceAccount, ok := m.store.Account(sourceAccountID)
-	if !ok {
-		return fmt.Errorf("source subscription is unavailable")
-	}
 	targetAccount, ok := m.store.Account(targetAccountID)
 	if !ok {
 		return fmt.Errorf("target subscription is unavailable")
 	}
-	// An account that already indexes the thread must resume it by id: Codex
-	// refuses a path that differs from the one it holds. Its copy is first
-	// brought up to date with the source's. An account that has never seen
-	// the thread needs the rollout linked into its home and resumes by path.
+	// A chat moves only to an account that has never indexed it. Codex 0.153
+	// numbers rollout records per session and projects them per account, so
+	// an account that already holds a copy would resume from its own stale
+	// numbering and corrupt the shared rollout for both.
 	probeParams, _ := json.Marshal(map[string]any{"threadId": threadID, "includeTurns": false})
 	if _, err := target.Request(ctx, "thread/read", probeParams); err == nil {
-		if !threadLoadedOn(ctx, target, threadID) {
-			if err := syncThreadCopy(sourceAccount.CodexHome, targetAccount.CodexHome, threadID); err != nil {
-				return fmt.Errorf("share chat history: %w", err)
-			}
-		}
-	} else {
-		path, err := linkRolloutIntoHome(readResult.Thread.Path, targetAccount.CodexHome)
-		if err != nil {
-			return fmt.Errorf("share chat history: %w", err)
-		}
-		resume["path"] = path
+		return errAlreadyIndexed
 	}
+	path, err := linkRolloutIntoHome(readResult.Thread.Path, targetAccount.CodexHome)
+	if err != nil {
+		return fmt.Errorf("share chat history: %w", err)
+	}
+	resume["path"] = path
 	resumeParams, _ := json.Marshal(resume)
 	if _, err := target.Request(ctx, "thread/resume", resumeParams); err != nil {
 		return fmt.Errorf("resume existing chat: %w", err)
 	}
 	return nil
-}
-
-// threadLoadedOn reports whether an app-server holds a live session for the
-// thread; its index and projection must not change underneath one.
-func threadLoadedOn(ctx context.Context, child *backend.Child, threadID string) bool {
-	response, err := child.Request(ctx, "thread/loaded/list", json.RawMessage(`{}`))
-	if err != nil {
-		return true
-	}
-	var decoded struct {
-		Data []string `json:"data"`
-	}
-	if json.Unmarshal(response.Result, &decoded) != nil {
-		return true
-	}
-	return slices.Contains(decoded.Data, threadID)
 }
 
 func (m *Multiplexer) handleServerRequestResponse(message protocol.Message) {
@@ -901,6 +881,33 @@ func (m *Multiplexer) allSubscriptionsDepleted(ctx context.Context, id json.RawM
 		}
 	}
 	return allSubscriptionsDepleted(id, resetsAt)
+}
+
+// chatSubscriptionDepleted explains why a turn stays on a depleted account: the
+// chat has already lived on the other subscription, and Codex 0.153 cannot
+// hand a chat back and forth without corrupting its history.
+func (m *Multiplexer) chatSubscriptionDepleted(ctx context.Context, id json.RawMessage, accountID, fallbackLabel string) protocol.Message {
+	label := accountID
+	if account, ok := m.store.Account(accountID); ok {
+		label = account.Label
+	}
+	message := fmt.Sprintf(
+		"%s is out of usage and this chat has already run on %s, so it cannot move again. "+
+			"Start a new chat to continue on %s, or wait for usage to reset.",
+		label, fallbackLabel, fallbackLabel,
+	)
+	if snapshot, err := m.routingSnapshot(ctx, accountID); err == nil {
+		if weekly, _ := longestAndShortestWindow(snapshot.RateLimits); weekly != nil && weekly.ResetsAt != nil {
+			message = fmt.Sprintf(
+				"%s is out of usage until %s and this chat has already run on %s, so it cannot move again. "+
+					"Start a new chat to continue on %s.",
+				label,
+				time.Unix(*weekly.ResetsAt, 0).In(time.Local).Format("Monday, 2 January at 3:04 PM"),
+				fallbackLabel, fallbackLabel,
+			)
+		}
+	}
+	return protocol.Failure(id, -32026, message)
 }
 
 func allSubscriptionsDepleted(id json.RawMessage, resetsAt *int64) protocol.Message {
