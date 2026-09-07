@@ -79,6 +79,8 @@ type Multiplexer struct {
 	events   map[chan Event]struct{}
 
 	profileMu     sync.Mutex
+	modelsMu      sync.Mutex
+	modelsCache   map[string]modelCatalog
 	profileClient *http.Client
 	profileCache  map[string]profileCacheEntry
 	now           func() time.Time
@@ -113,6 +115,7 @@ func New(options Options) (*Multiplexer, error) {
 		events:               make(map[chan Event]struct{}),
 		profileClient:        &http.Client{Timeout: 10 * time.Second},
 		profileCache:         make(map[string]profileCacheEntry),
+		modelsCache:          make(map[string]modelCatalog),
 		now:                  time.Now,
 		resetCreditsCache:    make(map[string]resetCreditsCacheEntry),
 		resetCreditsEndpoint: rateLimitResetCreditsURL,
@@ -264,9 +267,18 @@ func (m *Multiplexer) handleClientNotification(message protocol.Message) {
 func (m *Multiplexer) routeNewThread(message protocol.Message) {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
-	account, reason, err := m.chooseAccount(ctx)
+	support := m.modelSupportFor(ctx, modelFromParams(message.Params))
+	if support.native && len(support.supporting) == 0 {
+		m.write(protocol.Failure(message.ID, -32030, support.message("")))
+		return
+	}
+	account, reason, err := m.chooseAccountExcluding(ctx, support.unsupported)
 	if err != nil {
 		if errors.Is(err, errNoSubscriptionCapacity) {
+			if support.native {
+				m.write(protocol.Failure(message.ID, -32030, support.message("")))
+				return
+			}
 			m.write(m.allSubscriptionsDepleted(ctx, message.ID))
 			return
 		}
@@ -324,6 +336,12 @@ func (m *Multiplexer) routeExistingRequest(message protocol.Message) {
 		m.write(protocol.Failure(message.ID, -32022, "no controller account is configured"))
 		return
 	}
+	if threadID != "" && (message.Method == "turn/start" || message.Method == "thread/settings/update") {
+		if refusal, ok := m.refuseUnsupportedModel(message, accountID); ok {
+			m.write(refusal)
+			return
+		}
+	}
 	if message.Method == "turn/start" && threadID != "" {
 		go m.routeTurnStart(message, threadID, accountID)
 		return
@@ -379,6 +397,23 @@ func (m *Multiplexer) routeAggregatedRateLimits(message protocol.Message) {
 		return
 	}
 	m.write(protocol.Success(message.ID, result))
+}
+
+// refuseUnsupportedModel answers a model request for a chat whose owning
+// subscription cannot run that model. Codex 0.153 does not let a chat move
+// between subscriptions safely, so the answer names where the model works.
+func (m *Multiplexer) refuseUnsupportedModel(message protocol.Message, ownerID string) (protocol.Message, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	support := m.modelSupportFor(ctx, modelFromParams(message.Params))
+	if !support.native || support.supportsAccount(ownerID) {
+		return protocol.Message{}, false
+	}
+	ownerLabel := ownerID
+	if account, ok := m.store.Account(ownerID); ok {
+		ownerLabel = account.Label
+	}
+	return protocol.Failure(message.ID, -32030, support.message(ownerLabel)), true
 }
 
 func (m *Multiplexer) routeTurnStart(message protocol.Message, threadID, ownerID string) {

@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ### Added
 
+- Model-aware routing: a new chat that names an OpenAI model goes to a
+  subscription the backend lets run it, and switching an existing chat to a
+  model its subscription cannot run is refused with the subscriptions that
+  can, instead of the backend's error. Models served through another
+  provider are not gated.
 - Compatibility with official ChatGPT `26.810.52044` (build `6662`) and
   `26.901.22334` (build `7746`), whose renderer splits data access and UI
   across bundles.
