@@ -1,6 +1,7 @@
 package mux
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -133,5 +134,27 @@ func TestReconcileUnifiedCatalogToleratesUnreachableHome(t *testing.T) {
 	}
 	if got := rows(t, a, "SELECT count(*) FROM threads;"); got[0] != "1" {
 		t.Fatalf("expected a untouched, got %v", got)
+	}
+}
+
+func TestReconcileUnifiedCatalogRefusesPaginatedThreadStore(t *testing.T) {
+	if _, err := os.Stat(sqlite3Binary); err != nil {
+		t.Skip("system sqlite3 unavailable")
+	}
+	a := makeHome(t, `ALTER TABLE threads ADD COLUMN history_mode TEXT NOT NULL DEFAULT 'legacy';
+		INSERT INTO threads (id,rollout_path,created_at,updated_at,source,title)
+		VALUES ('t-a','/home-a/a.jsonl',1,1,'vscode','A thread');`)
+	b := makeHome(t, `ALTER TABLE threads ADD COLUMN history_mode TEXT NOT NULL DEFAULT 'legacy';
+		INSERT INTO threads (id,rollout_path,created_at,updated_at,source,title)
+		VALUES ('t-b','/home-b/b.jsonl',2,2,'vscode','B thread');`)
+
+	err := reconcileUnifiedCatalog([]catalogHome{a, b})
+	if !errors.Is(err, errPaginatedThreadStore) {
+		t.Fatalf("expected the paginated store to be refused, got %v", err)
+	}
+	for _, home := range []catalogHome{a, b} {
+		if got := rows(t, home, "SELECT count(*) FROM threads;"); got[0] != "1" {
+			t.Fatalf("home %s: rows were mirrored into a paginated store: %v", home.id, got)
+		}
 	}
 }

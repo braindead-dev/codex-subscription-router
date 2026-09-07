@@ -23,7 +23,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
   so remote control from a phone signed into any account can see and resume any
   session. Turns still run on, and bill, the connected account only. The
   reconciler clones existing rows insert-only and never modifies another
-  account's data.
+  account's data. On Codex 0.153 and later, whose thread store keeps a
+  per-account history projection, the flag is refused and logged once:
+  mirrored threads would be unusable there or corrupt the shared rollout.
 
 ### Changed
 

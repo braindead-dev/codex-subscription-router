@@ -51,7 +51,12 @@ func (m *Multiplexer) reconcileUnifiedCatalogLoop(ctx context.Context) {
 			if !m.unifiedCatalogEnabled() {
 				continue
 			}
-			if err := reconcileUnifiedCatalog(m.connectedCatalogHomes()); err != nil {
+			err := reconcileUnifiedCatalog(m.connectedCatalogHomes())
+			if errors.Is(err, errPaginatedThreadStore) {
+				fmt.Fprintf(os.Stderr, "codex-mux: %v\n", err)
+				return
+			}
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "codex-mux: reconcile unified catalog: %v\n", err)
 			}
 		}
@@ -101,6 +106,9 @@ func reconcileUnifiedCatalog(homes []catalogHome) error {
 			failures = append(failures, fmt.Sprintf("%s: read columns: %v", target.id, err))
 			continue
 		}
+		if err := catalogSupported(targetColumns); err != nil {
+			return err
+		}
 		for _, owner := range homes {
 			if owner.path == target.path {
 				continue
@@ -116,6 +124,24 @@ func reconcileUnifiedCatalog(homes []catalogHome) error {
 	}
 	if len(failures) > 0 {
 		return errors.New(strings.Join(failures, "; "))
+	}
+	return nil
+}
+
+// errPaginatedThreadStore is why mirroring stays off on Codex 0.153 and later
+// even with the flag present. That Codex keeps a per-account history
+// projection and numbers rollout records per session, so a mirrored row is
+// unusable on the other account and, if resumed there, corrupts the rollout
+// for both. The paginated store announces itself with the history_mode column.
+var errPaginatedThreadStore = errors.New(
+	"unified catalog is unavailable on this Codex: its thread store keeps a " +
+		"per-account history projection, and mirrored threads would be unusable " +
+		"or corrupted; the flag is ignored",
+)
+
+func catalogSupported(columns map[string]struct{}) error {
+	if _, paginated := columns["history_mode"]; paginated {
+		return errPaginatedThreadStore
 	}
 	return nil
 }
