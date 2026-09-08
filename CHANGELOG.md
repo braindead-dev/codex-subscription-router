@@ -49,12 +49,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 - Codex 0.153 resumes a thread only from a rollout inside the account's own
   sessions directory, so moving a chat to another subscription now hard-links
-  the rollout there instead of resuming it by its original path. A
-  subscription that already indexes the chat gets a fresh load with its copy
-  refreshed from the current owner's caught-up history projection; a session
-  it still holds from an earlier move cannot be reused, since its stale
-  numbering would corrupt the shared rollout, and the turn fails with an
-  explanation until the app restarts.
+  the rollout there instead of resuming it by its original path. The target
+  receives what a native home holds: the chat's index row, every rollout
+  file (including revert continuations), and every history projection
+  stream, taken from the owner's caught-up copy, and resumes by id. A session
+  the target still holds from an earlier move cannot be reused, since its
+  stale numbering would corrupt the shared rollout, and the turn fails with
+  an explanation until the app restarts.
 - Features the desktop enables at runtime, such as the paginated thread
   history migration, reach every subscription instead of the controller only;
   without it other accounts answered `list_turns is not supported yet`.

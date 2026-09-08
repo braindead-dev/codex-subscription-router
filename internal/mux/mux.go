@@ -533,32 +533,32 @@ func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourc
 		return fmt.Errorf("target subscription is unavailable")
 	}
 	// Codex 0.153 numbers rollout records per session and projects them per
-	// account. A session that loads behind the shared rollout restarts the
-	// numbering behind it and corrupts the history for both accounts, so an
-	// account that already indexes the chat gets a fresh load only: its copy
-	// is refreshed from the source's caught-up projection, and a session it
-	// still holds from an earlier move cannot be reused.
-	probeParams, _ := json.Marshal(map[string]any{"threadId": threadID, "includeTurns": false})
-	if _, err := target.Request(ctx, "thread/read", probeParams); err == nil {
-		if threadLoadedOn(ctx, target, threadID) {
-			return errStillOpen
+	// account, under one stream per rollout file. The target gets exactly
+	// what a native home would hold: the chat's row, every rollout file, and
+	// every projection stream, taken from the owner's caught-up copy, and
+	// then resumes by id. A session the target still holds from an earlier
+	// move cannot be reused: its numbering cursor is stale and would corrupt
+	// the shared rollout for both accounts.
+	if threadLoadedOn(ctx, target, threadID) {
+		return errStillOpen
+	}
+	// Reading the chat may make the source append a record; its projection
+	// follows within moments.
+	covered := false
+	for attempt := 0; attempt < 10 && !covered; attempt++ {
+		if attempt > 0 {
+			time.Sleep(300 * time.Millisecond)
 		}
-		covered, err := projectionCoversRollout(sourceAccount.CodexHome, threadID)
-		if err != nil {
+		var err error
+		if covered, err = projectionCoversRollout(sourceAccount.CodexHome, threadID); err != nil {
 			return fmt.Errorf("check chat history: %w", err)
 		}
-		if !covered {
-			return errUnsettled
-		}
-		if err := syncThreadCopy(sourceAccount.CodexHome, targetAccount.CodexHome, threadID); err != nil {
-			return fmt.Errorf("share chat history: %w", err)
-		}
-	} else {
-		path, err := linkRolloutIntoHome(readResult.Thread.Path, targetAccount.CodexHome)
-		if err != nil {
-			return fmt.Errorf("share chat history: %w", err)
-		}
-		resume["path"] = path
+	}
+	if !covered {
+		return errUnsettled
+	}
+	if err := syncThreadCopy(sourceAccount.CodexHome, targetAccount.CodexHome, threadID); err != nil {
+		return fmt.Errorf("share chat history: %w", err)
 	}
 	resumeParams, _ := json.Marshal(resume)
 	if _, err := target.Request(ctx, "thread/resume", resumeParams); err != nil {

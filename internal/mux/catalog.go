@@ -213,7 +213,7 @@ func requiredThreadColumns(database string) ([]string, error) {
 }
 
 func runSQLite(database, script string) error {
-	command := exec.Command(sqlite3Binary, database)
+	command := exec.Command(sqlite3Binary, "-bail", database)
 	command.Stdin = strings.NewReader(script)
 	output, err := command.CombinedOutput()
 	if err != nil {
@@ -223,7 +223,7 @@ func runSQLite(database, script string) error {
 }
 
 func querySQLite(database, query string) (string, error) {
-	output, err := exec.Command(sqlite3Binary, database, query).CombinedOutput()
+	output, err := exec.Command(sqlite3Binary, "-bail", database, query).CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("sqlite3: %v: %s", err, strings.TrimSpace(string(output)))
 	}

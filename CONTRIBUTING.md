@@ -28,3 +28,10 @@ anchors, update that file in the same change.
 One concern per PR, tests for backend behavior, and an explicit note on any
 security-relevant behavior. CI runs Go tests and vet, JavaScript and Python
 syntax checks, native C syntax, and release metadata consistency.
+
+## Live move test
+
+`TestLiveMoveKeepsHistoryOnBothAccounts` drives two real Codex app-servers and
+runs two short model turns. It is skipped unless `CODEX_MUX_LIVE_HOME` names a
+Codex home with `auth.json`, `config.toml`, and a `tid` file holding a thread
+id, and `CODEX_MUX_LIVE_CODEX` names the Codex binary.

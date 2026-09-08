@@ -15,7 +15,7 @@ func TestSyncThreadCopyBringsTargetUpToDate(t *testing.T) {
 	source, target := filepath.Join(root, "source"), filepath.Join(root, "target")
 	threadID := "01a04238-6090-7e01-b2c6-24c757a32b10"
 	first := filepath.Join(source, "sessions", "2026", "08", "27", "rollout-first-"+threadID+".jsonl")
-	second := filepath.Join(source, "sessions", "2026", "09", "04", "rollout-second-"+threadID+"_seg.jsonl")
+	second := filepath.Join(source, "sessions", "2026", "09", "04", "rollout-second-"+threadID+"_01a07dfe-cb5b-77d3-811e-cd12fcf01d50.jsonl")
 	for _, path := range []string{first, second} {
 		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 			t.Fatal(err)
@@ -43,8 +43,8 @@ func TestSyncThreadCopyBringsTargetUpToDate(t *testing.T) {
 	if err := runSQLite(stateDatabase(source), "insert into threads values ('"+threadID+"', '"+second+"', 'paginated');"); err != nil {
 		t.Fatal(err)
 	}
-	if err := runSQLite(historyDatabase(source), "insert into thread_turns values ('"+threadID+"', 't1', 1), ('"+threadID+"', 't2', 2);"+
-		"insert into thread_history_projection_state values ('"+threadID+"', 40, 2);"); err != nil {
+	if err := runSQLite(historyDatabase(source), "insert into thread_turns values ('"+threadID+"', 't1', 1), ('"+threadID+"', 't2', 2), ('01a07dfe-cb5b-77d3-811e-cd12fcf01d50', 't3', 1);"+
+		"insert into thread_history_projection_state values ('"+threadID+"', 40, 2), ('01a07dfe-cb5b-77d3-811e-cd12fcf01d50', 4, 1);"); err != nil {
 		t.Fatal(err)
 	}
 	if err := runSQLite(stateDatabase(target), "insert into threads values ('"+threadID+"', '"+filepath.Join(target, "sessions", "old.jsonl")+"', 'legacy');"); err != nil {
@@ -62,7 +62,7 @@ func TestSyncThreadCopyBringsTargetUpToDate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantPath := filepath.Join(target, "sessions", "2026", "09", "04", "rollout-second-"+threadID+"_seg.jsonl")
+	wantPath := filepath.Join(target, "sessions", "2026", "09", "04", "rollout-second-"+threadID+"_01a07dfe-cb5b-77d3-811e-cd12fcf01d50.jsonl")
 	if strings.TrimSpace(row) != wantPath+" paginated" {
 		t.Fatalf("target row %q, want %q", strings.TrimSpace(row), wantPath+" paginated")
 	}
@@ -77,6 +77,20 @@ func TestSyncThreadCopyBringsTargetUpToDate(t *testing.T) {
 	}
 	if strings.TrimSpace(turns) != "2 2" {
 		t.Fatalf("expected the source projection on the target, got %q", strings.TrimSpace(turns))
+	}
+	if link, err := querySQLite(historyDatabase(target), "select count(*) from thread_turns where thread_id = '01a07dfe-cb5b-77d3-811e-cd12fcf01d50';"); err != nil || strings.TrimSpace(link) != "1" {
+		t.Fatalf("expected the link stream to be copied, got %q, %v", strings.TrimSpace(link), err)
+	}
+}
+
+func TestProjectionStreamUsesLinkID(t *testing.T) {
+	thread := "01a04238-6090-7e01-b2c6-24c757a32b10"
+	link := "01a07dfe-cb5b-77d3-811e-cd12fcf01d50"
+	if got := projectionStream("/x/rollout-2026-09-07T15-30-45-"+thread+"_"+link+".jsonl", thread); got != link {
+		t.Fatalf("link file projected as %q", got)
+	}
+	if got := projectionStream("/x/rollout-2026-08-27T00-56-26-"+thread+".jsonl", thread); got != thread {
+		t.Fatalf("original rollout projected as %q", got)
 	}
 }
 
