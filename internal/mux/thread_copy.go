@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 var (
@@ -43,6 +44,19 @@ func syncThreadCopy(sourceHome, targetHome, threadID string) error {
 	if !threadIDPattern.MatchString(threadID) {
 		return fmt.Errorf("unexpected thread id %q", threadID)
 	}
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Second)
+		}
+		if err = copyThread(sourceHome, targetHome, threadID); err == nil || !strings.Contains(err.Error(), "database is locked") {
+			return err
+		}
+	}
+	return err
+}
+
+func copyThread(sourceHome, targetHome, threadID string) error {
 	row, err := querySQLite(
 		stateDatabase(sourceHome),
 		fmt.Sprintf(
@@ -81,8 +95,9 @@ func syncThreadCopy(sourceHome, targetHome, threadID string) error {
 		return err
 	}
 	script := []string{
+		"PRAGMA busy_timeout=10000;",
 		fmt.Sprintf("attach database '%s' as source;", escapeSQLLiteral(sourceHistory)),
-		"begin;",
+		"begin immediate;",
 	}
 	for _, table := range historyTables {
 		for _, stream := range streams {
@@ -120,7 +135,7 @@ func upsertThreadRow(sourceDB, targetDB, threadID, rollout, mode string) error {
 	sort.Strings(columns)
 	list := strings.Join(quoteIdentifiers(columns), ", ")
 	return runSQLite(targetDB, strings.Join([]string{
-		"PRAGMA busy_timeout=5000;",
+		"PRAGMA busy_timeout=10000;",
 		fmt.Sprintf("ATTACH DATABASE '%s' AS src;", escapeSQLLiteral(sourceDB)),
 		fmt.Sprintf("INSERT OR IGNORE INTO threads (%s) SELECT %s FROM src.threads WHERE id = '%s';", list, list, threadID),
 		fmt.Sprintf(
@@ -147,7 +162,7 @@ func ensureHistorySchema(sourceDB, targetDB string) error {
 		return err
 	}
 	return runSQLite(targetDB, strings.Join([]string{
-		"PRAGMA busy_timeout=5000;",
+		"PRAGMA busy_timeout=10000;",
 		schema,
 		fmt.Sprintf("ATTACH DATABASE '%s' AS src;", escapeSQLLiteral(sourceDB)),
 		"INSERT OR IGNORE INTO _sqlx_migrations SELECT * FROM src._sqlx_migrations;",
