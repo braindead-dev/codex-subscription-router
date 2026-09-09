@@ -96,3 +96,52 @@ func TestSyncIsolatedConfigLinksSharedHomeContent(t *testing.T) {
 		t.Fatalf("second sync must be idempotent: %v", err)
 	}
 }
+
+func TestSyncIsolatedConfigRelocatesBundledMarketplaces(t *testing.T) {
+	primary := t.TempDir()
+	isolated := t.TempDir()
+	bundled := filepath.Join(primary, ".tmp", "bundled-marketplaces", "openai-bundled")
+	if err := os.MkdirAll(bundled, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(primary, "config.toml"), `[marketplaces.openai-bundled]
+source_type = "local"
+source = "`+bundled+`"
+
+[marketplaces.runtime]
+source_type = "local"
+source = "/elsewhere/runtime"
+
+[marketplaces.official]
+source_type = "git"
+source = "https://example.com/plugins.git"
+`)
+
+	if err := syncIsolatedConfig(primary, isolated); err != nil {
+		t.Fatal(err)
+	}
+	merged, err := os.ReadFile(filepath.Join(isolated, "config.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(merged)
+	relocated := filepath.Join(isolated, ".tmp", "bundled-marketplaces", "openai-bundled")
+	if !strings.Contains(text, "[marketplaces.openai-bundled]\nsource_type = \"local\"\nsource = \""+relocated+"\"") {
+		t.Fatalf("expected the bundled marketplace source under the isolated home:\n%s", text)
+	}
+	if strings.Contains(text, bundled) {
+		t.Fatalf("expected no reference to the primary bundled marketplace:\n%s", text)
+	}
+	for _, untouched := range []string{`source = "/elsewhere/runtime"`, `source = "https://example.com/plugins.git"`} {
+		if !strings.Contains(text, untouched) {
+			t.Fatalf("expected %q to be left alone:\n%s", untouched, text)
+		}
+	}
+	link, err := os.Readlink(relocated)
+	if err != nil || link != bundled {
+		t.Fatalf("expected %s to link to the primary marketplace, got %q err=%v", relocated, link, err)
+	}
+	if err := syncIsolatedConfig(primary, isolated); err != nil {
+		t.Fatalf("second sync must be idempotent: %v", err)
+	}
+}

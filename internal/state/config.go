@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,6 +41,7 @@ func syncIsolatedConfig(primaryCodexHome, isolatedCodexHome string) error {
 		return !isProjectSection(section)
 	})
 	managed = removeTopLevelCredentialSettings(managed)
+	managed, bundledMarketplaces := relocateBundledMarketplaces(managed, primaryCodexHome, isolatedCodexHome)
 	projects := mergeProjectSections(
 		filterConfig(isolatedConfig, isProjectSection),
 		filterConfig(primaryConfig, isProjectSection),
@@ -66,7 +68,115 @@ func syncIsolatedConfig(primaryCodexHome, isolatedCodexHome string) error {
 	if err := linkSharedHomeContent(primaryCodexHome, isolatedCodexHome); err != nil {
 		return err
 	}
+	if err := linkBundledMarketplaces(primaryCodexHome, isolatedCodexHome, bundledMarketplaces); err != nil {
+		return err
+	}
 	return linkSharedPluginCache(primaryCodexHome, isolatedCodexHome)
+}
+
+// bundledMarketplacesDir is where the desktop app materializes the plugin
+// marketplaces it ships with (`openai-bundled` and friends). Codex only
+// trusts such a marketplace when its source lives under the app-server's own
+// home, so an isolated account handed the Primary path silently drops the
+// marketplace along with every plugin it provides, including the browser and
+// computer-use runtimes.
+const bundledMarketplacesDir = ".tmp/bundled-marketplaces"
+
+// relocateBundledMarketplaces rewrites marketplace sources that point into the
+// Primary home's bundled marketplaces so they point into the isolated home
+// instead, returning the marketplace directory names that must be linked.
+func relocateBundledMarketplaces(contents, primaryCodexHome, isolatedCodexHome string) (string, []string) {
+	primaryRoot := filepath.Join(primaryCodexHome, bundledMarketplacesDir)
+	isolatedRoot := filepath.Join(isolatedCodexHome, bundledMarketplacesDir)
+	var builder strings.Builder
+	var names []string
+	section := ""
+	for _, line := range strings.Split(contents, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			section = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(trimmed, "["), "]"))
+		}
+		if strings.HasPrefix(section, "marketplaces.") {
+			if source, ok := tomlStringValue(trimmed, "source"); ok {
+				if name, ok := marketplaceUnder(primaryRoot, source); ok {
+					line = fmt.Sprintf("source = %q", filepath.Join(isolatedRoot, name))
+					names = append(names, name)
+				}
+			}
+		}
+		builder.WriteString(line)
+		builder.WriteByte('\n')
+	}
+	return builder.String(), names
+}
+
+// tomlStringValue extracts the quoted value of `key = "..."` from a config
+// line, when the line assigns that key a plain string.
+func tomlStringValue(line, key string) (string, bool) {
+	rest, ok := strings.CutPrefix(line, key)
+	if !ok {
+		return "", false
+	}
+	rest = strings.TrimSpace(rest)
+	rest, ok = strings.CutPrefix(rest, "=")
+	if !ok {
+		return "", false
+	}
+	value, err := strconv.Unquote(strings.TrimSpace(rest))
+	if err != nil {
+		return "", false
+	}
+	return value, true
+}
+
+// marketplaceUnder returns the marketplace directory name when source is a
+// direct child of root.
+func marketplaceUnder(root, source string) (string, bool) {
+	relative, err := filepath.Rel(root, filepath.Clean(source))
+	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	if strings.ContainsRune(relative, filepath.Separator) {
+		return "", false
+	}
+	return relative, true
+}
+
+// linkBundledMarketplaces mirrors each named bundled marketplace of the
+// Primary home into the isolated home as a symlink, so the relocated
+// marketplace source resolves to the copy the desktop app maintains. A real
+// directory the isolated home already holds is its own materialization and
+// is kept.
+func linkBundledMarketplaces(primaryCodexHome, isolatedCodexHome string, names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+	root := filepath.Join(isolatedCodexHome, bundledMarketplacesDir)
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		return fmt.Errorf("create bundled marketplaces directory: %w", err)
+	}
+	for _, name := range names {
+		source := filepath.Join(primaryCodexHome, bundledMarketplacesDir, name)
+		target := filepath.Join(root, name)
+		info, err := os.Lstat(target)
+		switch {
+		case err == nil && info.Mode()&os.ModeSymlink != 0:
+			if current, readErr := os.Readlink(target); readErr == nil && current == source {
+				continue
+			}
+			if err := os.Remove(target); err != nil {
+				return fmt.Errorf("replace bundled marketplace link %s: %w", name, err)
+			}
+		case err == nil:
+			continue
+		case !errors.Is(err, os.ErrNotExist):
+			return fmt.Errorf("inspect bundled marketplace %s: %w", name, err)
+		}
+		if err := os.Symlink(source, target); err != nil {
+			return fmt.Errorf("link bundled marketplace %s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 // sharedHomeEntries are user-authored Codex home entries that describe how
