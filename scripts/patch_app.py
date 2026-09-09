@@ -1160,10 +1160,10 @@ RENDERER_BUILD_7746 = RendererBuild(
         "description:`Profile username shown with an at-sign prefix`,"
         "values:{username:Ie}}):null",
     ),
-    plugin_bundle_glob="plugins-page-*.js",
+    plugin_bundle_glob="plugins-settings-*.js",
     plugin_scope=(
-        "action:ee,children:oe})",
-        "action:ee,children:[globalThis.CodexMuxPluginScope?.()??null,oe]})",
+        "subtitle:k,action:F,children:w})",
+        "subtitle:k,action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
     ),
     thread_identifiers={
         "$n": "zd",
