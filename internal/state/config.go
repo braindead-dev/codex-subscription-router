@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const isolatedCredentialConfig = `cli_auth_credentials_store = "file"
@@ -62,7 +63,10 @@ func syncIsolatedConfig(primaryCodexHome, isolatedCodexHome string) error {
 	if err := os.Rename(temporaryPath, configPath); err != nil {
 		return fmt.Errorf("commit config: %w", err)
 	}
-	return linkSharedHomeContent(primaryCodexHome, isolatedCodexHome)
+	if err := linkSharedHomeContent(primaryCodexHome, isolatedCodexHome); err != nil {
+		return err
+	}
+	return linkSharedPluginCache(primaryCodexHome, isolatedCodexHome)
 }
 
 // sharedHomeEntries are user-authored Codex home entries that describe how
@@ -105,6 +109,56 @@ func linkSharedHomeContent(primaryCodexHome, isolatedCodexHome string) error {
 		if err := os.Symlink(source, target); err != nil {
 			return fmt.Errorf("link shared %s: %w", name, err)
 		}
+	}
+	return nil
+}
+
+// linkSharedPluginCache makes installed plugin packages available to every
+// subscription. Plugin configuration is already copied from the primary home,
+// while OAuth credentials and connection state remain in each isolated home.
+// Keeping separate package caches can therefore leave a plugin enabled in
+// config but unavailable to the account's app-server until it is installed a
+// second time. The cache is derived, reinstallable data, so the primary cache
+// is the single shared source of truth.
+func linkSharedPluginCache(primaryCodexHome, isolatedCodexHome string) error {
+	source := filepath.Join(primaryCodexHome, "plugins", "cache")
+	info, err := os.Stat(source)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect primary plugin cache: %w", err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("primary plugin cache is not a directory: %s", source)
+	}
+
+	pluginsRoot := filepath.Join(isolatedCodexHome, "plugins")
+	if err := os.MkdirAll(pluginsRoot, 0o700); err != nil {
+		return fmt.Errorf("create isolated plugins directory: %w", err)
+	}
+	target := filepath.Join(pluginsRoot, "cache")
+	targetInfo, err := os.Lstat(target)
+	switch {
+	case err == nil && targetInfo.Mode()&os.ModeSymlink != 0:
+		if current, readErr := os.Readlink(target); readErr == nil && current == source {
+			return nil
+		}
+		if err := os.Remove(target); err != nil {
+			return fmt.Errorf("replace shared plugin cache link: %w", err)
+		}
+	case err == nil && targetInfo.IsDir():
+		retired := target + ".pre-shared-" + time.Now().Format("20060102-150405")
+		if err := os.Rename(target, retired); err != nil {
+			return fmt.Errorf("retire isolated plugin cache: %w", err)
+		}
+	case err == nil:
+		return fmt.Errorf("isolated plugin cache is not a directory: %s", target)
+	case !errors.Is(err, os.ErrNotExist):
+		return fmt.Errorf("inspect isolated plugin cache: %w", err)
+	}
+	if err := os.Symlink(source, target); err != nil {
+		return fmt.Errorf("link shared plugin cache: %w", err)
 	}
 	return nil
 }

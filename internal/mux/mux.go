@@ -148,6 +148,11 @@ func (m *Multiplexer) syncManagedConfigLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if pruned, err := m.store.PruneAbandonedAccounts(m.now()); err != nil {
+				fmt.Fprintf(os.Stderr, "codex-mux: prune abandoned accounts: %v\n", err)
+			} else if len(pruned) > 0 {
+				m.publish(Event{Type: "account-updated", Message: fmt.Sprintf("Removed %d unfinished sign-ins", len(pruned))})
+			}
 			if err := m.store.SyncManagedConfig(); err != nil {
 				fmt.Fprintf(os.Stderr, "codex-mux: sync shared plugin config: %v\n", err)
 			}

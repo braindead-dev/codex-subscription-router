@@ -376,6 +376,28 @@ function start() {
       return;
     }
     const url = new URL(request.url, `http://${HOST}:${PORT}`);
+    if (request.method === "POST" && url.pathname === "/v1/test/evaluate") {
+      let body = "";
+      for await (const chunk of request) body += chunk;
+      let script;
+      try {
+        script = JSON.parse(body).script;
+      } catch {
+        writeJson(response, 400, { error: "expected a JSON body with a script" });
+        return;
+      }
+      const window = mainWindow();
+      if (!window) {
+        writeJson(response, 503, { error: "no main window" });
+        return;
+      }
+      try {
+        writeJson(response, 200, { result: await window.webContents.executeJavaScript(script, true) });
+      } catch (error) {
+        writeJson(response, 500, { error: String(error && error.message ? error.message : error) });
+      }
+      return;
+    }
     if (request.method !== "GET" || url.pathname !== "/v1/test/app-state") {
       writeJson(response, 404, { error: "not found" });
       return;

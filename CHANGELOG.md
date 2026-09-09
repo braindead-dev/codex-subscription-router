@@ -47,6 +47,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ### Fixed
 
+- Every subscription can use the installed plugins: isolated homes share the
+  Primary home's plugin package cache through a link (the old cache is set
+  aside), so a plugin enabled in the shared config no longer sits uninstalled
+  on another account.
+- Unfinished subscription sign-ins no longer pile up in the account list: an
+  added subscription that never completed sign-in is removed after an hour.
 - Codex 0.153 resumes a thread only from a rollout inside the account's own
   sessions directory, so moving a chat to another subscription now hard-links
   the rollout there instead of resuming it by its original path. The target

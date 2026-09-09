@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestStoreBootstrapsPrimaryAndPersistsThreadAffinity(t *testing.T) {
@@ -157,6 +158,58 @@ func TestSyncManagedConfigPropagatesPluginsWithoutRestart(t *testing.T) {
 	}
 }
 
+func TestAccountPluginCacheIsShared(t *testing.T) {
+	root := t.TempDir()
+	primaryHome := filepath.Join(root, "primary")
+	primaryCache := filepath.Join(primaryHome, "plugins", "cache")
+	if err := os.MkdirAll(primaryCache, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(primaryCache, "installed"), []byte("browser"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(primaryHome, "config.toml"), []byte("model = \"test\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	store, err := Open(filepath.Join(root, "mux"), primaryHome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	account, err := store.AddAccount("Work")
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(account.CodexHome, "plugins", "cache")
+	linked, err := os.Readlink(target)
+	if err != nil {
+		t.Fatalf("plugin cache was not linked: %v", err)
+	}
+	if linked != primaryCache {
+		t.Fatalf("plugin cache points to %q, want %q", linked, primaryCache)
+	}
+
+	if err := os.Remove(target); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(target, "stale"), []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SyncManagedConfig(); err != nil {
+		t.Fatal(err)
+	}
+	linked, err = os.Readlink(target)
+	if err != nil {
+		t.Fatalf("stale plugin cache was not replaced: %v", err)
+	}
+	if linked != primaryCache {
+		t.Fatalf("replacement plugin cache points to %q, want %q", linked, primaryCache)
+	}
+}
+
 func TestUpdateAccountPreservesController(t *testing.T) {
 	root := t.TempDir()
 	store, err := Open(root, filepath.Join(root, "primary"))
@@ -201,5 +254,54 @@ func TestSectionOrderFollowsMoves(t *testing.T) {
 	}
 	if got := reopened.SectionOrder("pinned"); !slices.Equal(got, []string{"c", "b", "new"}) {
 		t.Fatalf("expected the persisted order c, b, new, got %v", got)
+	}
+}
+
+func TestPruneAbandonedAccountsRemovesUnfinishedSignIns(t *testing.T) {
+	root := t.TempDir()
+	primaryHome := filepath.Join(root, "primary")
+	if err := os.MkdirAll(primaryHome, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	store, err := Open(filepath.Join(root, "mux"), primaryHome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedIn, err := store.AddAccount("Work")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(signedIn.CodexHome, "auth.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	abandoned, err := store.AddAccount("Subscription 3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh, err := store.AddAccount("Subscription 4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	later := time.Now().Add(2 * time.Hour)
+	if _, err := store.PruneAbandonedAccounts(time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.Accounts()) != 4 {
+		t.Fatalf("expected a recent sign-in to survive, got %d accounts", len(store.Accounts()))
+	}
+	pruned, err := store.PruneAbandonedAccounts(later)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pruned) != 2 || len(store.Accounts()) != 2 {
+		t.Fatalf("expected both unfinished sign-ins removed, pruned %d, left %d", len(pruned), len(store.Accounts()))
+	}
+	for _, account := range []Account{abandoned, fresh} {
+		if _, err := os.Stat(account.CodexHome); !os.IsNotExist(err) {
+			t.Fatalf("expected %s home removed", account.Label)
+		}
+	}
+	if _, ok := store.Account(signedIn.ID); !ok {
+		t.Fatal("signed-in account must survive")
 	}
 }

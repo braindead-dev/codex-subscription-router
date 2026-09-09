@@ -198,6 +198,52 @@ func (s *Store) AddAccount(label string) (Account, error) {
 	return account, nil
 }
 
+// abandonedAccountAge is how long an added subscription may stay signed out
+// before it is treated as an abandoned sign-in and removed.
+const abandonedAccountAge = time.Hour
+
+// PruneAbandonedAccounts removes subscriptions whose sign-in never
+// completed: no credentials in their home after abandonedAccountAge. Their
+// homes hold only managed config, so they are deleted with the record.
+func (s *Store) PruneAbandonedAccounts(now time.Time) ([]Account, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	kept := s.accounts[:0:0]
+	var pruned []Account
+	for _, account := range s.accounts {
+		signedIn := fileExists(filepath.Join(account.CodexHome, "auth.json"))
+		recent := now.Sub(time.Unix(account.CreatedAt, 0)) < abandonedAccountAge
+		if account.Controller || account.CodexHome == s.primaryCodexHome || signedIn || recent {
+			kept = append(kept, account)
+			continue
+		}
+		pruned = append(pruned, account)
+	}
+	if len(pruned) == 0 {
+		return nil, nil
+	}
+	s.accounts = kept
+	if err := s.saveLocked(); err != nil {
+		return nil, err
+	}
+	for _, account := range pruned {
+		if within(account.CodexHome, filepath.Join(s.root, "accounts")) {
+			_ = os.RemoveAll(filepath.Dir(account.CodexHome))
+		}
+	}
+	return pruned, nil
+}
+
+func within(path, root string) bool {
+	relative, err := filepath.Rel(root, path)
+	return err == nil && relative != "." && !strings.HasPrefix(relative, "..")
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
 func (s *Store) UpdateAccount(id string, label *string, enabled *bool) (Account, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
