@@ -837,6 +837,8 @@ class RendererBuild:
     thread_anchor: str
     thread_sections: tuple[str, str]
     composer_actions: tuple[tuple[str, str], ...] = ()
+    fork_titles: tuple[str, str] | None = None
+    fork_identifiers: dict[str, str] | None = None
 
 
 RENDERER_BUILD_6396 = RendererBuild(
@@ -1181,6 +1183,16 @@ RENDERER_BUILD_7746 = RendererBuild(
         "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,"
         "(0,mT.jsx)(CodexMuxThreadSubscription,{}),w,T,E,D]",
     ),
+    fork_titles=(
+        "function Xsr(e,t){let n=new Map,",
+        "function Xsr(e,t){codexMuxForkTitles(e,t);let n=new Map,",
+    ),
+    fork_identifiers={
+        "CODEX_MUX_SERVICES": "bX",
+        "codexMuxConversationTurns": "yUn",
+        "codexMuxTurnWithId": "bUn",
+        "codexMuxRememberDescription": "Hor",
+    },
     composer_actions=(
         (
             "(0,D7.jsxs)(YV.FooterActions,{ref:Le,spacing:Tt,children:[Ct,Et]})",
@@ -1324,6 +1336,13 @@ def patch_renderer(extracted: Path, token: str) -> None:
         "the native profile stats request",
     )
     data.replace(*build.reset_query, "the native reset-credit query")
+    if build.fork_titles is not None:
+        data.inject(
+            build.fork_titles[0],
+            injected_source("fork-titles.js", token, build.fork_identifiers or {}),
+            "the native thread title reconsideration setup",
+        )
+        data.replace(*build.fork_titles, "the native thread title reconsideration setup")
     data.replace(*build.reset_mutation, "the native reset-credit mutation")
 
     ui.inject(
