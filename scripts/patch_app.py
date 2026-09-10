@@ -836,6 +836,7 @@ class RendererBuild:
     thread_identifiers: dict[str, str]
     thread_anchor: str
     thread_sections: tuple[str, str]
+    composer_actions: tuple[tuple[str, str], ...] = ()
 
 
 RENDERER_BUILD_6396 = RendererBuild(
@@ -1079,6 +1080,8 @@ RENDERER_BUILD_7746 = RendererBuild(
         "CH": "Oo",
         "jLa": "jB",
         "lt": "Su",
+        "Rv": "zv",
+        "RD": "xR",
     },
     menu_anchor="function $hn(e){let t=(0,tgn.c)(35),",
     usage_slot=("usageItems:Tt", "usageItems:(0,Iq.jsx)(CodexMuxAccountMenu,{})"),
@@ -1177,6 +1180,20 @@ RENDERER_BUILD_7746 = RendererBuild(
         "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,w,T,E,D]",
         "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,"
         "(0,mT.jsx)(CodexMuxThreadSubscription,{}),w,T,E,D]",
+    ),
+    composer_actions=(
+        (
+            "(0,D7.jsxs)(YV.FooterActions,{ref:Le,spacing:Tt,children:[Ct,Et]})",
+            "(0,D7.jsxs)(YV.FooterActions,{ref:Le,spacing:Tt,"
+            "children:[globalThis.codexMuxComposerAccount?.()??null,Ct,Et]})",
+        ),
+        (
+            "(0,D7.jsxs)(YV.FooterActions,{spacing:`none`,children:[Ct,"
+            "(0,D7.jsx)(`div`,{className:`ms-2 flex items-center`,children:nt})]})",
+            "(0,D7.jsxs)(YV.FooterActions,{spacing:`none`,"
+            "children:[globalThis.codexMuxComposerAccount?.()??null,Ct,"
+            "(0,D7.jsx)(`div`,{className:`ms-2 flex items-center`,children:nt})]})",
+        ),
     ),
 )
 
@@ -1326,6 +1343,8 @@ def patch_renderer(extracted: Path, token: str) -> None:
         "the native usage-window selection",
     )
     ui.replace(*build.usage_header, "the native Usage sheet header")
+    for anchor, replacement in build.composer_actions:
+        ui.replace(anchor, replacement, "the native composer footer actions")
     for depleted_anchor in DEPLETED_ALERT_ANCHORS:
         ui.replace(
             depleted_anchor,

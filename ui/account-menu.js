@@ -856,6 +856,319 @@ function CodexMuxPluginScope() {
   });
 }
 
+function codexMuxRemainingPercent(account) {
+  const weekly = codexMuxWeeklyWindow(account?.rateLimits);
+  return weekly == null ? null : Math.max(0, 100 - weekly.usedPercent);
+}
+
+function codexMuxAccountCaption(account) {
+  const remaining = codexMuxRemainingPercent(account);
+  const plan = account.planLabel || "";
+  const usage =
+    remaining == null
+      ? "usage unavailable"
+      : remaining === 0
+        ? "depleted"
+        : `${Math.round(remaining)}% left`;
+  return plan ? `${plan} · ${usage}` : usage;
+}
+
+// The composer's account control: an avatar beside the model picker showing
+// which subscription the open chat runs on, or the one new chats will start
+// on. Its menu moves the chat or changes the new-chat preference.
+function CodexMuxComposerAccount() {
+  const route = typeof Rv === "undefined" ? null : Lo(Rv);
+  const threadId =
+    route?.value?.routeKind === "local-thread" ? route.value.conversationId : null;
+  const [accounts, setAccounts] = kXc.useState(codexMuxCachedAccounts);
+  const [threadAccountId, setThreadAccountId] = kXc.useState(null);
+  const [preferredId, setPreferredId] = kXc.useState(null);
+  const [open, setOpen] = kXc.useState(false);
+  const [busy, setBusy] = kXc.useState(false);
+  const [error, setError] = kXc.useState("");
+  const [anchor, setAnchor] = kXc.useState(null);
+  const buttonRef = kXc.useRef(null);
+
+  const refresh = kXc.useCallback(async () => {
+    try {
+      const [nextAccounts, preferred, thread] = await Promise.all([
+        codexMuxFetchAccounts(),
+        codexMuxRequest("/preferred-account"),
+        threadId
+          ? codexMuxRequest(
+              `/thread-account?threadId=${encodeURIComponent(threadId)}`,
+            ).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+      setAccounts(nextAccounts);
+      setPreferredId(preferred.accountId || null);
+      setThreadAccountId(thread?.account?.id || null);
+    } catch {}
+  }, [threadId]);
+
+  kXc.useEffect(() => {
+    setThreadAccountId(null);
+    setError("");
+    refresh();
+    const events = codexMuxEvents();
+    events.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (
+          payload.type === "account-updated" ||
+          payload.type === "preferred-account-updated" ||
+          payload.type === "thread-routed" ||
+          (["thread-moved", "thread-failed-over"].includes(payload.type) &&
+            payload.data?.threadId === threadId)
+        ) {
+          refresh();
+        }
+      } catch {}
+    };
+    const timer = setInterval(refresh, 30_000);
+    return () => {
+      clearInterval(timer);
+      events.close();
+    };
+  }, [refresh, threadId]);
+
+  kXc.useEffect(() => {
+    if (!open) return;
+    const close = (event) => {
+      if (event.type === "keydown" && event.key !== "Escape") return;
+      if (
+        event.type !== "keydown" &&
+        event.target?.closest?.("[data-codex-mux-composer-account]")
+      ) {
+        return;
+      }
+      setOpen(false);
+    };
+    window.addEventListener("pointerdown", close, true);
+    window.addEventListener("keydown", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("pointerdown", close, true);
+      window.removeEventListener("keydown", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
+  const connected = accounts.filter(
+    (account) => account.connected && account.enabled,
+  );
+  if (connected.length < 2) return null;
+  const currentId = threadId ? threadAccountId : preferredId;
+  const current = connected.find((account) => account.id === currentId) || null;
+
+  function toggle() {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const rect = buttonRef.current?.getBoundingClientRect();
+    setAnchor(rect ? { right: window.innerWidth - rect.right, bottom: window.innerHeight - rect.top + 8 } : null);
+    setError("");
+    setOpen(true);
+    refresh();
+  }
+
+  async function choose(accountId) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (threadId) {
+        const result = await codexMuxRequest("/thread-account", {
+          method: "POST",
+          body: JSON.stringify({ threadId, accountId }),
+        });
+        setThreadAccountId(result.account?.id || accountId);
+      } else {
+        await codexMuxRequest("/preferred-account", {
+          method: "PUT",
+          body: JSON.stringify({ accountId: accountId || "" }),
+        });
+        setPreferredId(accountId || null);
+      }
+      setOpen(false);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const title = threadId
+    ? current
+      ? `This chat runs on ${current.label}`
+      : "Choose the subscription for this chat"
+    : current
+      ? `New chats start on ${current.label}`
+      : "New chats start on the subscription with the most usage left";
+
+  const menuItem = (key, { avatar, label, caption, active, disabled, onClick }) =>
+    (0, e7.jsxs)(
+      "button",
+      {
+        type: "button",
+        disabled: disabled || busy,
+        "aria-pressed": active,
+        onClick,
+        className: [
+          "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-start text-sm transition-colors",
+          disabled
+            ? "cursor-not-allowed opacity-50"
+            : "hover:bg-token-foreground/5",
+          active ? "text-token-text-primary" : "text-token-text-secondary",
+        ].join(" "),
+        children: [
+          avatar,
+          (0, e7.jsxs)("span", {
+            className: "flex min-w-0 flex-1 flex-col",
+            children: [
+              (0, e7.jsx)("span", { className: "truncate", children: label }),
+              caption
+                ? (0, e7.jsx)("span", {
+                    className: "truncate text-xs text-token-text-tertiary",
+                    children: caption,
+                  })
+                : null,
+            ],
+          }),
+          active
+            ? (0, e7.jsx)(CodexMuxCheckIcon, { className: "size-4 shrink-0" })
+            : null,
+        ],
+      },
+      key,
+    );
+
+  const menu = open
+    ? (0, RD.createPortal)(
+        (0, e7.jsxs)("div", {
+          "data-codex-mux-composer-account": "menu",
+          role: "menu",
+          className:
+            "fixed z-[1000] w-64 rounded-xl border border-token-border-light bg-token-bg-primary p-1.5 shadow-lg",
+          style: anchor ? { right: anchor.right, bottom: anchor.bottom } : { right: 16, bottom: 80 },
+          children: [
+            (0, e7.jsx)("div", {
+              className: "px-2 pb-1 pt-1 text-xs font-medium text-token-text-tertiary",
+              children: threadId ? "Run this chat on" : "Start new chats on",
+            }),
+            threadId
+              ? null
+              : menuItem("auto", {
+                  avatar: (0, e7.jsx)(CodexMuxAvatarCluster, {
+                    accounts: connected,
+                    className: "size-6",
+                  }),
+                  label: "Automatic",
+                  caption: "most usage left, model access considered",
+                  active: !preferredId,
+                  onClick: () => choose(""),
+                }),
+            ...connected.map((account) =>
+              menuItem(account.id, {
+                avatar: (0, e7.jsx)(CodexMuxAccountAvatar, {
+                  imageUrl: account.profileImageUrl,
+                  label: account.label,
+                  className: "size-6 shrink-0",
+                }),
+                label: account.label,
+                caption: codexMuxAccountCaption(account),
+                active: account.id === currentId,
+                disabled: codexMuxRemainingPercent(account) === 0,
+                onClick: () => choose(account.id),
+              }),
+            ),
+            error
+              ? (0, e7.jsx)("div", {
+                  className: "px-2 pb-1 pt-1.5 text-xs text-token-text-error",
+                  children: error,
+                })
+              : null,
+          ],
+        }),
+        document.body,
+      )
+    : null;
+
+  return (0, e7.jsxs)("span", {
+    "data-codex-mux-composer-account": "control",
+    className: "mx-0.5 flex items-center",
+    children: [
+      (0, e7.jsx)("button", {
+        ref: buttonRef,
+        type: "button",
+        title,
+        "aria-label": title,
+        "aria-haspopup": "menu",
+        "aria-expanded": open,
+        onClick: toggle,
+        className: [
+          "flex size-8 items-center justify-center rounded-full transition-colors hover:bg-token-foreground/10",
+          busy ? "opacity-60" : "",
+        ].join(" "),
+        children: current
+          ? (0, e7.jsx)(CodexMuxAccountAvatar, {
+              imageUrl: current.profileImageUrl,
+              label: current.label,
+              className: "size-6",
+            })
+          : (0, e7.jsx)(CodexMuxAvatarCluster, {
+              accounts: connected,
+              className: "size-6",
+            }),
+      }),
+      menu,
+    ],
+  });
+}
+
+// Two avatars tucked together, standing for "any subscription".
+function CodexMuxAvatarCluster({ accounts, className }) {
+  const shown = accounts.slice(0, 2);
+  return (0, e7.jsx)("span", {
+    className: `${className} relative shrink-0`,
+    "aria-hidden": true,
+    children: shown.map((account, index) =>
+      (0, e7.jsx)(
+        "span",
+        {
+          className: `absolute size-[70%] rounded-full ring-2 ring-token-bg-primary ${
+            index === 0 ? "left-0 top-0" : "bottom-0 right-0"
+          }`,
+          style: { zIndex: index },
+          children: (0, e7.jsx)(CodexMuxAccountAvatar, {
+            imageUrl: account.profileImageUrl,
+            label: account.label,
+            className: "size-full",
+          }),
+        },
+        account.id,
+      ),
+    ),
+  });
+}
+
+function CodexMuxCheckIcon(props) {
+  return (0, e7.jsx)("svg", {
+    viewBox: "0 0 20 20",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    ...props,
+    children: (0, e7.jsx)("path", {
+      d: "M4.5 10.5L8.25 14.25L15.5 6.5",
+      stroke: "currentColor",
+      strokeWidth: "1.8",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+    }),
+  });
+}
+
 // The Profile, Plugins, and thread summary surfaces render from other bundles
 // and share the avatar component's image resolution and initials fallback.
 globalThis.CodexMuxAccountAvatar = CodexMuxAccountAvatar;
@@ -863,3 +1176,5 @@ globalThis.CodexMuxProfileAvatarStack = (props) =>
   (0, e7.jsx)(CodexMuxProfileAvatarStack, props || {});
 globalThis.CodexMuxPluginScope = () =>
   (0, e7.jsx)(CodexMuxPluginScope, {});
+globalThis.codexMuxComposerAccount = () =>
+  (0, e7.jsx)(CodexMuxComposerAccount, {});
