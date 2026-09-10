@@ -51,6 +51,14 @@ func run() error {
 	if root == "" {
 		root = filepath.Join(home, ".codex-mux")
 	}
+	lock, err := acquireMultiplexerLock(root)
+	if err != nil {
+		return err
+	}
+	if lock == nil {
+		return passthrough(realExecutable, args)
+	}
+	defer lock.Close()
 	primaryCodexHome := os.Getenv("CODEX_HOME")
 	if primaryCodexHome == "" {
 		primaryCodexHome = filepath.Join(home, ".codex")
@@ -121,6 +129,31 @@ func run() error {
 	}
 	cancel()
 	return scanner.Err()
+}
+
+// acquireMultiplexerLock claims the one multiplexer slot for a state root.
+// Plugin runtimes the desktop starts reach Codex through CODEX_CLI_PATH,
+// which is this wrapper, and ask it for an app-server of their own. Only the
+// desktop's connection may multiplex: a second multiplexer would start a
+// second live app-server on every subscription's home. When the slot is
+// taken the caller gets nil and hands the request to the real binary on the
+// account its environment already names.
+func acquireMultiplexerLock(root string) (*os.File, error) {
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		return nil, fmt.Errorf("create state root: %w", err)
+	}
+	lock, err := os.OpenFile(filepath.Join(root, "multiplexer.lock"), os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("open multiplexer lock: %w", err)
+	}
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		lock.Close()
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("lock multiplexer slot: %w", err)
+	}
+	return lock, nil
 }
 
 func resolveRealExecutable() (string, error) {

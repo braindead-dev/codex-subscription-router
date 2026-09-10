@@ -95,7 +95,7 @@ func Open(root, primaryCodexHome string) (*Store, error) {
 		return nil, fmt.Errorf("read state: %w", err)
 	}
 	for _, account := range store.accounts {
-		if samePath(account.CodexHome, primaryCodexHome) {
+		if !store.isolatedHome(account.CodexHome) {
 			continue
 		}
 		if err := syncIsolatedConfig(primaryCodexHome, account.CodexHome); err != nil {
@@ -120,7 +120,7 @@ func (s *Store) SyncManagedConfig() error {
 	s.mu.RUnlock()
 
 	for _, account := range accounts {
-		if samePath(account.CodexHome, primaryCodexHome) {
+		if !s.isolatedHome(account.CodexHome) {
 			continue
 		}
 		if err := syncIsolatedConfig(primaryCodexHome, account.CodexHome); err != nil {
@@ -232,6 +232,14 @@ func (s *Store) PruneAbandonedAccounts(now time.Time) ([]Account, error) {
 		}
 	}
 	return pruned, nil
+}
+
+// isolatedHome reports whether a Codex home is one this store created under
+// its accounts directory. Only such homes are ever rewritten from the
+// Primary home; a user's own home is never treated as isolated, whatever
+// CODEX_HOME the process was started with.
+func (s *Store) isolatedHome(codexHome string) bool {
+	return within(codexHome, filepath.Join(s.root, "accounts"))
 }
 
 func within(path, root string) bool {

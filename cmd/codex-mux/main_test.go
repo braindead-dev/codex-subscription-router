@@ -30,3 +30,21 @@ func TestValidateControlToken(t *testing.T) {
 		}
 	}
 }
+
+func TestMultiplexerLockAdmitsOneHolder(t *testing.T) {
+	root := t.TempDir()
+	first, err := acquireMultiplexerLock(root)
+	if err != nil || first == nil {
+		t.Fatalf("expected the first caller to hold the lock, got %v err=%v", first, err)
+	}
+	second, err := acquireMultiplexerLock(root)
+	if err != nil || second != nil {
+		t.Fatalf("expected the second caller to be refused, got %v err=%v", second, err)
+	}
+	first.Close()
+	third, err := acquireMultiplexerLock(root)
+	if err != nil || third == nil {
+		t.Fatalf("expected the slot to free once released, got %v err=%v", third, err)
+	}
+	third.Close()
+}
