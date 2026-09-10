@@ -96,6 +96,9 @@ type Multiplexer struct {
 	resetPreviewMu sync.RWMutex
 	resetPreviews  map[string]ResetCreditsPreview
 
+	mutedMu sync.Mutex
+	muted   map[mutedNotification]struct{}
+
 	snapshots *snapshotCache
 }
 
@@ -279,6 +282,9 @@ func (m *Multiplexer) routeNewThread(message protocol.Message) {
 		return
 	}
 	account, reason, err := m.chooseAccountExcluding(ctx, support.unsupported)
+	if preferred, ok := m.preferredAccount(ctx, support.unsupported); ok {
+		account, reason, err = preferred, RouteReason{Preferred: true}, nil
+	}
 	if err != nil {
 		if errors.Is(err, errNoSubscriptionCapacity) {
 			if support.native {
@@ -460,6 +466,7 @@ func (m *Multiplexer) failoverTurn(
 		m.write(protocol.Failure(message.ID, -32028, err.Error()))
 		return
 	}
+	m.releaseThread(ctx, sourceAccountID, threadID)
 	if err := m.forwardWithExclusions(fallback.ID, message, excluded); err != nil {
 		m.write(protocol.Failure(message.ID, -32023, err.Error()))
 		return
@@ -647,6 +654,9 @@ func (m *Multiplexer) handleInbound(inbound backend.Inbound) {
 		message.Method == "account/login/completed" ||
 		message.Method == "account/updated" {
 		go m.publishAccountRefresh(inbound.AccountID)
+	}
+	if m.mutedNotification(inbound.AccountID, message.Params) {
+		return
 	}
 	if m.shouldForwardNotification(inbound.AccountID, message.Method) {
 		m.writeRaw(inbound.Raw)

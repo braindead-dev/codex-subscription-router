@@ -305,3 +305,35 @@ func TestPruneAbandonedAccountsRemovesUnfinishedSignIns(t *testing.T) {
 		t.Fatal("signed-in account must survive")
 	}
 }
+
+func TestPreferredAccountPersistsAndValidates(t *testing.T) {
+	root := t.TempDir()
+	primaryHome := filepath.Join(root, "primary")
+	store, err := Open(filepath.Join(root, "mux"), primaryHome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SetPreferredAccount("missing"); err == nil {
+		t.Fatal("expected an unknown account to be refused")
+	}
+	added, err := store.AddAccount("Work")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SetPreferredAccount(added.ID); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := Open(filepath.Join(root, "mux"), primaryHome)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := reopened.PreferredAccount(); got != added.ID {
+		t.Fatalf("preferred account was not persisted: %q", got)
+	}
+	if err := reopened.SetPreferredAccount(""); err != nil {
+		t.Fatal(err)
+	}
+	if got := reopened.PreferredAccount(); got != "" {
+		t.Fatalf("expected the preference to clear, got %q", got)
+	}
+}

@@ -125,3 +125,74 @@ func TestProjectionCoversRolloutComparesOffsetToFileSize(t *testing.T) {
 		t.Fatalf("expected a caught-up projection, got covered=%v err=%v", covered, err)
 	}
 }
+
+func TestSyncThreadCopyBringsForkedFromThreadAlong(t *testing.T) {
+	if _, err := os.Stat(sqlite3Binary); err != nil {
+		t.Skip("sqlite3 is not available")
+	}
+	root := t.TempDir()
+	source, target := filepath.Join(root, "source"), filepath.Join(root, "target")
+	parentID := "019ff1f7-e91a-7fa3-bfd7-272e790235f6"
+	forkID := "01a08c71-52c7-7651-b40e-929694f82b26"
+	parent := filepath.Join(source, "sessions", "2026", "08", "11", "rollout-parent-"+parentID+".jsonl")
+	fork := filepath.Join(source, "sessions", "2026", "09", "10", "rollout-fork-"+forkID+".jsonl")
+	writeRollout := func(path, meta string) {
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(meta+"\n{\"type\":\"turn\"}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeRollout(parent, `{"type":"session_meta","payload":{"id":"`+parentID+`","history_mode":"paginated"}}`)
+	writeRollout(fork, `{"type":"session_meta","payload":{"id":"`+forkID+`","forked_from_id":"`+parentID+`","history_base":{"thread_id":"`+parentID+`","end_ordinal_exclusive":2,"end_byte_offset":90}}}`)
+	if err := os.MkdirAll(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	schema := "create table threads (id text primary key, rollout_path text, history_mode text);"
+	history := "create table thread_turns (thread_id text, turn_id text, rollout_ordinal integer);" +
+		"create table thread_items (thread_id text, turn_id text, item_id text, rollout_ordinal integer);" +
+		"create table thread_history_projection_state (thread_id text primary key, next_rollout_byte_offset integer, next_rollout_ordinal integer);" +
+		"create table thread_realtime_items (thread_id text, item_id text);"
+	for _, home := range []string{source, target} {
+		if err := runSQLite(stateDatabase(home), schema); err != nil {
+			t.Fatal(err)
+		}
+		if err := runSQLite(historyDatabase(home), history); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := runSQLite(stateDatabase(source), "insert into threads values ('"+parentID+"', '"+parent+"', 'paginated'), ('"+forkID+"', '"+fork+"', 'paginated');"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runSQLite(historyDatabase(source), "insert into thread_history_projection_state values ('"+parentID+"', 90, 2), ('"+forkID+"', 120, 2);"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := syncThreadCopy(source, target, forkID); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{forkID, parentID} {
+		if rollouts := threadRollouts(target, id); len(rollouts) != 1 {
+			t.Fatalf("expected %s to have one rollout on the target, got %v", id, rollouts)
+		}
+		row, err := querySQLite(stateDatabase(target), "select rollout_path from threads where id = '"+id+"';")
+		if err != nil || !strings.HasPrefix(strings.TrimSpace(row), target) {
+			t.Fatalf("expected %s to be indexed under the target home, got %q err=%v", id, row, err)
+		}
+		offset, err := querySQLite(historyDatabase(target), "select next_rollout_byte_offset from thread_history_projection_state where thread_id = '"+id+"';")
+		if err != nil || strings.TrimSpace(offset) == "" {
+			t.Fatalf("expected %s to have a projection on the target, got %q err=%v", id, offset, err)
+		}
+	}
+}
+
+func TestHistoryBaseThreadIgnoresOwnHistory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "rollout.jsonl")
+	if err := os.WriteFile(path, []byte(`{"type":"session_meta","payload":{"id":"x","history_mode":"paginated"}}`+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if base := historyBaseThread(path); base != "" {
+		t.Fatalf("expected no base thread, got %q", base)
+	}
+}

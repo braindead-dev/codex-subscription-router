@@ -76,13 +76,10 @@ func TestLiveMoveKeepsHistoryOnBothAccounts(t *testing.T) {
 
 	// Primary -> Work: Work has never indexed the thread; its row, files, and
 	// projection streams are copied before it resumes by id.
-	if err := m.resumeThreadOnAccount(ctx, threadID, "primary", work.ID); err != nil {
+	if _, err := m.MoveThread(ctx, threadID, work.ID); err != nil {
 		t.Fatalf("move to work: %v", err)
 	}
 	t.Logf("after move: work %s", describeHome(t, work.CodexHome, threadID))
-	if err := store.SetThreadOwner(threadID, work.ID); err != nil {
-		t.Fatal(err)
-	}
 	client.turn(threadID, "Reply with exactly: moved-to-work")
 	t.Logf("after work turn: work %s", describeHome(t, work.CodexHome, threadID))
 	if onWork := projectedTurns(t, work.CodexHome, threadID); onWork != before+1 {
@@ -93,12 +90,13 @@ func TestLiveMoveKeepsHistoryOnBothAccounts(t *testing.T) {
 	}
 
 	// Work -> Primary: Primary indexes the thread and never loaded it, so its
-	// copy is refreshed from Work, including every link's stream.
-	if err := m.resumeThreadOnAccount(ctx, threadID, work.ID, "primary"); err != nil {
+	// copy is refreshed from Work, including every link's stream. The move
+	// closes Work's session so Work can take the chat back later.
+	if _, err := m.MoveThread(ctx, threadID, "primary"); err != nil {
 		t.Fatalf("move back to primary: %v", err)
 	}
-	if err := store.SetThreadOwner(threadID, "primary"); err != nil {
-		t.Fatal(err)
+	if workChild, ok := m.child(work.ID); !ok || threadLoadedOn(ctx, workChild, threadID) {
+		t.Fatal("work still holds the chat's session after the move")
 	}
 	client.turn(threadID, "Reply with exactly: back-on-primary")
 	t.Logf("after primary turn: primary %s", describeHome(t, primaryHome, threadID))
@@ -115,6 +113,16 @@ func TestLiveMoveKeepsHistoryOnBothAccounts(t *testing.T) {
 	}
 	if primaryRollouts, workRollouts := threadRollouts(primaryHome, threadID), threadRollouts(work.CodexHome, threadID); len(primaryRollouts) != len(workRollouts) {
 		t.Fatalf("rollout sets differ: primary %d files, work %d files", len(primaryRollouts), len(workRollouts))
+	}
+
+	// Primary -> Work again: Work ran the chat before, and only the release
+	// after the previous move lets it resume without a stale cursor.
+	if _, err := m.MoveThread(ctx, threadID, work.ID); err != nil {
+		t.Fatalf("move to work a second time: %v", err)
+	}
+	client.turn(threadID, "Reply with exactly: work-again")
+	if onWork := projectedTurns(t, work.CodexHome, threadID); onWork != before+3 {
+		t.Fatalf("work projects %d turns after its second stint, want %d", onWork, before+3)
 	}
 }
 
@@ -133,7 +141,7 @@ func (c *liveClient) request(method string, params any) map[string]any {
 	return c.output.await(c.t, func(message map[string]any) bool {
 		raw, _ := json.Marshal(message["id"])
 		return string(raw) == string(id)
-	}, 120*time.Second)
+	}, 300*time.Second)
 }
 
 func (c *liveClient) turn(threadID, text string) {

@@ -1,6 +1,8 @@
 package mux
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,7 +41,8 @@ func projectionStream(rollout, threadID string) string {
 // turns. Every rollout file is hard-linked into the target's sessions tree,
 // the target's row is pointed at the source's current rollout, and the
 // projection rows of every stream are copied. The files are shared, so the
-// derived rows apply unchanged.
+// derived rows apply unchanged. A forked thread keeps its history in the
+// thread it was forked from, so that thread's copy is brought along too.
 func syncThreadCopy(sourceHome, targetHome, threadID string) error {
 	if !threadIDPattern.MatchString(threadID) {
 		return fmt.Errorf("unexpected thread id %q", threadID)
@@ -49,14 +52,18 @@ func syncThreadCopy(sourceHome, targetHome, threadID string) error {
 		if attempt > 0 {
 			time.Sleep(time.Second)
 		}
-		if err = copyThread(sourceHome, targetHome, threadID); err == nil || !strings.Contains(err.Error(), "database is locked") {
+		if err = copyThread(sourceHome, targetHome, threadID, map[string]struct{}{}); err == nil || !strings.Contains(err.Error(), "database is locked") {
 			return err
 		}
 	}
 	return err
 }
 
-func copyThread(sourceHome, targetHome, threadID string) error {
+func copyThread(sourceHome, targetHome, threadID string, copied map[string]struct{}) error {
+	if _, done := copied[threadID]; done {
+		return nil
+	}
+	copied[threadID] = struct{}{}
 	row, err := querySQLite(
 		stateDatabase(sourceHome),
 		fmt.Sprintf(
@@ -78,6 +85,11 @@ func copyThread(sourceHome, targetHome, threadID string) error {
 		}
 		if stream := projectionStream(rollout, threadID); stream != threadID {
 			streams = append(streams, stream)
+		}
+		if base := historyBaseThread(rollout); base != "" && base != threadID {
+			if err := copyThread(sourceHome, targetHome, base, copied); err != nil {
+				return fmt.Errorf("forked-from thread %s: %w", base, err)
+			}
 		}
 	}
 	current, err := linkRolloutIntoHome(path, targetHome)
@@ -168,6 +180,36 @@ func ensureHistorySchema(sourceDB, targetDB string) error {
 		"INSERT OR IGNORE INTO _sqlx_migrations SELECT * FROM src._sqlx_migrations;",
 		"DETACH DATABASE src;",
 	}, "\n"))
+}
+
+// historyBaseThread reads the thread whose rollout a fork's history starts
+// from, recorded in the fork's session metadata, or "" for a thread that
+// carries its own history.
+func historyBaseThread(rollout string) string {
+	file, err := os.Open(rollout)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+	reader := bufio.NewReaderSize(file, 1<<20)
+	line, err := reader.ReadBytes('\n')
+	if len(line) == 0 && err != nil {
+		return ""
+	}
+	var record struct {
+		Payload struct {
+			HistoryBase struct {
+				ThreadID string `json:"thread_id"`
+			} `json:"history_base"`
+		} `json:"payload"`
+	}
+	if json.Unmarshal(line, &record) != nil {
+		return ""
+	}
+	if !threadIDPattern.MatchString(record.Payload.HistoryBase.ThreadID) {
+		return ""
+	}
+	return record.Payload.HistoryBase.ThreadID
 }
 
 // threadRollouts lists every rollout segment of a thread in a Codex home.

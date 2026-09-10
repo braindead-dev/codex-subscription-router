@@ -30,6 +30,9 @@ type persistedState struct {
 	Accounts     []Account           `json:"accounts"`
 	ThreadOwner  map[string]string   `json:"threadOwner"`
 	SectionOrder map[string][]string `json:"sectionOrder,omitempty"`
+	// PreferredAccount is the subscription new chats start on when the user
+	// picked one in the composer; empty means the router chooses.
+	PreferredAccount string `json:"preferredAccount,omitempty"`
 }
 
 // Store persists only routing metadata. OAuth credentials and conversation
@@ -42,6 +45,7 @@ type Store struct {
 	accounts         []Account
 	owners           map[string]string
 	sections         map[string][]string
+	preferred        string
 }
 
 func Open(root, primaryCodexHome string) (*Store, error) {
@@ -79,6 +83,7 @@ func Open(root, primaryCodexHome string) (*Store, error) {
 		if persisted.SectionOrder != nil {
 			store.sections = persisted.SectionOrder
 		}
+		store.preferred = persisted.PreferredAccount
 	case errors.Is(err, os.ErrNotExist):
 		store.accounts = []Account{{
 			ID:         "primary",
@@ -139,6 +144,10 @@ func (s *Store) Accounts() []Account {
 func (s *Store) Account(id string) (Account, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	return s.accountLocked(id)
+}
+
+func (s *Store) accountLocked(id string) (Account, bool) {
 	for _, account := range s.accounts {
 		if account.ID == id {
 			return account, true
@@ -297,6 +306,31 @@ func (s *Store) SetThreadOwner(threadID, accountID string) error {
 	return s.saveLocked()
 }
 
+// PreferredAccount is the subscription the user chose for new chats, or
+// empty when the router should choose.
+func (s *Store) PreferredAccount() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.preferred
+}
+
+// SetPreferredAccount records the subscription new chats should start on.
+// An empty id returns the choice to the router.
+func (s *Store) SetPreferredAccount(accountID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if accountID != "" {
+		if _, ok := s.accountLocked(accountID); !ok {
+			return fmt.Errorf("unknown account %q", accountID)
+		}
+	}
+	if s.preferred == accountID {
+		return nil
+	}
+	s.preferred = accountID
+	return s.saveLocked()
+}
+
 // SectionOrder is the pinned order of a section across every subscription.
 // Each account's index orders only its own threads, so the multiplexer keeps
 // the one order the sidebar shows.
@@ -371,10 +405,11 @@ func (s *Store) ThreadCounts() map[string]int {
 
 func (s *Store) saveLocked() error {
 	persisted := persistedState{
-		Version:      stateVersion,
-		Accounts:     s.accounts,
-		ThreadOwner:  s.owners,
-		SectionOrder: s.sections,
+		Version:          stateVersion,
+		Accounts:         s.accounts,
+		ThreadOwner:      s.owners,
+		SectionOrder:     s.sections,
+		PreferredAccount: s.preferred,
 	}
 	data, err := json.MarshalIndent(persisted, "", "  ")
 	if err != nil {

@@ -59,6 +59,7 @@ type RouteReason struct {
 	ResetCreditExpiresAt *int64   `json:"resetCreditExpiresAt,omitempty"`
 	UrgencyScore         *float64 `json:"urgencyScore,omitempty"`
 	ThreadCount          int      `json:"threadCount"`
+	Preferred            bool     `json:"preferred,omitempty"`
 }
 
 func (m *Multiplexer) Accounts(ctx context.Context) []AccountSnapshot {
