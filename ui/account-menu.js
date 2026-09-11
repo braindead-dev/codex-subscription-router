@@ -180,19 +180,15 @@ function CodexMuxAccountMenu() {
 
   kXc.useEffect(() => {
     refresh();
-    const events = codexMuxEvents();
-    events.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (
-          payload.type === "account-updated" &&
-          payload.accountId === loginAccountId
-        ) {
-          setLogin(null);
-        }
-        if (payload.type === "account-updated") refresh();
-      } catch {}
-    };
+    const unsubscribe = codexMuxSubscribe((payload) => {
+      if (
+        payload.type === "account-updated" &&
+        payload.accountId === loginAccountId
+      ) {
+        setLogin(null);
+      }
+      if (payload.type === "account-updated") refresh();
+    });
     const warmupTimer = setTimeout(refresh, 2_000);
     const loadingDeadline = setTimeout(() => {
       refresh().finally(() => setLoading(false));
@@ -202,7 +198,7 @@ function CodexMuxAccountMenu() {
       clearTimeout(warmupTimer);
       clearTimeout(loadingDeadline);
       clearInterval(timer);
-      events.close();
+      unsubscribe();
     };
   }, [refresh, loginAccountId]);
 
@@ -910,25 +906,21 @@ function CodexMuxComposerAccount() {
     setThreadAccountId(null);
     setError("");
     refresh();
-    const events = codexMuxEvents();
-    events.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (
-          payload.type === "account-updated" ||
-          payload.type === "preferred-account-updated" ||
-          payload.type === "thread-routed" ||
-          (["thread-moved", "thread-failed-over"].includes(payload.type) &&
-            payload.data?.threadId === threadId)
-        ) {
-          refresh();
-        }
-      } catch {}
-    };
+    const unsubscribe = codexMuxSubscribe((payload) => {
+      if (
+        payload.type === "account-updated" ||
+        payload.type === "preferred-account-updated" ||
+        payload.type === "thread-routed" ||
+        (["thread-moved", "thread-failed-over"].includes(payload.type) &&
+          payload.data?.threadId === threadId)
+      ) {
+        refresh();
+      }
+    });
     const timer = setInterval(refresh, 30_000);
     return () => {
       clearInterval(timer);
-      events.close();
+      unsubscribe();
     };
   }, [refresh, threadId]);
 

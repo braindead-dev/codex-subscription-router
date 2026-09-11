@@ -39,7 +39,7 @@ func New(address, token string, multiplexer *mux.Multiplexer, uiTests bool) *Ser
 		Addr:              address,
 		Handler:           server.securityHeaders(router),
 		ReadHeaderTimeout: 5 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		IdleTimeout:       5 * time.Minute,
 		MaxHeaderBytes:    16 * 1024,
 	}
 	return server
