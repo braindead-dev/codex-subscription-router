@@ -239,7 +239,9 @@ async function codexMuxStartRemoteControlPairing(accountId) {
 function codexMuxCredits(rateLimits) {
   const credits = rateLimits?.credits;
   if (!credits || !(credits.hasCredits || credits.unlimited)) return null;
-  return credits.unlimited ? "unlimited credits" : `${credits.balance} credits`;
+  if (credits.unlimited) return "unlimited credits";
+  const balance = Number(credits.balance);
+  return `${Number.isFinite(balance) ? Math.round(balance) : credits.balance} credits`;
 }
 
 function codexMuxWeeklyWindow(rateLimits) {
