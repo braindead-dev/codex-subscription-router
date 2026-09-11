@@ -108,6 +108,12 @@ def parse_args() -> argparse.Namespace:
         help="Replace an existing destination after moving it to a timestamped backup.",
     )
     parser.add_argument(
+        "--discard-existing",
+        action="store_true",
+        help="With --force, delete the existing destination instead of keeping a "
+        "backup; for staging builds that are rebuilt often.",
+    )
+    parser.add_argument(
         "--allow-adhoc-signing",
         action="store_true",
         help="Allow an ad-hoc signature (Appshots and Computer Use may stop working).",
@@ -1882,6 +1888,7 @@ def patch_app(
     allow_adhoc_signing: bool,
     allow_untested_source: bool,
     allow_signing_team_change: bool,
+    discard_existing: bool = False,
 ) -> None:
     source = source.expanduser().resolve()
     destination = destination.expanduser().resolve()
@@ -2056,6 +2063,12 @@ def patch_app(
         helper_backup = backup_directory / installed_computer_use_app.name
         had_app = destination.exists()
         had_helper = installed_computer_use_app.exists()
+        if discard_existing:
+            if had_app:
+                shutil.rmtree(destination)
+            if had_helper:
+                shutil.rmtree(installed_computer_use_app)
+            had_app = had_helper = False
         if had_app or had_helper:
             backup_directory.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             backup_directory.parent.chmod(0o700)
@@ -2109,6 +2122,7 @@ def main() -> int:
             args.allow_adhoc_signing,
             args.allow_untested_source,
             args.allow_signing_team_change,
+            args.discard_existing,
         )
     except (RuntimeError, OSError, subprocess.CalledProcessError) as error:
         print(f"patch failed: {error}", file=sys.stderr)
