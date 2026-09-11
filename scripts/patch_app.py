@@ -1881,6 +1881,19 @@ def patch_info_plist(
         plistlib.dump(info, handle, fmt=plistlib.FMT_BINARY, sort_keys=False)
 
 
+def prune_backups(backups: Path, keep: int) -> None:
+    """Keep only the newest backups; each holds a full app bundle."""
+    if not backups.is_dir():
+        return
+    dated = sorted(
+        path for path in backups.iterdir()
+        if path.is_dir() and re.fullmatch(r"\d{8}-\d{6}", path.name)
+    )
+    for stale in dated[:-keep] if keep else dated:
+        shutil.rmtree(stale)
+        print(f"Removed old backup {stale}")
+
+
 def patch_app(
     source: Path,
     destination: Path,
@@ -2059,6 +2072,7 @@ def patch_app(
 
         backup_suffix = time.strftime("%Y%m%d-%H%M%S")
         backup_directory = DEFAULT_STATE_ROOT / "backups" / backup_suffix
+        prune_backups(DEFAULT_STATE_ROOT / "backups", keep=1)
         app_backup = backup_directory / destination.name
         helper_backup = backup_directory / installed_computer_use_app.name
         had_app = destination.exists()
