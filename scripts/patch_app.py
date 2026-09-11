@@ -839,6 +839,10 @@ class RendererBuild:
     composer_actions: tuple[tuple[str, str], ...] = ()
     fork_titles: tuple[str, str] | None = None
     fork_identifiers: dict[str, str] | None = None
+    # Snippets that exist once in the build and name identifiers the
+    # injected sources borrow; the porting tool reads them, the patcher
+    # verifies them.
+    identifier_probes: tuple[str, ...] = ()
 
 
 RENDERER_BUILD_6396 = RendererBuild(
@@ -1041,13 +1045,7 @@ RENDERER_BUILD_6662 = RendererBuild(
         "ee=(0,tc.jsxs)(tc.Fragment,{children:["
         "globalThis.CodexMuxPluginScope?.()??null,H,U]})",
     ),
-    thread_identifiers={
-        "$n": "jf",
-        "sr": "Pa",
-        "TE": "jy",
-        "zE": "CE",
-        "K": "q",
-    },
+    thread_identifiers={"K": "q"},
     thread_anchor="function bE(){let e=(0,SE.c)(1)",
     thread_sections=(
         "children:[c,l,u,d,f,p,m,h,g,_,v,y,b,x]",
@@ -1085,8 +1083,27 @@ RENDERER_BUILD_7746 = RendererBuild(
         "Rv": "zv",
         "RD": "xR",
     },
-    menu_anchor="function $hn(e){let t=(0,tgn.c)(35),",
-    usage_slot=("usageItems:Tt", "usageItems:(0,Iq.jsx)(CodexMuxAccountMenu,{})"),
+    menu_anchor=(
+        "function $hn(e){let t=(0,tgn.c)(35),{accountIcon:n,accountLabel:r,"
+        "additionalItems:i,displayName:a,identityItems:o,isPetVisible:s,"
+        "onCopyUserId:c,onLogOut:l,onOpenProfile:u,onOpenSettings:d,"
+        "onOpenWorkspaceSettings:f,onTogglePet:p,personalPlanLabel:m,"
+        "petShortcut:h,settingsShortcut:g,usageItems:_,"
+        "workspaceSettingsRightIcon:v}=e"
+    ),
+    usage_slot=(
+        "(F=(0,Iq.jsx)($hn,{accountIcon:f,accountLabel:x,additionalItems:C,"
+        "displayName:T,identityItems:E,isPetVisible:o,onCopyUserId:D,onLogOut:O,"
+        "onOpenProfile:A,onOpenSettings:ct,onOpenWorkspaceSettings:j,"
+        "personalPlanLabel:_,onTogglePet:N,petShortcut:fe,settingsShortcut:de,"
+        "usageItems:Tt,workspaceSettingsRightIcon:P})",
+        "(F=(0,Iq.jsx)($hn,{accountIcon:f,accountLabel:x,additionalItems:C,"
+        "displayName:T,identityItems:E,isPetVisible:o,onCopyUserId:D,onLogOut:O,"
+        "onOpenProfile:A,onOpenSettings:ct,onOpenWorkspaceSettings:j,"
+        "personalPlanLabel:_,onTogglePet:N,petShortcut:fe,settingsShortcut:de,"
+        "usageItems:(0,Iq.jsx)(CodexMuxAccountMenu,{}),"
+        "workspaceSettingsRightIcon:P})",
+    ),
     plugin_request=(
         "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
         "`AppServerRequestClient is missing a message dispatcher`);"
@@ -1170,22 +1187,21 @@ RENDERER_BUILD_7746 = RendererBuild(
         "subtitle:k,action:F,children:w})",
         "subtitle:k,action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
     ),
-    thread_identifiers={
-        "$n": "zd",
-        "sr": "Gi",
-        "TE": "nT",
-        "zE": "mT",
-        "K": "Q",
-    },
-    thread_anchor="function dT(){let e=(0,pT.c)(1),",
+    thread_identifiers={"K": "Q"},
+    thread_anchor=(
+        "function fT(e){let t=(0,pT.c)(4),{onOpenPullRequestSidePanel:n,"
+        "onForceShow:r,registerEnvironmentActionCommands:i}=e,a=zd(Gi);"
+    ),
     thread_sections=(
         "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,w,T,E,D]",
         "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,"
         "(0,mT.jsx)(CodexMuxThreadSubscription,{}),w,T,E,D]",
     ),
     fork_titles=(
-        "function Xsr(e,t){let n=new Map,",
-        "function Xsr(e,t){codexMuxForkTitles(e,t);let n=new Map,",
+        "function Xsr(e,t){let n=new Map,r=i=>{let a=n.get(i),"
+        "o=t.getConversation(i)?.title?.trim()??``;",
+        "function Xsr(e,t){codexMuxForkTitles(e,t);let n=new Map,r=i=>{let a=n.get(i),"
+        "o=t.getConversation(i)?.title?.trim()??``;",
     ),
     fork_identifiers={
         "CODEX_MUX_SERVICES": "bX",
@@ -1206,6 +1222,27 @@ RENDERER_BUILD_7746 = RendererBuild(
             "children:[globalThis.codexMuxComposerAccount?.()??null,Ct,"
             "(0,D7.jsx)(`div`,{className:`ms-2 flex items-center`,children:nt})]})",
         ),
+    ),
+    identifier_probes=(
+        "var Fq,lgn,Iq,Lq,ugn,dgn=t((()=>{Fq=X(),bD(),j_(),Of(),Rc(),lgn=n(Z(),1),",
+        "(0,Pq.jsxs)(fa,{className:u==null?`opacity-100`:void 0,"
+        "disabled:u==null&&c==null,",
+        "(0,Pq.jsx)(Oo.ItemIcon,{size:`sm`,children:n})",
+        "function jG(e){let t=(0,scn.c)(20),{defaultResetCreditsOpen:n,"
+        "initialAvailableCount:r,isRateLimitReached:i,onClose:a,onResetComplete:o}=e,"
+        "s=DO(_S),c=Aa(),l=Su(),",
+        "ru(l,qln,{availableResetCount:M,analyticsEnabled:r,",
+        "sK=e=>(0,oK.jsxs)(`svg`,{width:20,height:20,viewBox:`0 0 20 20`,fill:`none`,"
+        "xmlns:`http://www.w3.org/2000/svg`,...e,children:[(0,oK.jsx)(`path`,{d:`M10.8343 12.",
+        "function jB(e){return EHt(e).src}function EHt(e){let t=(0,kHt.c)(5),",
+        ",l=DO(zv),u=Aa(),d=(0,Pkt.useContext)(Qy),f=i===`restricted`||d===`restricted`,",
+        "bR=n(Z(),1),xR=n($x(),1),SR=Q(),",
+        "(0,mT.jsx)(Q.Section,{sectionKey:`usage`,title:(0,mT.jsx)(Z,"
+        "{id:`codex.localConversation.usage.title`,",
+        "bX=await iCa.services,bX.statsig!=null",
+        "function yUn(e){return e==null?null:nA(e)}"
+        "function bUn(e,t){return yUn(e)?.find(e=>e.turnId===t)??null}",
+        "qsr(t,i,t.getConversationCwd(i),()=>ME(e,man)).then(t=>{t!=null&&Hor(e,i,t)})",
     ),
 )
 
@@ -1302,6 +1339,7 @@ def patch_renderer(extracted: Path, token: str) -> None:
     )
     if build is None:
         raise RuntimeError("the ChatGPT renderer layout is not supported")
+    verify_identifier_probes(assets, build.identifier_probes)
     ui = (
         data
         if build.ui_bundle_glob == "app-initial-*.js"
@@ -1415,6 +1453,17 @@ def patch_renderer(extracted: Path, token: str) -> None:
     )
     thread.replace(*build.thread_sections, "the native thread summary section list")
     thread.save()
+
+
+def verify_identifier_probes(assets: Path, probes: tuple[str, ...]) -> None:
+    """Every probe names identifiers the injected sources borrow; a build
+    that lost one has moved code the injected sources depend on."""
+    if not probes:
+        return
+    texts = [path.read_text(encoding="utf-8") for path in assets.glob("*.js")]
+    for probe in probes:
+        if sum(text.count(probe) for text in texts) != 1:
+            raise RuntimeError(f"could not verify an identifier probe: {probe[:60]!r}")
 
 
 def disable_updater_lifecycle(extracted: Path) -> None:

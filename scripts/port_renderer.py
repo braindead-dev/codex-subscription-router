@@ -17,7 +17,6 @@ hand, and the patcher still refuses a build whose asar hash is untested.
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import importlib.util
 import json
 import re
@@ -37,7 +36,7 @@ KEEP = {
     "undefined", "e", "t", "n", "r", "i", "a", "o", "s", "c", "l", "u", "d",
     "f", "p", "m", "h", "g", "_", "v", "y", "b", "x", "S", "C", "w", "T", "E",
     "D", "O", "k", "A", "j", "M", "N", "P", "F", "I", "L", "R", "z", "B", "V",
-    "H", "U", "W", "G", "K", "q", "J", "Y", "X", "Z", "Q", "$",
+    "H", "U", "W", "G", "K", "q", "J", "Y", "X",
 }
 KEEP_PREFIXES = ("codexMux", "CodexMux", "__codexMux")
 
@@ -71,7 +70,7 @@ def is_minified(parts: list[tuple[str, str]], position: int) -> bool:
     kind, text = parts[position]
     if kind != "identifier" or text in KEEP or text.startswith(KEEP_PREFIXES):
         return False
-    if len(text) == 1:
+    if len(text) == 1 and text not in ("Q", "Z", "$"):
         return False
     previous = parts[position - 1][1] if position > 0 else ""
     if previous == ".":
@@ -224,9 +223,10 @@ def main() -> int:
         (port.locate(check, "plugin_request_checks") or (None, check))[1]
         for check in reference.plugin_request_checks
     )
-    for probe in getattr(reference, "identifier_probes", ()):
+    for probe in reference.identifier_probes:
         port.locate(probe, "identifier_probes")
-    modal = port.locate(f"function {reference.usage_modal}(e){{", "usage_modal")
+    if reference.usage_modal not in port.mapping:
+        port.problems.append(f"usage_modal: no probe named {reference.usage_modal}")
     profile["usage_modal"] = port.mapping.get(reference.usage_modal, reference.usage_modal)
     plugin = port.locate(reference.plugin_scope[0], "plugin_bundle")
     profile["plugin_bundle_glob"] = (
@@ -235,6 +235,10 @@ def main() -> int:
     thread = port.locate(reference.thread_anchor, "thread_anchor")
     profile["thread_anchor"] = thread[1] if thread else reference.thread_anchor
     profile["thread_bundle_glob"] = bundle_glob(thread[0]) if thread else None
+    profile["identifier_probes"] = tuple(
+        (port.locate(probe, "identifier_probes") or (None, probe))[1]
+        for probe in reference.identifier_probes
+    )
     profile["composer_actions"] = tuple(
         port.port_pair(pair, "composer_actions") for pair in reference.composer_actions
     )

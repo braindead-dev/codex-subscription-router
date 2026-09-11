@@ -887,7 +887,7 @@ function codexMuxAccountCaption(account) {
 // which subscription the open chat runs on, or the one new chats will start
 // on. Its menu moves the chat or changes the new-chat preference.
 function CodexMuxComposerAccount() {
-  const route = typeof Rv === "undefined" ? null : Lo(Rv);
+  const route = globalThis.codexMuxUseRoute();
   const threadId =
     route?.value?.routeKind === "local-thread" ? route.value.conversationId : null;
   const [accounts, setAccounts] = kXc.useState(codexMuxCachedAccounts);
@@ -1195,3 +1195,6 @@ globalThis.CodexMuxPluginScope = () =>
   (0, e7.jsx)(CodexMuxPluginScope, {});
 globalThis.codexMuxComposerAccount = () =>
   (0, e7.jsx)(CodexMuxComposerAccount, {});
+globalThis.CodexMuxReact = kXc;
+globalThis.CodexMuxJsx = e7;
+globalThis.codexMuxUseRoute = () => (typeof Rv === "undefined" ? null : Lo(Rv));
