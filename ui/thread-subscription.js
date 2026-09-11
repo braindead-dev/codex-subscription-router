@@ -53,7 +53,8 @@ function CodexMuxThreadSubscription() {
   if (!account) return null;
   const weekly = codexMuxThreadWeeklyWindow(account.rateLimits);
   const remaining = weekly == null ? null : Math.max(0, 100 - weekly.usedPercent);
-  const depleted = remaining === 0;
+  const credits = globalThis.codexMuxCredits?.(account.rateLimits) ?? null;
+  const depleted = remaining === 0 && credits == null;
   const AccountAvatar = globalThis.CodexMuxAccountAvatar;
   return (0, zE.jsx)(K.Section, {
     sectionKey: "codex-mux-subscription",
@@ -86,7 +87,9 @@ function CodexMuxThreadSubscription() {
               ? "Usage unavailable"
               : depleted
                 ? "Depleted"
-                : `${Math.round(remaining)}% remaining`,
+                : remaining === 0
+                  ? credits
+                  : `${Math.round(remaining)}% remaining`,
         }),
       ],
     }),

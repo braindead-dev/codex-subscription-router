@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/b-nnett/codex-subscription-router/internal/state"
@@ -28,9 +29,31 @@ type RateLimitWindow struct {
 }
 
 type RateLimits struct {
-	Primary              *RateLimitWindow `json:"primary"`
-	Secondary            *RateLimitWindow `json:"secondary"`
-	RateLimitReachedType any              `json:"rateLimitReachedType"`
+	Primary              *RateLimitWindow  `json:"primary"`
+	Secondary            *RateLimitWindow  `json:"secondary"`
+	Credits              *RateLimitCredits `json:"credits,omitempty"`
+	RateLimitReachedType any               `json:"rateLimitReachedType"`
+}
+
+// RateLimitCredits is the purchased balance Codex spends once a plan's
+// windows are exhausted; an account holding any can still take turns.
+type RateLimitCredits struct {
+	HasCredits bool   `json:"hasCredits"`
+	Unlimited  bool   `json:"unlimited"`
+	Balance    string `json:"balance"`
+}
+
+// creditsAvailable reports whether purchased credits can carry an account
+// past an exhausted window.
+func creditsAvailable(limits *RateLimits) bool {
+	return limits != nil && limits.Credits != nil &&
+		(limits.Credits.HasCredits || limits.Credits.Unlimited)
+}
+
+// windowCapacity reports whether an account's plan windows still have room.
+func windowCapacity(limits *RateLimits) bool {
+	weekly, _ := longestAndShortestWindow(limits)
+	return weekly == nil || weekly.UsedPercent < 100
 }
 
 type AccountSnapshot struct {
@@ -293,7 +316,7 @@ func (m *Multiplexer) chooseAccountExcluding(ctx context.Context, excluded map[s
 			continue
 		}
 		weekly, short := longestAndShortestWindow(snapshot.RateLimits)
-		if weekly != nil && weekly.UsedPercent >= 100 {
+		if !windowCapacity(snapshot.RateLimits) && !creditsAvailable(snapshot.RateLimits) {
 			continue
 		}
 		weeklyUsed := 1_000.0
@@ -420,6 +443,7 @@ func aggregateRateLimits(snapshots []AccountSnapshot) (*RateLimits, error) {
 	secondary := make([]*RateLimitWindow, 0, len(snapshots))
 	hasSubscription := false
 	hasCapacity := false
+	var credits *RateLimitCredits
 	for _, snapshot := range snapshots {
 		if !snapshot.Enabled || !snapshot.Connected || snapshot.AuthType != "chatgpt" {
 			continue
@@ -428,9 +452,9 @@ func aggregateRateLimits(snapshots []AccountSnapshot) (*RateLimits, error) {
 		if snapshot.RateLimits != nil {
 			primary = append(primary, snapshot.RateLimits.Primary)
 			secondary = append(secondary, snapshot.RateLimits.Secondary)
+			credits = pooledCredits(credits, snapshot.RateLimits.Credits)
 		}
-		weekly, _ := longestAndShortestWindow(snapshot.RateLimits)
-		if weekly == nil || weekly.UsedPercent < 100 {
+		if windowCapacity(snapshot.RateLimits) {
 			hasCapacity = true
 		}
 	}
@@ -440,11 +464,32 @@ func aggregateRateLimits(snapshots []AccountSnapshot) (*RateLimits, error) {
 	result := &RateLimits{
 		Primary:   averageRateLimitWindow(primary),
 		Secondary: averageRateLimitWindow(secondary),
+		Credits:   credits,
 	}
 	if !hasCapacity {
 		result.RateLimitReachedType = "rate_limit_reached"
 	}
 	return result, nil
+}
+
+// pooledCredits sums the purchased balances of every subscription, so the
+// desktop offers to continue on credits whenever any account holds some.
+func pooledCredits(total, next *RateLimitCredits) *RateLimitCredits {
+	if next == nil {
+		return total
+	}
+	if total == nil {
+		copied := *next
+		return &copied
+	}
+	total.HasCredits = total.HasCredits || next.HasCredits
+	total.Unlimited = total.Unlimited || next.Unlimited
+	left, leftErr := strconv.ParseFloat(total.Balance, 64)
+	right, rightErr := strconv.ParseFloat(next.Balance, 64)
+	if leftErr == nil && rightErr == nil {
+		total.Balance = strconv.FormatFloat(left+right, 'f', -1, 64)
+	}
+	return total
 }
 
 func averageRateLimitWindow(windows []*RateLimitWindow) *RateLimitWindow {

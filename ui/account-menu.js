@@ -380,7 +380,12 @@ function CodexMuxAccountMenu() {
           className: "group",
           rightIcon: (0, e7.jsx)("span", {
             className: "text-token-description-foreground tabular-nums",
-            children: remaining == null ? "–" : `${Math.round(remaining)}%`,
+            children:
+              remaining === 0 && codexMuxCredits(account.rateLimits)
+                ? codexMuxCredits(account.rateLimits)
+                : remaining == null
+                  ? "–"
+                  : `${Math.round(remaining)}%`,
           }),
           onSelect: (event) => toggleAccount(account, event),
           children: account.planLabel
@@ -857,6 +862,15 @@ function codexMuxRemainingPercent(account) {
   return weekly == null ? null : Math.max(0, 100 - weekly.usedPercent);
 }
 
+// codexMuxAccountExhausted reports an account that can take no more turns:
+// its windows are spent and it holds no credits.
+function codexMuxAccountExhausted(account) {
+  return (
+    codexMuxRemainingPercent(account) === 0 &&
+    codexMuxCredits(account.rateLimits) == null
+  );
+}
+
 function codexMuxAccountCaption(account) {
   const remaining = codexMuxRemainingPercent(account);
   const plan = account.planLabel || "";
@@ -864,7 +878,7 @@ function codexMuxAccountCaption(account) {
     remaining == null
       ? "usage unavailable"
       : remaining === 0
-        ? "depleted"
+        ? (codexMuxCredits(account.rateLimits) ?? "depleted")
         : `${Math.round(remaining)}% left`;
   return plan ? `${plan} · ${usage}` : usage;
 }
@@ -1071,7 +1085,7 @@ function CodexMuxComposerAccount() {
                 label: account.label,
                 caption: codexMuxAccountCaption(account),
                 active: account.id === currentId,
-                disabled: codexMuxRemainingPercent(account) === 0,
+                disabled: codexMuxAccountExhausted(account),
                 onClick: () => choose(account.id),
               }),
             ),

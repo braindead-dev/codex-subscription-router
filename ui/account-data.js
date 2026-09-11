@@ -144,7 +144,11 @@ async function codexMuxFilterUsageStatus(status) {
   if (pool.length < 2) return status;
   const poolHasCapacity = pool.some((account) => {
     const weekly = codexMuxWeeklyWindow(account.rateLimits);
-    return weekly == null || weekly.usedPercent < 100;
+    return (
+      weekly == null ||
+      weekly.usedPercent < 100 ||
+      codexMuxCredits(account.rateLimits) != null
+    );
   });
   const rateLimit = status.rate_limit;
   const pooledRateLimit =
@@ -230,6 +234,14 @@ async function codexMuxStartRemoteControlPairing(accountId) {
   );
 }
 
+// codexMuxCredits is the purchased balance an account can spend once its
+// plan windows are exhausted, or null when it holds none.
+function codexMuxCredits(rateLimits) {
+  const credits = rateLimits?.credits;
+  if (!credits || !(credits.hasCredits || credits.unlimited)) return null;
+  return credits.unlimited ? "unlimited credits" : `${credits.balance} credits`;
+}
+
 function codexMuxWeeklyWindow(rateLimits) {
   const windows = [rateLimits?.primary, rateLimits?.secondary].filter(Boolean);
   windows.sort(
@@ -254,6 +266,7 @@ function codexMuxUsageWindows(rateLimits) {
 Object.assign(globalThis, {
   codexMuxRequest,
   codexMuxSubscribe,
+  codexMuxCredits,
   codexMuxCachedAccounts,
   codexMuxRememberAccounts,
   codexMuxFetchAccounts,

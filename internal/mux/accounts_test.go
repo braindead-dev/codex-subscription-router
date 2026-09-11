@@ -150,3 +150,29 @@ func TestRouteUrgencyFallsBackToWeeklyUtilization(t *testing.T) {
 		t.Fatalf("fallback should prefer the less-used account: less=%f more=%f", lessUsed, moreUsed)
 	}
 }
+
+func TestCreditsKeepAnExhaustedAccountRoutable(t *testing.T) {
+	week := int64(10080)
+	spent := &RateLimitWindow{UsedPercent: 100, WindowDurationMins: &week}
+	withCredits := AccountSnapshot{
+		ID: "primary", Enabled: true, Connected: true, AuthType: "chatgpt",
+		RateLimits: &RateLimits{Primary: spent, Credits: &RateLimitCredits{HasCredits: true, Balance: "750"}},
+	}
+	without := AccountSnapshot{
+		ID: "work", Enabled: true, Connected: true, AuthType: "chatgpt",
+		RateLimits: &RateLimits{Primary: spent, Credits: &RateLimitCredits{Balance: "0"}},
+	}
+	if !accountHasCapacity(withCredits) {
+		t.Fatal("an account holding credits must keep capacity")
+	}
+	if accountHasCapacity(without) {
+		t.Fatal("an account with spent windows and no credits has no capacity")
+	}
+	limits, err := aggregateRateLimits([]AccountSnapshot{withCredits, without})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if limits.Credits == nil || !limits.Credits.HasCredits || limits.Credits.Balance != "750" {
+		t.Fatalf("expected pooled credits to carry the balance, got %#v", limits.Credits)
+	}
+}
