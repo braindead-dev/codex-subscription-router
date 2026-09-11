@@ -1882,7 +1882,8 @@ def patch_info_plist(
 
 
 def prune_backups(backups: Path, keep: int) -> None:
-    """Keep only the newest backups; each holds a full app bundle."""
+    """Drop older backups before a new one is taken; each holds a full app
+    bundle, so only the copy replaced by the newest install is kept."""
     if not backups.is_dir():
         return
     dated = sorted(
@@ -2072,7 +2073,7 @@ def patch_app(
 
         backup_suffix = time.strftime("%Y%m%d-%H%M%S")
         backup_directory = DEFAULT_STATE_ROOT / "backups" / backup_suffix
-        prune_backups(DEFAULT_STATE_ROOT / "backups", keep=1)
+        prune_backups(DEFAULT_STATE_ROOT / "backups", keep=0)
         app_backup = backup_directory / destination.name
         helper_backup = backup_directory / installed_computer_use_app.name
         had_app = destination.exists()
