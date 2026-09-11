@@ -1014,14 +1014,10 @@ function CodexMuxComposerAccount() {
         type: "button",
         disabled: disabled || busy,
         "aria-pressed": active,
+        "data-codex-mux-menu-item": active ? "active" : "",
         onClick,
-        className: [
-          "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-start text-sm transition-colors",
-          disabled
-            ? "cursor-not-allowed opacity-50"
-            : "hover:bg-token-foreground/5",
-          active ? "text-token-text-primary" : "text-token-text-secondary",
-        ].join(" "),
+        className:
+          "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-start text-sm text-token-text-primary transition-colors",
         children: [
           avatar,
           (0, e7.jsxs)("span", {
@@ -1049,9 +1045,14 @@ function CodexMuxComposerAccount() {
         (0, e7.jsxs)("div", {
           "data-codex-mux-composer-account": "menu",
           role: "menu",
-          className:
-            "fixed z-[1000] w-64 rounded-xl border border-token-border-light bg-token-bg-primary p-1.5 shadow-lg",
-          style: anchor ? { right: anchor.right, bottom: anchor.bottom } : { right: 16, bottom: 80 },
+          className: "fixed z-[1000] w-64 rounded-2xl p-1.5 shadow-lg",
+          style: {
+            ...(anchor ? { right: anchor.right, bottom: anchor.bottom } : { right: 16, bottom: 80 }),
+            background:
+              "color-mix(in oklab, var(--color-surface-secondary) 94%, transparent)",
+            border:
+              "1px solid color-mix(in srgb, var(--color-border) 72%, transparent)",
+          },
           children: [
             (0, e7.jsx)("div", {
               className: "px-2 pb-1 pt-1 text-xs font-medium text-token-text-tertiary",
@@ -1065,7 +1066,7 @@ function CodexMuxComposerAccount() {
                     className: "size-6",
                   }),
                   label: "Automatic",
-                  caption: "most usage left, model access considered",
+                  caption: "whichever has the most usage left",
                   active: !preferredId,
                   onClick: () => choose(""),
                 }),
@@ -1137,7 +1138,7 @@ function CodexMuxAvatarCluster({ accounts, className }) {
       (0, e7.jsx)(
         "span",
         {
-          className: `absolute size-[70%] rounded-full ring-2 ring-token-bg-primary ${
+          className: `absolute size-[70%] rounded-full ${
             index === 0 ? "left-0 top-0" : "bottom-0 right-0"
           }`,
           style: { zIndex: index },
@@ -1152,6 +1153,17 @@ function CodexMuxAvatarCluster({ accounts, className }) {
     ),
   });
 }
+
+// The menu borrows the composer's own "+" menu look: rows sit at reduced
+// opacity and light up on hover or when chosen; a row that cannot be chosen
+// keeps the regular cursor and just stays dim.
+const codexMuxMenuStyle = document.createElement("style");
+codexMuxMenuStyle.textContent = [
+  "[data-codex-mux-menu-item]{opacity:.75;cursor:var(--cursor-interaction)}",
+  "[data-codex-mux-menu-item]:disabled{opacity:.25;cursor:default}",
+  "[data-codex-mux-menu-item]:hover:not(:disabled),[data-codex-mux-menu-item=active]{background-color:var(--color-background-primary-ghost-hover);opacity:1}",
+].join("");
+document.head.append(codexMuxMenuStyle);
 
 function CodexMuxCheckIcon(props) {
   return (0, e7.jsx)("svg", {
