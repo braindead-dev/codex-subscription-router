@@ -1048,8 +1048,7 @@ function CodexMuxComposerAccount() {
           className: "fixed z-[1000] w-64 rounded-2xl p-1.5 shadow-lg",
           style: {
             ...(anchor ? { right: anchor.right, bottom: anchor.bottom } : { right: 16, bottom: 80 }),
-            background:
-              "color-mix(in oklab, var(--color-surface-secondary) 94%, transparent)",
+            background: "var(--color-surface-secondary)",
             border:
               "1px solid color-mix(in srgb, var(--color-border) 72%, transparent)",
           },
