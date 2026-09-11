@@ -66,12 +66,17 @@ TESTED_SOURCE_BUILDS = {
         "26.901.22334",
         "7746",
     ): "405f0e1600fc63851abe4c763ec0546f56c32da312c2c2745e2b997c579ce0d0",
+    (
+        "26.908.40834",
+        "8881",
+    ): "bb40cd8811887363104a19291346af9595632e0e956316a1086b274fb8e3eafc",
 }
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS = 49
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
     ("26.803.61601", "6396"): 49,
     ("26.810.52044", "6662"): 99,
     ("26.901.22334", "7746"): 49,
+    ("26.908.40834", "8881"): 49,
 }
 DEFAULT_CUA_SERVICE_LAYOUT = (("Codex Computer Use.app", 17),)
 EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
@@ -81,12 +86,14 @@ EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
         ("bin/mac/normal/Codex Computer Use.app", 13),
     ),
     ("26.901.22334", "7746"): DEFAULT_CUA_SERVICE_LAYOUT,
+    ("26.908.40834", "8881"): DEFAULT_CUA_SERVICE_LAYOUT,
 }
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS = 17
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
     ("26.803.61601", "6396"): 17,
     ("26.810.52044", "6662"): 20,
     ("26.901.22334", "7746"): 16,
+    ("26.908.40834", "8881"): 16,
 }
 
 
@@ -843,6 +850,9 @@ class RendererBuild:
     # injected sources borrow; the porting tool reads them, the patcher
     # verifies them.
     identifier_probes: tuple[str, ...] = ()
+    # The native `/wham/usage` fetch when it no longer sits inline in the
+    # rate-limit query; None keeps the pattern-based patch.
+    usage_status: tuple[str, str] | None = None
 
 
 RENDERER_BUILD_6396 = RendererBuild(
@@ -1246,7 +1256,192 @@ RENDERER_BUILD_7746 = RendererBuild(
     ),
 )
 
-RENDERER_BUILDS = (RENDERER_BUILD_6396, RENDERER_BUILD_6662, RENDERER_BUILD_7746)
+# Build 8881 (26.908.40834, Codex 0.154.0-alpha.6.2) adds a native account
+# switcher to the profile menu, moves the `/wham/usage` fetch into a helper,
+# and lets the profile page grow a larger avatar.
+RENDERER_BUILD_8881 = RendererBuild(
+    marker=(
+        "function Dm(e,t){let n=e.get(Om);"
+        "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
+        "return n.forHost(t)}"
+    ),
+    ui_bundle_glob="app-primary-*.js",
+    data_anchor=(
+        "function Dm(e,t){let n=e.get(Om);"
+        "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
+        "return n.forHost(t)}"
+    ),
+    menu_identifiers={
+        "e7": "Uz",
+        "kXc": "vGt",
+        "Lo": "Of",
+        "Q": "o_",
+        "BW": "ud",
+        "QLs": "NL",
+        "_H": "kg",
+        "S2": "cR",
+        "CH": "tS",
+        "jLa": "$N",
+        "lt": "rf",
+        "Rv": "se",
+        "RD": "DUt",
+    },
+    menu_anchor=(
+        "function cGt(e){let t=(0,uGt.c)(41),{accountIcon:n,accountSwitcher:r,"
+        "additionalItems:i,displayName:a,hasWorkspaceAccount:o,identityItems:s,"
+        "isPetVisible:c,onCopyUserId:l,onLogOut:u,onOpenProfile:d,onOpenSettings:f,"
+        "onOpenWorkspaceSettings:p,onTogglePet:m,personalPlanLabel:h,petShortcut:g,"
+        "settingsShortcut:_,usageItems:v}=e"
+    ),
+    usage_slot=(
+        "(j=(0,Gz.jsx)(cGt,{accountIcon:d,accountSwitcher:St,additionalItems:x,"
+        "displayName:S,hasWorkspaceAccount:f,identityItems:C,isPetVisible:o,"
+        "onCopyUserId:w,onLogOut:E,onOpenProfile:D,onOpenSettings:dt,"
+        "onOpenWorkspaceSettings:O,personalPlanLabel:g,onTogglePet:k,petShortcut:he,"
+        "settingsShortcut:me,usageItems:kt})",
+        "(j=(0,Gz.jsx)(cGt,{accountIcon:d,accountSwitcher:St,additionalItems:x,"
+        "displayName:S,hasWorkspaceAccount:f,identityItems:C,isPetVisible:o,"
+        "onCopyUserId:w,onLogOut:E,onOpenProfile:D,onOpenSettings:dt,"
+        "onOpenWorkspaceSettings:O,personalPlanLabel:g,onTogglePet:k,petShortcut:he,"
+        "settingsShortcut:me,usageItems:(0,Gz.jsx)(CodexMuxAccountMenu,{})})",
+    ),
+    plugin_request=(
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
+        "`AppServerRequestClient is missing a message dispatcher`);"
+        "return e===`config/read`?",
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
+        "`AppServerRequestClient is missing a message dispatcher`);"
+        "t=codexMuxScopePluginRequest(e,t);return e===`config/read`?",
+    ),
+    plugin_request_checks=(
+        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
+        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
+    ),
+    reset_query=(
+        "function iji(){let e=(0,cG.c)(1);KD(),fm(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:oji,select:aji,refetchInterval:Qx.ONE_MINUTE,staleTime:Qx.FIVE_SECONDS},e[0]=t):t=e[0],xm(t)}",
+        "function iji(){KD(),fm(null);let e=window.__codexMuxResetAccountId;return xm({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):oji,select:aji,refetchInterval:Qx.ONE_MINUTE,staleTime:Qx.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function sji(){let e=(0,cG.c)(3),t=_m(),n=Xx(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:cji,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>Wki(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],wm(r)}",
+        "function sji(){let e=_m(),t=Xx(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return wm({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):cji,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>Wki(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    usage_modal="NL",
+    usage_header=(
+        "(ge=(0,ML.jsx)(dC,{children:(0,ML.jsx)(Sh,{title:(0,ML.jsx)(MC,{asChild:!0,"
+        "children:(0,ML.jsx)(`h2`,{className:`m-0`,children:(0,ML.jsx)(Z,"
+        "{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,"
+        "defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`"
+        "})})})})}),t[41]=ge)",
+        "(ge=(0,ML.jsxs)(dC,{children:[(0,ML.jsx)(Sh,{title:(0,ML.jsx)(MC,{asChild:!0,"
+        "children:(0,ML.jsx)(`h2`,{className:`m-0`,children:(0,ML.jsx)(Z,"
+        "{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,"
+        "defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`"
+        "})})})}),window.__codexMuxResetAccountSelector??null]}),t[41]=ge)",
+    ),
+    profile_avatar=(
+        "avatar:(0,$.jsxs)($.Fragment,{children:["
+        "(0,$.jsxs)(`label`,{\"aria-disabled\":tt,"
+        "className:zn(`group relative flex rounded-full outline-none "
+        "focus-within:ring-1 focus-within:ring-ring`,r?`size-28`:`size-20`,",
+        "avatar:(0,$.jsxs)($.Fragment,{children:["
+        "globalThis.CodexMuxProfileAvatarStack?.("
+        "{onSelect:()=>W.refetch()})??null,"
+        "(0,$.jsxs)(`label`,{\"aria-disabled\":tt,"
+        "className:zn(globalThis.CodexMuxProfileAvatarStack?`hidden`:"
+        "`group relative flex rounded-full outline-none "
+        "focus-within:ring-1 focus-within:ring-ring`,r?`size-28`:`size-20`,",
+    ),
+    profile_name=(
+        "displayName:Ot??(0,$.jsx)(J,{id:`profile.nameFallback`,"
+        "defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
+        "displayName:globalThis.__codexMuxSelectedProfileAccountId?"
+        "(Ot??(0,$.jsx)(J,{id:`profile.nameFallback`,"
+        "defaultMessage:`ChatGPT user`,"
+        "description:`Fallback profile display name`})):null",
+    ),
+    profile_identity=(
+        "username:Et==null?null:(0,$.jsx)(J,{id:`profile.usernameValue`,"
+        "defaultMessage:`@{username}`,"
+        "description:`Profile username shown with an at-sign prefix`,"
+        "values:{username:Et}})",
+        "username:globalThis.__codexMuxSelectedProfileAccountId&&Et!=null?"
+        "(0,$.jsx)(J,{id:`profile.usernameValue`,"
+        "defaultMessage:`@{username}`,"
+        "description:`Profile username shown with an at-sign prefix`,"
+        "values:{username:Et}}):null",
+    ),
+    plugin_bundle_glob="plugins-settings-*.js",
+    plugin_scope=(
+        "subtitle:k,action:F,children:w})",
+        "subtitle:k,action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
+    ),
+    thread_identifiers={"K": "Z"},
+    thread_anchor=(
+        "function iO(e){let t=(0,aO.c)(4),{onOpenPullRequestSidePanel:n,"
+        "onForceShow:r,registerEnvironmentActionCommands:i}=e,a=vi(S);"
+    ),
+    thread_sections=(
+        "(C=(0,oO.jsxs)(oO.Fragment,{children:[m,h,g,_,v,y,b,x]})",
+        "(C=(0,oO.jsxs)(oO.Fragment,{children:[m,h,g,_,v,"
+        "(0,oO.jsx)(CodexMuxThreadSubscription,{}),y,b,x]})",
+    ),
+    composer_actions=(
+        (
+            "(0,B8.jsxs)(CP.FooterActions,{ref:Ke,spacing:Rt,children:[zt,It,Bt]})",
+            "(0,B8.jsxs)(CP.FooterActions,{ref:Ke,spacing:Rt,"
+            "children:[globalThis.codexMuxComposerAccount?.()??null,zt,It,Bt]})",
+        ),
+        (
+            "(0,B8.jsxs)(CP.FooterActions,{spacing:`none`,children:[It,"
+            "(0,B8.jsx)(`div`,{className:`ms-2 flex items-center`,children:pt})]})",
+            "(0,B8.jsxs)(CP.FooterActions,{spacing:`none`,"
+            "children:[globalThis.codexMuxComposerAccount?.()??null,It,"
+            "(0,B8.jsx)(`div`,{className:`ms-2 flex items-center`,children:pt})]})",
+        ),
+    ),
+    fork_titles=(
+        "function PUn(e,t){let n=new Map,r=i=>{let a=n.get(i),"
+        "o=t.getConversation(i)?.title?.trim()??``;",
+        "function PUn(e,t){codexMuxForkTitles(e,t);let n=new Map,r=i=>{let a=n.get(i),"
+        "o=t.getConversation(i)?.title?.trim()??``;",
+    ),
+    fork_identifiers={
+        "CODEX_MUX_SERVICES": "Iq",
+        "codexMuxConversationTurns": "Awn",
+        "codexMuxTurnWithId": "gT",
+        "codexMuxRememberDescription": "AHn",
+    },
+    identifier_probes=(
+        "rateLimitReachedType:null}}}var Wz,vGt,Gz,yGt,bGt,xGt=t((()=>{Wz=a(),",
+        "(0,Uz.jsxs)(kg,{className:d==null?`opacity-100`:void 0,"
+        "disabled:d==null&&l==null,",
+        "(0,Uz.jsx)(tS.ItemIcon,{size:`sm`,children:n})",
+        "function NL(e){let t=(0,_It.c)(20),{defaultResetCreditsOpen:n,"
+        "initialAvailableCount:r,isRateLimitReached:i,onClose:a,onResetComplete:o}=e,"
+        "s=Of(o_),c=yf(),l=rf(),",
+        "ud(l,eRt,{availableResetCount:M,analyticsEnabled:r,",
+        "cR=e=>(0,sR.jsxs)(`svg`,{width:20,height:20,viewBox:`0 0 20 20`,fill:`none`,"
+        "xmlns:`http://www.w3.org/2000/svg`,...e,children:[(0,sR.jsx)(`path`,{d:`M10.8343 12.",
+        "function $N(e){return Ygt(e).src}function Ygt(e){let t=(0,Qgt.c)(5),",
+        ",l=Of(se),u=yf(),d=(0,Yat.useContext)(at),f=i===`restricted`||d===`restricted`,",
+        "Oz=n(i(),1),DUt=n(Uw(),1),",
+        "(0,oO.jsx)(Z.Section,{sectionKey:`usage`,title:(0,oO.jsx)(X,"
+        "{id:`codex.localConversation.usage.title`,",
+        "Iq=await z0i.services,Iq.threadReadState!=null",
+        "function Awn(e){return e==null?null:hT(e)}"
+        "function gT(e,t){return Awn(e)?.find(e=>e.turnId===t)??null}",
+        "jUn(t,i,t.getConversationCwd(i),()=>dx(e,NYt)).then(t=>{t!=null&&AHn(e,i,t)})",
+    ),
+    usage_status=(
+        "async function LCa({additionalHeaders:e,signal:t}){try{let n=await DS.safeGet("
+        "`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":SS.toLowerCase(),...e},signal:t}),",
+        "async function LCa({additionalHeaders:e,signal:t}){try{"
+        "let n=await codexMuxFilterUsageStatus(await DS.safeGet("
+        "`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":SS.toLowerCase(),...e},signal:t})),",
+    ),
+)
+
+RENDERER_BUILDS = (RENDERER_BUILD_6396, RENDERER_BUILD_6662, RENDERER_BUILD_7746, RENDERER_BUILD_8881)
 
 USAGE_QUERY_PATTERN = re.compile(
     r"queryKey:\[`rate-limit-status`\],(?P<select>select:e=>e,)?"
@@ -1361,12 +1556,15 @@ def patch_renderer(extracted: Path, token: str) -> None:
                 "could not verify the native Plugins request-to-RPC mapping"
             )
     data.replace(*build.plugin_request, "the native app-server request bridge")
-    data.substitute(
-        USAGE_QUERY_PATTERN,
-        r"queryKey:[`rate-limit-status`],\g<select>queryFn:async()=>{try{"
-        r"\g<lead>await codexMuxFilterUsageStatus(await \g<call>)",
-        "the native rate-limit status query",
-    )
+    if build.usage_status is not None:
+        data.replace(*build.usage_status, "the native rate-limit status fetch")
+    else:
+        data.substitute(
+            USAGE_QUERY_PATTERN,
+            r"queryKey:[`rate-limit-status`],\g<select>queryFn:async()=>{try{"
+            r"\g<lead>await codexMuxFilterUsageStatus(await \g<call>)",
+            "the native rate-limit status query",
+        )
     data.substitute(
         PROFILE_QUERY_PATTERN,
         "let e=await codexMuxProfileData("
