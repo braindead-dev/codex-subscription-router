@@ -76,6 +76,11 @@ func copyThread(sourceHome, targetHome, threadID string, copied map[string]struc
 	}
 	path, mode, found := strings.Cut(strings.TrimSpace(row), "\t")
 	if !found {
+		if len(copied) > 1 {
+			// A history base the source never indexed still resumes by
+			// file, so its rollouts and streams travel without a row.
+			return copyStreams(sourceHome, targetHome, threadID)
+		}
 		return fmt.Errorf("source does not index thread %s", threadID)
 	}
 	streams := []string{threadID}
@@ -87,8 +92,12 @@ func copyThread(sourceHome, targetHome, threadID string, copied map[string]struc
 			streams = append(streams, stream)
 		}
 		if base := historyBaseThread(rollout); base != "" && base != threadID {
-			if err := copyThread(sourceHome, targetHome, base, copied); err != nil {
-				return fmt.Errorf("forked-from thread %s: %w", base, err)
+			owner := rolloutOwner(sourceHome, base)
+			if owner == threadID {
+				continue
+			}
+			if err := copyThread(sourceHome, targetHome, owner, copied); err != nil {
+				return fmt.Errorf("forked-from thread %s: %w", owner, err)
 			}
 		}
 	}
@@ -99,6 +108,25 @@ func copyThread(sourceHome, targetHome, threadID string, copied map[string]struc
 	if err := upsertThreadRow(stateDatabase(sourceHome), stateDatabase(targetHome), threadID, current, mode); err != nil {
 		return err
 	}
+	return copyProjection(sourceHome, targetHome, streams)
+}
+
+// copyStreams links a thread's rollouts and copies their projection rows
+// without touching the target's index.
+func copyStreams(sourceHome, targetHome, threadID string) error {
+	streams := []string{threadID}
+	for _, rollout := range threadRollouts(sourceHome, threadID) {
+		if _, err := linkRolloutIntoHome(rollout, targetHome); err != nil {
+			return err
+		}
+		if stream := projectionStream(rollout, threadID); stream != threadID {
+			streams = append(streams, stream)
+		}
+	}
+	return copyProjection(sourceHome, targetHome, streams)
+}
+
+func copyProjection(sourceHome, targetHome string, streams []string) error {
 	sourceHistory := historyDatabase(sourceHome)
 	if !fileExists(sourceHistory) {
 		return nil
@@ -210,6 +238,22 @@ func historyBaseThread(rollout string) string {
 		return ""
 	}
 	return record.Payload.HistoryBase.ThreadID
+}
+
+var rolloutThreadPattern = regexp.MustCompile(`-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_[0-9a-f-]{36})?\.jsonl$`)
+
+// rolloutOwner resolves the thread whose rollout carries a history stream.
+// A fork's history base names the stream it continues from, which is the
+// thread itself for an original rollout and the link id for a continuation
+// file (`<thread>_<link>.jsonl`), so the file name settles which thread to
+// bring along.
+func rolloutOwner(codexHome, streamID string) string {
+	for _, rollout := range threadRollouts(codexHome, streamID) {
+		if match := rolloutThreadPattern.FindStringSubmatch(filepath.Base(rollout)); match != nil {
+			return match[1]
+		}
+	}
+	return streamID
 }
 
 // threadRollouts lists every rollout segment of a thread in a Codex home.

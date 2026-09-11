@@ -196,3 +196,82 @@ func TestHistoryBaseThreadIgnoresOwnHistory(t *testing.T) {
 		t.Fatalf("expected no base thread, got %q", base)
 	}
 }
+
+func TestRolloutOwnerResolvesContinuationStreams(t *testing.T) {
+	home := t.TempDir()
+	thread := "01a04238-6090-7e01-b2c6-24c757a32b10"
+	link := "01a07dfe-ac02-7393-b113-81a48193c591"
+	path := filepath.Join(home, "sessions", "2026", "09", "07", "rollout-2026-09-07T15-30-37-"+thread+"_"+link+".jsonl")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := rolloutOwner(home, link); got != thread {
+		t.Fatalf("expected the link to resolve to its thread, got %q", got)
+	}
+	if got := rolloutOwner(home, thread); got != thread {
+		t.Fatalf("expected a thread id to resolve to itself, got %q", got)
+	}
+	if got := rolloutOwner(home, "01a00000-0000-7000-8000-000000000000"); got != "01a00000-0000-7000-8000-000000000000" {
+		t.Fatalf("expected an unknown stream to pass through, got %q", got)
+	}
+}
+
+func TestSyncThreadCopyCarriesAnUnindexedHistoryBase(t *testing.T) {
+	if _, err := os.Stat(sqlite3Binary); err != nil {
+		t.Skip("sqlite3 is not available")
+	}
+	root := t.TempDir()
+	source, target := filepath.Join(root, "source"), filepath.Join(root, "target")
+	baseID := "01a04238-6090-7e01-b2c6-24c757a32b10"
+	linkID := "01a07dfe-ac02-7393-b113-81a48193c591"
+	forkID := "01a08c71-52c7-7651-b40e-929694f82b26"
+	base := filepath.Join(source, "sessions", "2026", "09", "07", "rollout-base-"+baseID+"_"+linkID+".jsonl")
+	fork := filepath.Join(source, "sessions", "2026", "09", "11", "rollout-fork-"+forkID+".jsonl")
+	for path, meta := range map[string]string{
+		base: `{"type":"session_meta","payload":{"id":"` + baseID + `","history_mode":"paginated"}}`,
+		fork: `{"type":"session_meta","payload":{"id":"` + forkID + `","history_base":{"thread_id":"` + linkID + `","end_ordinal_exclusive":2,"end_byte_offset":90}}}`,
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(meta+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.MkdirAll(target, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	schema := "create table threads (id text primary key, rollout_path text, history_mode text);"
+	history := "create table thread_turns (thread_id text, turn_id text, rollout_ordinal integer);" +
+		"create table thread_items (thread_id text, turn_id text, item_id text, rollout_ordinal integer);" +
+		"create table thread_history_projection_state (thread_id text primary key, next_rollout_byte_offset integer, next_rollout_ordinal integer);" +
+		"create table thread_realtime_items (thread_id text, item_id text);"
+	for _, home := range []string{source, target} {
+		if err := runSQLite(stateDatabase(home), schema); err != nil {
+			t.Fatal(err)
+		}
+		if err := runSQLite(historyDatabase(home), history); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := runSQLite(stateDatabase(source), "insert into threads values ('"+forkID+"', '"+fork+"', 'paginated');"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runSQLite(historyDatabase(source), "insert into thread_history_projection_state values ('"+linkID+"', 90, 2), ('"+forkID+"', 120, 2);"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := syncThreadCopy(source, target, forkID); err != nil {
+		t.Fatal(err)
+	}
+	if rollouts := threadRollouts(target, linkID); len(rollouts) != 1 {
+		t.Fatalf("expected the base continuation to be linked, got %v", rollouts)
+	}
+	offset, err := querySQLite(historyDatabase(target), "select next_rollout_byte_offset from thread_history_projection_state where thread_id = '"+linkID+"';")
+	if err != nil || strings.TrimSpace(offset) != "90" {
+		t.Fatalf("expected the base stream's projection on the target, got %q err=%v", offset, err)
+	}
+}
