@@ -4,8 +4,8 @@ const CODEX_MUX_THREAD_TOKEN = "__CODEX_MUX_CONTROL_TOKEN__";
 // React, the JSX runtime, and the route hook come from the primary bundle's
 // injected menu, so this bundle only needs its own summary Section.
 function CodexMuxThreadSubscription() {
-  const TE = globalThis.CodexMuxReact;
-  const zE = globalThis.CodexMuxJsx;
+  const TE = globalThis.codexMuxReact();
+  const zE = globalThis.codexMuxJsx();
   const route = globalThis.codexMuxUseRoute();
   const threadId =
     route?.value?.routeKind === "local-thread" ? route.value.conversationId : null;

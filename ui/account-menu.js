@@ -1195,6 +1195,8 @@ globalThis.CodexMuxPluginScope = () =>
   (0, e7.jsx)(CodexMuxPluginScope, {});
 globalThis.codexMuxComposerAccount = () =>
   (0, e7.jsx)(CodexMuxComposerAccount, {});
-globalThis.CodexMuxReact = kXc;
-globalThis.CodexMuxJsx = e7;
+// The bundle binds React and the JSX runtime lazily, so other bundles ask
+// for them at render time rather than reading a value captured at load.
+globalThis.codexMuxReact = () => kXc;
+globalThis.codexMuxJsx = () => e7;
 globalThis.codexMuxUseRoute = () => (typeof Rv === "undefined" ? null : Lo(Rv));
