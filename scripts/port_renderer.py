@@ -31,7 +31,7 @@ IDENTIFIER = re.compile(r"[A-Za-z_$][\w$]*")
 KEEP = {
     "function", "return", "let", "const", "var", "if", "else", "for", "of", "in",
     "new", "null", "void", "typeof", "await", "async", "true", "false", "this",
-    "throw", "children", "className", "Symbol", "Error", "Promise", "JSON",
+    "throw", "try", "catch", "children", "className", "Symbol", "Error", "Promise", "JSON",
     "Object", "Math", "Map", "Set", "window", "document", "globalThis",
     "undefined", "e", "t", "n", "r", "i", "a", "o", "s", "c", "l", "u", "d",
     "f", "p", "m", "h", "g", "_", "v", "y", "b", "x", "S", "C", "w", "T", "E",
@@ -211,7 +211,6 @@ def main() -> int:
     profile["data_anchor"] = data[1] if data else reference.data_anchor
     menu = port.locate(reference.menu_anchor, "menu_anchor")
     profile["menu_anchor"] = menu[1] if menu else reference.menu_anchor
-    profile["ui_bundle_glob"] = bundle_glob(menu[0]) if menu else reference.ui_bundle_glob
 
     for field in (
         "usage_slot", "plugin_request", "reset_query", "reset_mutation",
@@ -223,8 +222,10 @@ def main() -> int:
         (port.locate(check, "plugin_request_checks") or (None, check))[1]
         for check in reference.plugin_request_checks
     )
-    for probe in reference.identifier_probes:
-        port.locate(probe, "identifier_probes")
+    profile["identifier_probes"] = tuple(
+        (port.locate(probe, "identifier_probes") or (None, probe))[1]
+        for probe in reference.identifier_probes
+    )
     if reference.usage_modal not in port.mapping:
         port.problems.append(f"usage_modal: no probe named {reference.usage_modal}")
     profile["usage_modal"] = port.mapping.get(reference.usage_modal, reference.usage_modal)
@@ -235,15 +236,13 @@ def main() -> int:
     thread = port.locate(reference.thread_anchor, "thread_anchor")
     profile["thread_anchor"] = thread[1] if thread else reference.thread_anchor
     profile["thread_bundle_glob"] = bundle_glob(thread[0]) if thread else None
-    profile["identifier_probes"] = tuple(
-        (port.locate(probe, "identifier_probes") or (None, probe))[1]
-        for probe in reference.identifier_probes
-    )
     profile["composer_actions"] = tuple(
         port.port_pair(pair, "composer_actions") for pair in reference.composer_actions
     )
     if reference.fork_titles is not None:
         profile["fork_titles"] = port.port_pair(reference.fork_titles, "fork_titles")
+    if reference.usage_status is not None:
+        profile["usage_status"] = port.port_pair(reference.usage_status, "usage_status")
 
     profile["menu_identifiers"] = port.port_identifiers(
         reference.menu_identifiers, "menu_identifiers"

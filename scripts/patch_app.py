@@ -70,6 +70,10 @@ TESTED_SOURCE_BUILDS = {
         "26.908.40834",
         "8881",
     ): "bb40cd8811887363104a19291346af9595632e0e956316a1086b274fb8e3eafc",
+    (
+        "26.917.51856",
+        "10492",
+    ): "55861ddbcc5d965642441e167a349fefcc932426c85b61a5d5b7a9a2fc639d70",
 }
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS = 49
 EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
@@ -77,6 +81,7 @@ EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
     ("26.810.52044", "6662"): 99,
     ("26.901.22334", "7746"): 49,
     ("26.908.40834", "8881"): 49,
+    ("26.917.51856", "10492"): 49,
 }
 DEFAULT_CUA_SERVICE_LAYOUT = (("Codex Computer Use.app", 17),)
 EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
@@ -87,6 +92,7 @@ EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
     ),
     ("26.901.22334", "7746"): DEFAULT_CUA_SERVICE_LAYOUT,
     ("26.908.40834", "8881"): DEFAULT_CUA_SERVICE_LAYOUT,
+    ("26.917.51856", "10492"): DEFAULT_CUA_SERVICE_LAYOUT,
 }
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS = 17
 EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
@@ -94,6 +100,7 @@ EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
     ("26.810.52044", "6662"): 20,
     ("26.901.22334", "7746"): 16,
     ("26.908.40834", "8881"): 16,
+    ("26.917.51856", "10492"): 16,
 }
 
 
@@ -830,7 +837,6 @@ class RendererBuild:
     """
 
     marker: str
-    ui_bundle_glob: str
     data_anchor: str
     menu_identifiers: dict[str, str]
     menu_anchor: str
@@ -863,7 +869,6 @@ class RendererBuild:
 
 RENDERER_BUILD_6396 = RendererBuild(
     marker="function wXc({sidebarFooter:e,triggerButton:t})",
-    ui_bundle_glob="app-initial-*.js",
     data_anchor="function wXc({sidebarFooter:e,triggerButton:t})",
     menu_identifiers={},
     menu_anchor="function wXc({sidebarFooter:e,triggerButton:t})",
@@ -956,7 +961,6 @@ RENDERER_BUILD_6396 = RendererBuild(
 
 RENDERER_BUILD_6662 = RendererBuild(
     marker="function Icl(e){let t=(0,Vcl.c)(248),",
-    ui_bundle_glob="app-initial-*.js",
     data_anchor="function Icl(e){let t=(0,Vcl.c)(248),",
     menu_identifiers={
         "e7": "$5",
@@ -965,7 +969,6 @@ RENDERER_BUILD_6662 = RendererBuild(
         "BW": "RU",
         "QLs": "E$s",
         "_H": "GV",
-        "S2": "E0",
         "CH": "ZV",
         "jLa": "x$a",
         "lt": "ct",
@@ -1078,7 +1081,6 @@ RENDERER_BUILD_7746 = RendererBuild(
         "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
         "return n.forHost(t)}"
     ),
-    ui_bundle_glob="app-primary-*.js",
     data_anchor=(
         "function wb(e,t){let n=e.get(Tb);"
         "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
@@ -1092,7 +1094,6 @@ RENDERER_BUILD_7746 = RendererBuild(
         "BW": "ru",
         "QLs": "jG",
         "_H": "fa",
-        "S2": "sK",
         "CH": "Oo",
         "jLa": "jB",
         "lt": "Su",
@@ -1271,7 +1272,6 @@ RENDERER_BUILD_8881 = RendererBuild(
         "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
         "return n.forHost(t)}"
     ),
-    ui_bundle_glob="app-primary-*.js",
     data_anchor=(
         "function Dm(e,t){let n=e.get(Om);"
         "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
@@ -1285,7 +1285,6 @@ RENDERER_BUILD_8881 = RendererBuild(
         "BW": "ud",
         "QLs": "NL",
         "_H": "kg",
-        "S2": "cR",
         "CH": "tS",
         "jLa": "$N",
         "lt": "rf",
@@ -1447,7 +1446,129 @@ RENDERER_BUILD_8881 = RendererBuild(
     ),
 )
 
-RENDERER_BUILDS = (RENDERER_BUILD_6396, RENDERER_BUILD_6662, RENDERER_BUILD_7746, RENDERER_BUILD_8881)
+
+
+# Build 10492 (26.917.51856, Codex 0.155.0-alpha.16) moves the profile menu,
+# usage sheet, and reset-credit code into the initial bundle, drops title
+# reconsideration, and redesigns the profile page. React, the JSX runtime,
+# and ReactDOM are live imports from the shared chunk.
+RENDERER_BUILD_10492 = RendererBuild(
+    marker="function wd(e,t){let n=e.get(Td);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
+    data_anchor="function wd(e,t){let n=e.get(Td);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
+    menu_identifiers={
+        "e7": "j4",
+        "kXc": "mys",
+        "Lo": "Ar",
+        "Q": "X",
+        "BW": "Nj",
+        "QLs": "uIo",
+        "_H": "Jr",
+        "CH": "co",
+        "jLa": "ads",
+        "lt": "ut",
+        "Rv": "Rb",
+        "RD": "Ur()",
+    },
+    menu_anchor="function rys(e){let t=(0,ays.c)(43),{accountIcon:n,accountSwitcher:r,additionalItems:i,displayName:a,hasWorkspaceAccount:o,identityItems:s,isPetVisible:c,onCopyUserId:l,onLogOut:u,onOpenProfile:d,onOpenSettings:f,onOpenWorkspaceSettings:p,onTogglePet:m,personalPlanLabel:h,petShortcut:g,settingsShortcut:_,usageItems:v}=e",
+    usage_slot=(
+        "(M=(0,M4.jsx)(rys,{accountIcon:o,accountSwitcher:Ft,additionalItems:x,displayName:S,hasWorkspaceAccount:f,identityItems:C,isPetVisible:c,onCloseMenu:w,onCopyUserId:T,onLogOut:E,onOpenPersonalization:D,onOpenProfile:O,onOpenSettings:wt,onOpenWorkspaceSettings:k,personalPlanLabel:m,onTogglePet:j,petShortcut:De,settingsShortcut:Ee,usageItems:Ht})",
+        "(M=(0,M4.jsx)(rys,{accountIcon:o,accountSwitcher:Ft,additionalItems:x,displayName:S,hasWorkspaceAccount:f,identityItems:C,isPetVisible:c,onCloseMenu:w,onCopyUserId:T,onLogOut:E,onOpenPersonalization:D,onOpenProfile:O,onOpenSettings:wt,onOpenWorkspaceSettings:k,personalPlanLabel:m,onTogglePet:j,petShortcut:De,settingsShortcut:Ee,usageItems:(0,M4.jsx)(CodexMuxAccountMenu,{})})",
+    ),
+    plugin_request=(
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error(`AppServerRequestClient is missing a message dispatcher`);return e===`config/read`?",
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error(`AppServerRequestClient is missing a message dispatcher`);t=codexMuxScopePluginRequest(e,t);return e===`config/read`?",
+    ),
+    plugin_request_checks=(
+        "listMcpServers(e,t){return dCt(this,this.mcpServerStatusPromises,e,t)}",
+        "let s=e.sendRequest(`mcpServerStatus/list`,n,i);",
+    ),
+    reset_query=(
+        "function zai(){let e=(0,uz.c)(1);HS(),cr(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:Vai,select:Bai,refetchInterval:_.ONE_MINUTE,staleTime:_.FIVE_SECONDS},e[0]=t):t=e[0],Yi(t)}",
+        "function zai(){HS(),cr(null);let e=window.__codexMuxResetAccountId;return Yi({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):Vai,select:Bai,refetchInterval:_.ONE_MINUTE,staleTime:_.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function Hai(){let e=(0,uz.c)(3),t=ut(),n=Zg(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Uai,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>uai(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],qa(r)}",
+        "function Hai(){let e=ut(),t=Zg(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return qa({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):Uai,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>uai(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    usage_modal="uIo",
+    usage_header=(
+        "(Se=(0,H$.jsx)(lo,{children:(0,H$.jsx)(_e,{title:(0,H$.jsx)(si,{asChild:!0,children:(0,H$.jsx)(`h2`,{className:`m-0`,children:(0,H$.jsx)(Y,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})})}),t[41]=Se)",
+        "(Se=(0,H$.jsxs)(lo,{children:[(0,H$.jsx)(_e,{title:(0,H$.jsx)(si,{asChild:!0,children:(0,H$.jsx)(`h2`,{className:`m-0`,children:(0,H$.jsx)(Y,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})}),window.__codexMuxResetAccountSelector??null]}),t[41]=Se)",
+    ),
+    profile_avatar=(
+        "avatar:(0,$.jsxs)($.Fragment,{children:[(0,$.jsxs)(`div`,{\"aria-disabled\":Gt,className:nt(`group relative flex rounded-full outline-none`,",
+        "avatar:(0,$.jsxs)($.Fragment,{children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>Ke.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":Gt,className:nt(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
+    ),
+    profile_name=(
+        "In=Sn??(0,$.jsx)(J,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
+        "In=globalThis.__codexMuxSelectedProfileAccountId?(Sn??(0,$.jsx)(J,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})):null",
+    ),
+    profile_identity=(
+        "Ln=gn&&(0,$.jsx)(J,{id:`profile.usernameValue`,defaultMessage:`@{username}`,description:`Profile username shown with an at-sign prefix`,values:{username:gn}})",
+        "Ln=globalThis.__codexMuxSelectedProfileAccountId&&gn&&(0,$.jsx)(J,{id:`profile.usernameValue`,defaultMessage:`@{username}`,description:`Profile username shown with an at-sign prefix`,values:{username:gn}})",
+    ),
+    plugin_bundle_glob="plugins-settings-*.js",
+    plugin_scope=(
+        "subtitle:k,action:F,children:D})",
+        "subtitle:k,action:F,children:[globalThis.CodexMuxPluginScope?.()??null,D]})",
+    ),
+    thread_identifiers={
+        "K": "Z",
+    },
+    thread_anchor="function TE(e){let t=(0,EE.c)(4),{onOpenPullRequestSidePanel:n,onForceShow:r,registerEnvironmentActionCommands:i}=e,a=J(bl),",
+    thread_sections=(
+        "(A=(0,DE.jsxs)(DE.Fragment,{children:[S,C,w,T,E,D,O,k]})",
+        "(A=(0,DE.jsxs)(DE.Fragment,{children:[S,C,w,T,E,(0,DE.jsx)(CodexMuxThreadSubscription,{}),D,O,k]})",
+    ),
+    composer_actions=(
+        (
+            "(0,D3.jsxs)(BS.FooterActions,{ref:$e,spacing:Ut,children:[Wt,Vt,Gt]})",
+            "(0,D3.jsxs)(BS.FooterActions,{ref:$e,spacing:Ut,children:[globalThis.codexMuxComposerAccount?.()??null,Wt,Vt,Gt]})",
+        ),
+        (
+            "(0,D3.jsxs)(BS.FooterActions,{spacing:`none`,children:[Vt,(0,D3.jsx)(`div`,{className:`ms-2 flex items-center`,children:bt})]})",
+            "(0,D3.jsxs)(BS.FooterActions,{spacing:`none`,children:[globalThis.codexMuxComposerAccount?.()??null,Vt,(0,D3.jsx)(`div`,{className:`ms-2 flex items-center`,children:bt})]})",
+        ),
+    ),
+    fork_titles=(
+        "function v9t(e,t){t.addTurnCompletedListener(",
+        "function v9t(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(",
+    ),
+    fork_identifiers={
+        "CODEX_MUX_SERVICES": "$H",
+        "codexMuxConversationTurns": "g1t",
+        "codexMuxTurnWithId": "_1t",
+        "codexMuxRememberDescription": "iEn",
+    },
+    identifier_probes=(
+        "var ays,j4;function oys(){return(oys=n((()=>{ays=c(),",
+        "pys=c(),Shs(),Aa(),Sme(),Ase(),m_e(),Cbe(),_te(),Lae(),Ua(),W(),bs(),mys=Z(),",
+        "function Nj(e,t,n,r){e.set(Ij,",
+        "function uIo(e){let t=(0,dIo.c)(19),{defaultResetCreditsOpen:n,initialAvailableCount:r,isRateLimitReached:i,onClose:a,onResetComplete:o}=e,s=Ar(X),",
+        "function ads(e){return ods(e).src}",
+        "Rb=hi(`RouteScope`",
+        "(0,j4.jsx)(co.ItemIcon,{size:`sm`,children:n})",
+        "t=ut(),n=Zg(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Uai,",
+        "fPe=Ur(),",
+        "$H=await jGi.services,$H.threadReadState!=null",
+        "function g1t(e){return e==null?null:Ly(e)}function _1t(e,t){return g1t(e)?.find(e=>e.turnId===t)??null}",
+        "function iEn(e,t,n){let r={...df(aEn,{}),[t]:n};",
+        "(r=(0,DE.jsx)(Z.Section,{sectionKey:`usage`,",
+        "let Ke=Br(Ge),qe=i?Re:Ke.data,",
+    ),
+    usage_status=(
+        "async function $On({additionalHeaders:e,signal:t}){try{return LOn(await vg.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":rg.toLowerCase(),...e},signal:t}))}",
+        "async function $On({additionalHeaders:e,signal:t}){try{return LOn(await codexMuxFilterUsageStatus(await vg.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":rg.toLowerCase(),...e},signal:t})))}",
+    ),
+)
+
+RENDERER_BUILDS = (
+    RENDERER_BUILD_6396,
+    RENDERER_BUILD_6662,
+    RENDERER_BUILD_7746,
+    RENDERER_BUILD_8881,
+    RENDERER_BUILD_10492,
+)
 
 USAGE_QUERY_PATTERN = re.compile(
     r"queryKey:\[`rate-limit-status`\],(?P<select>select:e=>e,)?"
@@ -1492,6 +1613,41 @@ class RendererBundle:
         self.path.write_text(self.text, encoding="utf-8")
 
 
+class RendererBundleSet:
+    """The app's main renderer bundles. Builds move code between them, so
+    each patch lands in the one bundle that holds its anchor exactly once."""
+
+    def __init__(self, bundles: list[RendererBundle]) -> None:
+        self.bundles = bundles
+
+    def _holder(self, anchor: str, description: str) -> RendererBundle:
+        holders = [bundle for bundle in self.bundles if anchor in bundle.text]
+        if len(holders) != 1 or holders[0].text.count(anchor) != 1:
+            raise RuntimeError(f"could not find {description}")
+        return holders[0]
+
+    def contains(self, anchor: str) -> bool:
+        return sum(bundle.text.count(anchor) for bundle in self.bundles) == 1
+
+    def replace(self, anchor: str, replacement: str, description: str) -> None:
+        self._holder(anchor, description).replace(anchor, replacement, description)
+
+    def inject(self, anchor: str, source: str, description: str) -> None:
+        self._holder(anchor, description).inject(anchor, source, description)
+
+    def substitute(
+        self, pattern: re.Pattern[str], replacement: str, description: str
+    ) -> None:
+        holders = [bundle for bundle in self.bundles if pattern.search(bundle.text)]
+        if len(holders) != 1:
+            raise RuntimeError(f"could not find {description}")
+        holders[0].substitute(pattern, replacement, description)
+
+    def save(self) -> None:
+        for bundle in self.bundles:
+            bundle.save()
+
+
 def single_bundle(assets: Path, glob: str, anchor: str, description: str) -> Path:
     matches = [
         path
@@ -1531,90 +1687,87 @@ def patch_renderer(extracted: Path, token: str) -> None:
         raise RuntimeError(
             f"expected one ChatGPT initial renderer bundle, found {len(initial_bundles)}"
         )
-    data = RendererBundle(initial_bundles[0])
-    if "function codexMuxRequest(" in data.text:
+    initial = RendererBundle(initial_bundles[0])
+    if "function codexMuxRequest(" in initial.text:
         raise RuntimeError("source app already contains the Codex multiplexer")
     build = next(
-        (candidate for candidate in RENDERER_BUILDS if candidate.marker in data.text),
+        (candidate for candidate in RENDERER_BUILDS if candidate.marker in initial.text),
         None,
     )
     if build is None:
         raise RuntimeError("the ChatGPT renderer layout is not supported")
     verify_identifier_probes(assets, build.identifier_probes)
-    ui = (
-        data
-        if build.ui_bundle_glob == "app-initial-*.js"
-        else RendererBundle(
-            single_bundle(
-                assets, build.ui_bundle_glob, build.menu_anchor, "ChatGPT UI bundle"
-            )
+    primary_bundles = list(assets.glob("app-primary-*.js"))
+    if len(primary_bundles) > 1:
+        raise RuntimeError(
+            f"expected at most one ChatGPT primary renderer bundle, found {len(primary_bundles)}"
         )
+    renderer = RendererBundleSet(
+        [initial, *(RendererBundle(path) for path in primary_bundles)]
     )
 
-    data.inject(
+    renderer.inject(
         build.data_anchor,
         injected_source("account-data.js", token, {}),
         "the native app-server RPC accessor",
     )
     for check in build.plugin_request_checks:
-        if data.text.count(check) != 1:
+        if not renderer.contains(check):
             raise RuntimeError(
                 "could not verify the native Plugins request-to-RPC mapping"
             )
-    data.replace(*build.plugin_request, "the native app-server request bridge")
+    renderer.replace(*build.plugin_request, "the native app-server request bridge")
     if build.usage_status is not None:
-        data.replace(*build.usage_status, "the native rate-limit status fetch")
+        renderer.replace(*build.usage_status, "the native rate-limit status fetch")
     else:
-        data.substitute(
+        renderer.substitute(
             USAGE_QUERY_PATTERN,
             r"queryKey:[`rate-limit-status`],\g<select>queryFn:async()=>{try{"
             r"\g<lead>await codexMuxFilterUsageStatus(await \g<call>)",
             "the native rate-limit status query",
         )
-    data.substitute(
+    renderer.substitute(
         PROFILE_QUERY_PATTERN,
         "let e=await codexMuxProfileData("
         "globalThis.__codexMuxSelectedProfileAccountId??null)",
         "the native profile stats request",
     )
-    data.replace(*build.reset_query, "the native reset-credit query")
+    renderer.replace(*build.reset_query, "the native reset-credit query")
     if build.fork_titles is not None:
-        data.inject(
+        renderer.inject(
             build.fork_titles[0],
             injected_source("fork-titles.js", token, build.fork_identifiers or {}),
-            "the native thread title reconsideration setup",
+            "the native turn-completion setup",
         )
-        data.replace(*build.fork_titles, "the native thread title reconsideration setup")
-    data.replace(*build.reset_mutation, "the native reset-credit mutation")
+        renderer.replace(*build.fork_titles, "the native turn-completion setup")
+    renderer.replace(*build.reset_mutation, "the native reset-credit mutation")
 
-    ui.inject(
+    renderer.inject(
         build.menu_anchor,
         injected_source("account-menu.js", token, build.menu_identifiers),
         "the native ChatGPT profile menu component",
     )
-    ui.replace(*build.usage_slot, "the native ChatGPT usage menu slot")
-    ui.replace(
+    renderer.replace(*build.usage_slot, "the native ChatGPT usage menu slot")
+    renderer.replace(
         f"function {build.usage_modal}(e){{",
         f"function {build.usage_modal}(e){{CodexMuxUseResetAccountState();",
         "the native Usage modal component",
     )
-    ui.replace(
+    renderer.replace(
         "let y=v;if(g!=null){",
         "let y=window.__codexMuxSelectedUsageWindows??v;if(g!=null){",
         "the native usage-window selection",
     )
-    ui.replace(*build.usage_header, "the native Usage sheet header")
+    renderer.replace(*build.usage_header, "the native Usage sheet header")
     for anchor, replacement in build.composer_actions:
-        ui.replace(anchor, replacement, "the native composer footer actions")
+        renderer.replace(anchor, replacement, "the native composer footer actions")
     for depleted_anchor in DEPLETED_ALERT_ANCHORS:
-        ui.replace(
+        renderer.replace(
             depleted_anchor,
             "defaultMessage:`All connected subscriptions are depleted`",
             "a native subscription depletion alert",
         )
-    data.save()
-    if ui is not data:
-        ui.save()
+    renderer.save()
 
     profile = RendererBundle(
         single_bundle(
@@ -1668,6 +1821,22 @@ def verify_identifier_probes(assets: Path, probes: tuple[str, ...]) -> None:
     for probe in probes:
         if sum(text.count(probe) for text in texts) != 1:
             raise RuntimeError(f"could not verify an identifier probe: {probe[:60]!r}")
+
+
+def remove_updater_initialization(bootstrap: str) -> str:
+    """Drop the one updater `initialize()` the bootstrap awaits between
+    importing the main process and running it, whether it stands as its own
+    statement or leads a comma expression."""
+    start = bootstrap.find("phase:`bootstrap-import-main`")
+    end = bootstrap.find("runMainAppStartup:", start)
+    if start < 0 or end < 0:
+        raise RuntimeError("could not disable updates in the copied ChatGPT app")
+    window = bootstrap[start:end]
+    calls = list(re.finditer(r"await [A-Za-z_$][\w$]*\.initialize\(\)[;,]", window))
+    if len(calls) != 1:
+        raise RuntimeError("could not disable updates in the copied ChatGPT app")
+    call = calls[0]
+    return bootstrap[: start + call.start()] + bootstrap[start + call.end() :]
 
 
 def disable_updater_lifecycle(extracted: Path) -> None:
@@ -1772,13 +1941,7 @@ def patch_desktop_profile(
         raise RuntimeError("could not isolate the copied ChatGPT desktop profile")
 
     # The copied app must never replace itself with an unpatched official update.
-    updater_pattern = re.compile(
-        r"await [A-Za-z_$][\w$]*\.initialize\(\);"
-        r"(?=(?:try\{)?let\{runMainAppStartup:)"
-    )
-    bootstrap, updater_replacements = updater_pattern.subn("", bootstrap, count=1)
-    if updater_replacements != 1:
-        raise RuntimeError("could not disable updates in the copied ChatGPT app")
+    bootstrap = remove_updater_initialization(bootstrap)
     bootstrap_path.write_text(bootstrap, encoding="utf-8")
     disable_updater_lifecycle(extracted)
 
@@ -2073,7 +2236,6 @@ def patch_app(
 
         backup_suffix = time.strftime("%Y%m%d-%H%M%S")
         backup_directory = DEFAULT_STATE_ROOT / "backups" / backup_suffix
-        prune_backups(DEFAULT_STATE_ROOT / "backups", keep=0)
         app_backup = backup_directory / destination.name
         helper_backup = backup_directory / installed_computer_use_app.name
         had_app = destination.exists()
@@ -2085,6 +2247,7 @@ def patch_app(
                 shutil.rmtree(installed_computer_use_app)
             had_app = had_helper = False
         if had_app or had_helper:
+            prune_backups(DEFAULT_STATE_ROOT / "backups", keep=0)
             backup_directory.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             backup_directory.parent.chmod(0o700)
             backup_directory.mkdir(mode=0o700, parents=True, exist_ok=False)
