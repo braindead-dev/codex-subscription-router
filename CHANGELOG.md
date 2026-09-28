@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-28
+
+### Fixed
+
+- Build `11645` crashed at launch. Its Electron seals `Info.plist`'s ASAR
+  integrity entry with a digest compiled into the framework, so the patcher
+  now restamps that digest for the repacked archive and re-signs the
+  framework and its helpers.
+- Installs no longer keep a copy of the replaced Computer Use helper in
+  `~/.codex/computer-use`.
+
+### Added
+
+- `scripts/launch_check.py` boots a staged app until its window talks to
+  Codex, and `verify_build.py` fails on an integrity seal format it does not
+  know.
+
 ## [0.2.0] - 2026-09-27
 
 ### Added
@@ -117,6 +134,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.1
 [0.2.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.0
 [0.1.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.1.0

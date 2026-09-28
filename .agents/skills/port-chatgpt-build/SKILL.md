@@ -78,11 +78,15 @@ CODEX_MUX_SIGNING_IDENTITY=- python3 scripts/patch_app.py --source <app> \
   --allow-adhoc-signing --force --discard-existing
 ```
 
-Every entrypoint in the staged app must launch: the router, `codex.real` next
+The staged app must boot: `python3 scripts/launch_check.py --app <staged>`
+exits 0 only once the renderer runs and the app-server answers, and prints the
+crash otherwise. Electron hardening (fuses, integrity seals, signing) only
+shows up here. Every entrypoint must launch too: the router, `codex.real` next
 to it, and `codex-cli/bin/codex` print the Codex version. Then run the live
 move test against the staged `codex.real` (`scripts/live_seed.py` prepares its
-home). After his "go", install over `~/Applications/Codex
-(router).app`, relaunch with `launchctl setenv CODEX_MUX_UI_TESTS 1`, and check
+home). After his "go", install over `~/Applications/Codex (router).app` with
+`--discard-existing` only if the installed copy is broken, run the launch
+check on it, relaunch with `launchctl setenv CODEX_MUX_UI_TESTS 1`, and check
 the profile menu, composer account picker, usage sheet, and thread panel
 through the bridge on port 48124. Unset the variable afterwards.
 

@@ -44,6 +44,9 @@ LAUNCH_SERVICES_REGISTER = Path(
     "/System/Library/Frameworks/CoreServices.framework/Frameworks/"
     "LaunchServices.framework/Support/lsregister"
 )
+# Marks the __asar_integrity section Electron 154 compiles into its framework:
+# an enabled flag, a format version, and a digest of Info.plist's integrity entry.
+ASAR_INTEGRITY_SENTINEL = b"AGbevlPCksUGKNL8TSn7wGmJEuJsXb2A"
 ASAR_UNPACK_DIRECTORIES = (
     "node_modules/{@worklouder,better-sqlite3,node-mac-permissions,node-pty,objc-js}"
 )
@@ -307,7 +310,8 @@ def computer_use_package(app: Path) -> Path:
 
 
 def retire_stale_cached_computer_use_app() -> None:
-    """Move aside only a prior custom helper copied into the shared Codex home."""
+    """Remove only a prior custom helper copied into the shared Codex home;
+    every install ships its own."""
     cached_app = (
         Path.home() / ".codex" / "computer-use" / "Codex Computer Use.app"
     )
@@ -323,11 +327,8 @@ def retire_stale_cached_computer_use_app() -> None:
         return
     if LAUNCH_SERVICES_REGISTER.is_file():
         run([str(LAUNCH_SERVICES_REGISTER), "-u", str(cached_app)])
-    backup = cached_app.with_name(
-        f"Codex Computer Use backup-{time.strftime('%Y%m%d-%H%M%S')}"
-    )
-    cached_app.rename(backup)
-    print(f"Stale cached Computer Use helper moved to {backup}")
+    shutil.rmtree(cached_app)
+    print(f"Stale cached Computer Use helper removed from {cached_app}")
 
 
 def patch_computer_use_identity(
@@ -1634,6 +1635,54 @@ def asar_header_digest(asar_path: Path) -> str:
     return hashlib.sha256(header).hexdigest()
 
 
+def electron_framework(app: Path) -> Path:
+    frameworks = list((app / "Contents" / "Frameworks").glob("* Framework.framework"))
+    if len(frameworks) != 1:
+        raise RuntimeError(f"expected one Electron framework, found {len(frameworks)}")
+    return frameworks[0]
+
+
+def asar_integrity_seal(binary: bytes) -> int | None:
+    """Where the framework keeps its Info.plist integrity digest, or None when
+    the build predates the seal or ships it disabled."""
+    at = binary.find(ASAR_INTEGRITY_SENTINEL)
+    if at < 0:
+        return None
+    if binary.find(ASAR_INTEGRITY_SENTINEL, at + 1) >= 0:
+        raise RuntimeError("found more than one ASAR integrity seal")
+    enabled, version = binary[at + 32], binary[at + 33]
+    if not enabled:
+        return None
+    if version != 1:
+        raise RuntimeError(f"unsupported ASAR integrity seal version {version}")
+    return at + 34
+
+
+def seal_asar_integrity(app: Path, identity: str) -> None:
+    """Point the framework's seal at the repacked archive's Info.plist entry,
+    then re-sign the framework and the helpers that load it."""
+    framework = electron_framework(app)
+    binary_path = framework / "Versions" / "Current" / framework.stem
+    binary = bytearray(binary_path.read_bytes())
+    digest_at = asar_integrity_seal(binary)
+    if digest_at is None:
+        return
+    with (app / "Contents" / "Info.plist").open("rb") as handle:
+        integrity = plistlib.load(handle)["ElectronAsarIntegrity"]
+    binary[digest_at : digest_at + 32] = hashlib.sha256(
+        "".join(
+            path + entry["algorithm"] + entry["hash"]
+            for path, entry in sorted(integrity.items())
+        ).encode()
+    ).digest()
+    binary_path.write_bytes(binary)
+    # Like the main executable, helpers run without library validation so they
+    # can load the re-signed framework beside the official libraries.
+    for helper in sorted((framework / "Versions" / "Current" / "Helpers").glob("*.app")):
+        sign_runtime_bundle(helper, identity, runtime=False)
+    run(["codesign", "--force", "--sign", identity, "--timestamp=none", str(framework)])
+
+
 def patch_info_plist(
     app: Path,
     asar_path: Path,
@@ -1817,6 +1866,7 @@ def patch_app(
 
         patch_info_plist(staged_app, original_asar, team_identifier)
         print(f"Signing independent app copy with {signing_identity}…")
+        seal_asar_integrity(staged_app, signing_identity)
         sign_independent_app(
             staged_app,
             signing_identity,

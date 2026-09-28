@@ -5,7 +5,8 @@
 
 Runs the installer's own Computer Use, desktop profile, updater, and renderer
 patches in a temporary directory, which fail closed on any moved anchor, then
-syntax-checks every JavaScript file they changed. It needs Node and the pinned
+syntax-checks every JavaScript file they changed. It also fails on a framework
+ASAR integrity seal the installer cannot restamp. It needs Node and the pinned
 @electron/asar but no signing identity, so it runs in CI and hosted agents.
 """
 
@@ -71,6 +72,11 @@ def main() -> int:
     approved = spec.asar_sha256 == asar_hash
     print(f"source: {key[0]} ({key[1]}) app.asar {asar_hash}")
     print(f"listed in SUPPORTED_BUILDS: {'yes' if approved else 'no'}")
+    framework = patcher.electron_framework(app)
+    seal = patcher.asar_integrity_seal(
+        (framework / "Versions" / "Current" / framework.stem).read_bytes()
+    )
+    print(f"framework ASAR integrity seal: {'present' if seal else 'none'}")
 
     with tempfile.TemporaryDirectory() as scratch:
         extracted = Path(scratch) / "asar"
