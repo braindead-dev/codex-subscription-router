@@ -8,7 +8,9 @@ repeat consistently, matched exactly once across the new build's renderer
 bundles, and the captured identifiers rewrite the anchors, replacements,
 and injected-source identifier maps into a profile for the new build.
 
-    python3 scripts/port_renderer.py --source /path/to/ChatGPT.app [--reference 7746]
+    python3 scripts/port_renderer.py --source /path/to/ChatGPT.app [--reference BUILD]
+
+The reference defaults to the newest supported build.
 
 The result is printed for review; a profile is added to patch_app.py by
 hand, and the patcher still refuses a build whose asar hash is untested.
@@ -17,8 +19,10 @@ hand, and the patcher still refuses a build whose asar hash is untested.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import importlib.util
 import json
+import plistlib
 import re
 import subprocess
 import sys
@@ -153,14 +157,11 @@ class Port:
         return anchor, self.port_text(pair[1], label + " replacement")
 
     def port_identifiers(self, table: dict[str, str], label: str) -> dict[str, str]:
-        ported: dict[str, str] = {}
-        for placeholder, old in table.items():
-            if old in self.mapping:
-                ported[placeholder] = self.mapping[old]
-            else:
-                self.problems.append(f"{label}: no mapping for {placeholder} ({old})")
-                ported[placeholder] = old
-        return ported
+        # Values are identifiers or small expressions such as `Ur()`.
+        return {
+            placeholder: self.port_text(old, f"{label} {placeholder}")
+            for placeholder, old in table.items()
+        }
 
 
 def load_patcher():
@@ -178,7 +179,7 @@ def renderer_bundles(app: Path) -> dict[str, str]:
     asar = app / "Contents" / "Resources" / "app.asar"
     with tempfile.TemporaryDirectory() as scratch:
         subprocess.run(
-            ["npx", "--yes", "@electron/asar", "extract", str(asar), scratch],
+            [str(PROJECT_ROOT / "node_modules" / ".bin" / "asar"), "extract", str(asar), scratch],
             check=True,
             capture_output=True,
         )
@@ -189,6 +190,36 @@ def renderer_bundles(app: Path) -> dict[str, str]:
         }
 
 
+def build_number(app: Path) -> str:
+    info = plistlib.loads((app / "Contents" / "Info.plist").read_bytes())
+    return info["CFBundleVersion"]
+
+
+def render(build: str, profile: dict[str, object], reference) -> str:
+    """The profile as Python source, in the patcher's field order."""
+    lines = [f"RENDERER_BUILD_{build} = RendererBuild("]
+    for field in dataclasses.fields(reference):
+        value = profile.get(field.name, getattr(reference, field.name))
+        lines.append(f"    {field.name}={python_literal(value, 1)},")
+    lines.append(")")
+    return "\n".join(lines)
+
+
+def python_literal(value: object, depth: int) -> str:
+    pad, inner = "    " * depth, "    " * (depth + 1)
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if value is None:
+        return "None"
+    if isinstance(value, dict):
+        items = "".join(
+            f"{inner}{json.dumps(k)}: {python_literal(v, depth + 1)},\n" for k, v in value.items()
+        )
+        return "{\n" + items + pad + "}"
+    items = "".join(f"{inner}{python_literal(v, depth + 1)},\n" for v in value)
+    return "(\n" + items + pad + ")"
+
+
 def bundle_glob(name: str) -> str:
     return re.sub(r"-[0-9a-f]{12}\.js$", "-*.js", name)
 
@@ -196,11 +227,15 @@ def bundle_glob(name: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)
-    parser.add_argument("--reference", default="7746")
+    parser.add_argument("--reference", help="supported build to port from (default: newest)")
     args = parser.parse_args()
 
     patcher = load_patcher()
-    reference = getattr(patcher, f"RENDERER_BUILD_{args.reference}")
+    reference = (
+        getattr(patcher, f"RENDERER_BUILD_{args.reference}")
+        if args.reference
+        else patcher.RENDERER_BUILDS[-1]
+    )
     bundles = renderer_bundles(args.source)
     port = Port(bundles)
     profile: dict[str, object] = {}
@@ -212,6 +247,11 @@ def main() -> int:
     menu = port.locate(reference.menu_anchor, "menu_anchor")
     profile["menu_anchor"] = menu[1] if menu else reference.menu_anchor
 
+    # Probes first: replacements may borrow identifiers only probes name.
+    profile["identifier_probes"] = tuple(
+        (port.locate(probe, "identifier_probes") or (None, probe))[1]
+        for probe in reference.identifier_probes
+    )
     for field in (
         "usage_slot", "plugin_request", "reset_query", "reset_mutation",
         "usage_header", "profile_avatar", "profile_name", "profile_identity",
@@ -222,27 +262,15 @@ def main() -> int:
         (port.locate(check, "plugin_request_checks") or (None, check))[1]
         for check in reference.plugin_request_checks
     )
-    profile["identifier_probes"] = tuple(
-        (port.locate(probe, "identifier_probes") or (None, probe))[1]
-        for probe in reference.identifier_probes
-    )
-    if reference.usage_modal not in port.mapping:
-        port.problems.append(f"usage_modal: no probe named {reference.usage_modal}")
-    profile["usage_modal"] = port.mapping.get(reference.usage_modal, reference.usage_modal)
-    plugin = port.locate(reference.plugin_scope[0], "plugin_bundle")
-    profile["plugin_bundle_glob"] = (
-        bundle_glob(plugin[0]) if plugin else reference.plugin_bundle_glob
-    )
+    modal = port.locate(reference.usage_modal, "usage_modal")
+    profile["usage_modal"] = modal[1] if modal else reference.usage_modal
     thread = port.locate(reference.thread_anchor, "thread_anchor")
     profile["thread_anchor"] = thread[1] if thread else reference.thread_anchor
-    profile["thread_bundle_glob"] = bundle_glob(thread[0]) if thread else None
     profile["composer_actions"] = tuple(
         port.port_pair(pair, "composer_actions") for pair in reference.composer_actions
     )
-    if reference.fork_titles is not None:
-        profile["fork_titles"] = port.port_pair(reference.fork_titles, "fork_titles")
-    if reference.usage_status is not None:
-        profile["usage_status"] = port.port_pair(reference.usage_status, "usage_status")
+    profile["fork_titles"] = port.port_pair(reference.fork_titles, "fork_titles")
+    profile["usage_status"] = port.port_pair(reference.usage_status, "usage_status")
 
     profile["menu_identifiers"] = port.port_identifiers(
         reference.menu_identifiers, "menu_identifiers"
@@ -250,12 +278,11 @@ def main() -> int:
     profile["thread_identifiers"] = port.port_identifiers(
         reference.thread_identifiers, "thread_identifiers"
     )
-    if reference.fork_identifiers:
-        profile["fork_identifiers"] = port.port_identifiers(
-            reference.fork_identifiers, "fork_identifiers"
-        )
+    profile["fork_identifiers"] = port.port_identifiers(
+        reference.fork_identifiers, "fork_identifiers"
+    )
 
-    print(json.dumps(profile, indent=2))
+    print(render(build_number(args.source), profile, reference))
     if port.conflicts:
         print("\nconflicting identifier captures:", file=sys.stderr)
         for old, seen in sorted(port.conflicts.items()):

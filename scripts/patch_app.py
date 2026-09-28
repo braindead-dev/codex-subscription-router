@@ -53,55 +53,33 @@ PREFERRED_SIGNING_IDENTITY_PREFIXES = (
 )
 OPENAI_INTERNAL_TEAM_IDENTIFIER = "HX7739G8FX"
 OPENAI_DISTRIBUTION_TEAM_IDENTIFIER = "2DC432GLL2"
-TESTED_SOURCE_BUILDS = {
-    (
-        "26.803.61601",
-        "6396",
-    ): "d5a44ed9e2f1db5f81dbbe85408aed256f3203c5b16f00817bb9d7cd941343cf",
-    (
-        "26.810.52044",
-        "6662",
-    ): "6e7e8791b8bf69a586ff994721fff518af391d9efdc66cd2e620dd2a4aedc90f",
-    (
-        "26.901.22334",
-        "7746",
-    ): "405f0e1600fc63851abe4c763ec0546f56c32da312c2c2745e2b997c579ce0d0",
-    (
-        "26.908.40834",
-        "8881",
-    ): "bb40cd8811887363104a19291346af9595632e0e956316a1086b274fb8e3eafc",
-    (
-        "26.917.51856",
-        "10492",
-    ): "55861ddbcc5d965642441e167a349fefcc932426c85b61a5d5b7a9a2fc639d70",
-}
-EXPECTED_CUA_IDENTIFIER_REPLACEMENTS = 49
-EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
-    ("26.803.61601", "6396"): 49,
-    ("26.810.52044", "6662"): 99,
-    ("26.901.22334", "7746"): 49,
-    ("26.908.40834", "8881"): 49,
-    ("26.917.51856", "10492"): 49,
-}
-DEFAULT_CUA_SERVICE_LAYOUT = (("Codex Computer Use.app", 17),)
-EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD = {
-    ("26.803.61601", "6396"): DEFAULT_CUA_SERVICE_LAYOUT,
-    ("26.810.52044", "6662"): (
-        ("Codex Computer Use.app", 17),
-        ("bin/mac/normal/Codex Computer Use.app", 13),
+
+
+@dataclass(frozen=True)
+class SourceBuild:
+    """What one official build must contain before it is patched."""
+
+    asar_sha256: str
+    cua_identifier_replacements: int = 49
+    asar_cua_identifier_replacements: int = 16
+    cua_service_layout: tuple[tuple[str, int], ...] = (("Codex Computer Use.app", 17),)
+
+
+# The newest three official builds, keyed by (version, build). Adding a build
+# removes the oldest one here and its RENDERER_BUILD profile.
+SUPPORTED_BUILDS = {
+    ("26.908.40834", "8881"): SourceBuild(
+        "bb40cd8811887363104a19291346af9595632e0e956316a1086b274fb8e3eafc"
     ),
-    ("26.901.22334", "7746"): DEFAULT_CUA_SERVICE_LAYOUT,
-    ("26.908.40834", "8881"): DEFAULT_CUA_SERVICE_LAYOUT,
-    ("26.917.51856", "10492"): DEFAULT_CUA_SERVICE_LAYOUT,
+    ("26.917.51856", "10492"): SourceBuild(
+        "55861ddbcc5d965642441e167a349fefcc932426c85b61a5d5b7a9a2fc639d70"
+    ),
+    ("26.924.22138", "11645"): SourceBuild(
+        "d0ba973179d2f717affd39e012b64a095464a54a51c6bccb7bc6b3d2a1cfba80"
+    ),
 }
-EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS = 17
-EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD = {
-    ("26.803.61601", "6396"): 17,
-    ("26.810.52044", "6662"): 20,
-    ("26.901.22334", "7746"): 16,
-    ("26.908.40834", "8881"): 16,
-    ("26.917.51856", "10492"): 16,
-}
+# Counts assumed for a build passed with --allow-untested-source.
+UNTESTED_BUILD = SourceBuild(asar_sha256="")
 
 
 def parse_args() -> argparse.Namespace:
@@ -355,8 +333,8 @@ def retire_stale_cached_computer_use_app() -> None:
 def patch_computer_use_identity(
     app: Path,
     team_identifier: str | None,
-    expected_replacements: int = EXPECTED_CUA_IDENTIFIER_REPLACEMENTS,
-    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
+    expected_replacements: int = UNTESTED_BUILD.cua_identifier_replacements,
+    service_layout: tuple[tuple[str, int], ...] = UNTESTED_BUILD.cua_service_layout,
 ) -> None:
     """Give the copied CUA service an independent identity and trusted callers."""
     package = computer_use_package(app)
@@ -457,7 +435,7 @@ def patch_computer_use_identity(
 
 def patch_asar_computer_use_identity(
     extracted: Path,
-    expected_replacements: int = EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS,
+    expected_replacements: int = UNTESTED_BUILD.asar_cua_identifier_replacements,
 ) -> None:
     """Keep desktop launch, temp-file, and service references on the new CUA ID."""
     replacements = 0
@@ -628,7 +606,7 @@ def sign_runtime_bundle(
 
 def capture_computer_use_entitlements(
     app: Path,
-    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
+    service_layout: tuple[tuple[str, int], ...] = UNTESTED_BUILD.cua_service_layout,
 ) -> dict[Path, dict[str, object] | None]:
     package = computer_use_package(app)
     entitlements: dict[Path, dict[str, object] | None] = {}
@@ -652,7 +630,7 @@ def sign_computer_use_code(
     app: Path,
     identity: str,
     preserved_entitlements: dict[Path, dict[str, object] | None],
-    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
+    service_layout: tuple[tuple[str, int], ...] = UNTESTED_BUILD.cua_service_layout,
 ) -> None:
     """Keep the Computer Use service and its callers on one signing team."""
     resources = app / "Contents" / "Resources"
@@ -709,12 +687,27 @@ def sign_computer_use_code(
     )
 
 
+def codex_entrypoint(resources: Path) -> Path:
+    """The Codex binary the desktop launches: the packaged CLI app's
+    executable since build 11645, a loose `codex` before it."""
+    packaged = resources / "codex-cli" / "CodexCLI.app" / "Contents" / "MacOS" / "codex"
+    return packaged if packaged.is_file() else resources / "codex"
+
+
+def codex_signing_target(resources: Path) -> Path:
+    """What to re-seal after the entrypoint is swapped: the enclosing CLI app,
+    or the loose binary itself."""
+    entrypoint = codex_entrypoint(resources)
+    bundle = entrypoint.parent.parent.parent
+    return bundle if bundle.suffix == ".app" else entrypoint
+
+
 def sign_independent_app(
     app: Path,
     identity: str,
     team_identifier: str | None,
-    expected_cua_replacements: int = EXPECTED_CUA_IDENTIFIER_REPLACEMENTS,
-    service_layout: tuple[tuple[str, int], ...] = DEFAULT_CUA_SERVICE_LAYOUT,
+    expected_cua_replacements: int = UNTESTED_BUILD.cua_identifier_replacements,
+    service_layout: tuple[tuple[str, int], ...] = UNTESTED_BUILD.cua_service_layout,
 ) -> None:
     """Apply one stable identity throughout the modified Electron bundle."""
     computer_use_entitlements = capture_computer_use_entitlements(app, service_layout)
@@ -725,16 +718,16 @@ def sign_independent_app(
         service_layout,
     )
     sign_computer_use_code(app, identity, computer_use_entitlements, service_layout)
-    run(
-        [
-            "codesign",
-            "--force",
-            "--sign",
+    codex_target = codex_signing_target(app / "Contents" / "Resources")
+    if codex_target.suffix == ".app":
+        # A re-sealed CLI app no longer matches its profile, so the official
+        # binary keeps only the runtime entitlements it needs to run.
+        (codex_target / "Contents" / "embedded.provisionprofile").unlink(missing_ok=True)
+        sign_runtime_executable(
+            codex_entrypoint(app / "Contents" / "Resources").with_name("codex.real"),
             identity,
-            "--timestamp=none",
-            str(app / "Contents" / "Resources" / "codex"),
-        ]
-    )
+        )
+    run(["codesign", "--force", "--sign", identity, "--timestamp=none", str(codex_target)])
     run(
         [
             "codesign",
@@ -850,422 +843,20 @@ class RendererBuild:
     profile_avatar: tuple[str, str]
     profile_name: tuple[str, str]
     profile_identity: tuple[str, str]
-    plugin_bundle_glob: str
     plugin_scope: tuple[str, str]
     thread_identifiers: dict[str, str]
     thread_anchor: str
     thread_sections: tuple[str, str]
-    composer_actions: tuple[tuple[str, str], ...] = ()
-    fork_titles: tuple[str, str] | None = None
-    fork_identifiers: dict[str, str] | None = None
+    composer_actions: tuple[tuple[str, str], ...]
+    fork_titles: tuple[str, str]
+    fork_identifiers: dict[str, str]
     # Snippets that exist once in the build and name identifiers the
     # injected sources borrow; the porting tool reads them, the patcher
     # verifies them.
-    identifier_probes: tuple[str, ...] = ()
-    # The native `/wham/usage` fetch when it no longer sits inline in the
-    # rate-limit query; None keeps the pattern-based patch.
-    usage_status: tuple[str, str] | None = None
+    identifier_probes: tuple[str, ...]
+    usage_status: tuple[str, str]
 
 
-RENDERER_BUILD_6396 = RendererBuild(
-    marker="function wXc({sidebarFooter:e,triggerButton:t})",
-    data_anchor="function wXc({sidebarFooter:e,triggerButton:t})",
-    menu_identifiers={},
-    menu_anchor="function wXc({sidebarFooter:e,triggerButton:t})",
-    usage_slot=("usageItems:Ge", "usageItems:(0,e7.jsx)(CodexMuxAccountMenu,{})"),
-    plugin_request=(
-        "function gm(e,t,n){return n==null?h6e.sendRequest(e,t):"
-        "h6e.sendRequest(e,t,n)}",
-        "function gm(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
-        "return n==null?h6e.sendRequest(e,r):h6e.sendRequest(e,r,n)}",
-    ),
-    plugin_request_checks=(
-        '"list-apps":q9((e,{priority:t,source:n,timeoutMs:r,'
-        "trace:i,...a})=>e.sendRequest(`app/list`,a,",
-        '"list-installed-apps":q9((e,t)=>e.sendRequest(`app/installed`,t))',
-        '"read-apps":q9((e,t)=>e.sendRequest(`app/read`,t))',
-        '"login-mcp-server":q9((e,t)=>e.sendRequest(`mcpServer/oauth/login`,t))',
-        '"list-mcp-server-status":K9((e,{priority:t,'
-        "source:n,timeoutMs:r,trace:i,...a})=>e.listMcpServers(a,",
-        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
-        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
-    ),
-    reset_query=(
-        "function l6r(){let e=(0,$F.c)(1),t;return "
-        "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
-        "(t={queryKey:[`rate-limit-reset-credits`],queryFn:u6r,"
-        "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS},e[0]=t):"
-        "t=e[0],Lt(t)}",
-        "function l6r(){let e=window.__codexMuxResetAccountId;return Lt({"
-        "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
-        "queryFn:e?()=>codexMuxRateLimitResets(e):u6r,"
-        "refetchInterval:vm.ONE_MINUTE,staleTime:vm.FIVE_SECONDS})}",
-    ),
-    reset_mutation=(
-        "function d6r(){let e=(0,$F.c)(3),t=lt(),n=zO(),r;return "
-        "e[0]!==n||e[1]!==t?(r={mutationFn:f6r,onSuccess:(e,r)=>{"
-        "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
-        "let n=e.code===`reset`?e.credit?.id??i:i;"
-        "t.setQueryData([`rate-limit-reset-credits`],e=>F3r(e,a,n))}"
-        "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
-        "e[0]=n,e[1]=t,e[2]=r):r=e[2],$t(r)}",
-        "function d6r(){let e=lt(),t=zO(),n=window.__codexMuxResetAccountId,"
-        "r=[`rate-limit-reset-credits`,n??`primary`];return $t({"
-        "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):f6r,"
-        "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
-        "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
-        "n.credit?.id??a:a;e.setQueryData(r,e=>F3r(e,o,t))}"
-        "Promise.all([t([`rate-limit-status`]),t(r)])}})}",
-    ),
-    usage_modal="QLs",
-    usage_header=(
-        "let ve;t[46]===ge?ve=t[47]:"
-        "(ve=(0,k2.jsxs)(LL,{children:[ge,_e]}),t[46]=ge,t[47]=ve);",
-        "let ve=(0,k2.jsxs)(LL,{children:[ge,_e,"
-        "window.__codexMuxResetAccountSelector??null]});",
-    ),
-    profile_avatar=(
-        "children:[(0,$.jsxs)(`div`,{className:`relative mb-4 size-20`,"
-        "children:[",
-        "children:[globalThis.CodexMuxProfileAvatarStack?.("
-        "{onSelect:()=>A.refetch()})??null,"
-        "(0,$.jsxs)(`div`,{className:"
-        "globalThis.CodexMuxProfileAvatarStack?"
-        "`hidden`:`relative mb-4 size-20`,children:[",
-    ),
-    profile_name=(
-        "className:`flex w-full justify-center`",
-        "className:globalThis.__codexMuxSelectedProfileAccountId&&"
-        "!A.isFetching?`flex w-full justify-center`:`hidden`",
-    ),
-    profile_identity=(
-        "className:`mt-1 flex min-h-7 items-center gap-1.5 text-base leading-5 "
-        "font-normal text-token-text-tertiary`",
-        "className:globalThis.__codexMuxSelectedProfileAccountId&&"
-        "!A.isFetching?`mt-1 flex min-h-7 items-center gap-1.5 text-base "
-        "leading-5 font-normal text-token-text-tertiary`:`hidden`",
-    ),
-    plugin_bundle_glob="plugins-settings-*.js",
-    plugin_scope=(
-        "action:F,children:w})",
-        "action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
-    ),
-    thread_identifiers={},
-    thread_anchor="function bE(){let e=(0,wE.c)(57)",
-    thread_sections=(
-        "children:[c,l,u,d,f,p,m,h,g,_,v,y,b,x]",
-        "children:[c,l,u,d,f,(0,zE.jsx)(CodexMuxThreadSubscription,{}),"
-        "p,m,h,g,_,v,y,b,x]",
-    ),
-)
-
-RENDERER_BUILD_6662 = RendererBuild(
-    marker="function Icl(e){let t=(0,Vcl.c)(248),",
-    data_anchor="function Icl(e){let t=(0,Vcl.c)(248),",
-    menu_identifiers={
-        "e7": "$5",
-        "kXc": "Hcl",
-        "Lo": "Fo",
-        "BW": "RU",
-        "QLs": "E$s",
-        "_H": "GV",
-        "CH": "ZV",
-        "jLa": "x$a",
-        "lt": "ct",
-    },
-    menu_anchor="function Icl(e){let t=(0,Vcl.c)(248),",
-    usage_slot=("usageItems:Ct", "usageItems:(0,$5.jsx)(CodexMuxAccountMenu,{})"),
-    plugin_request=(
-        "function Bp(e,t,n){return n==null?N8e.sendRequest(e,t):"
-        "N8e.sendRequest(e,t,n)}",
-        "function Bp(e,t,n){let r=codexMuxScopePluginRequest(e,t);"
-        "return n==null?N8e.sendRequest(e,r):N8e.sendRequest(e,r,n)}",
-    ),
-    plugin_request_checks=(
-        '"list-apps":J9((e,{priority:t,source:n,timeoutMs:r,'
-        "trace:i,...a})=>e.sendRequest(`app/list`,a,",
-        '"list-installed-apps":J9((e,t)=>e.sendRequest(`app/installed`,t))',
-        '"read-apps":J9((e,t)=>e.sendRequest(`app/read`,t))',
-        '"login-mcp-server":J9((e,t)=>e.sendRequest(`mcpServer/oauth/login`,t))',
-        '"list-mcp-server-status":q9((e,{priority:t,'
-        "source:n,timeoutMs:r,trace:i,...a})=>e.listMcpServers(a,",
-        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
-        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
-    ),
-    reset_query=(
-        "function Ooi(){let e=(0,SI.c)(1),t;return "
-        "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
-        "(t={queryKey:[`rate-limit-reset-credits`],queryFn:koi,"
-        "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS},e[0]=t):"
-        "t=e[0],It(t)}",
-        "function Ooi(){let e=window.__codexMuxResetAccountId;return It({"
-        "queryKey:[`rate-limit-reset-credits`,e??`primary`],"
-        "queryFn:e?()=>codexMuxRateLimitResets(e):koi,"
-        "refetchInterval:Wp.ONE_MINUTE,staleTime:Wp.FIVE_SECONDS})}",
-    ),
-    reset_mutation=(
-        "function Aoi(){let e=(0,SI.c)(3),t=ct(),n=Uw(),r;return "
-        "e[0]!==n||e[1]!==t?(r={mutationFn:joi,onSuccess:(e,r)=>{"
-        "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
-        "let n=e.code===`reset`?e.credit?.id??i:i;"
-        "t.setQueryData([`rate-limit-reset-credits`],e=>eoi(e,a,n))}"
-        "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
-        "e[0]=n,e[1]=t,e[2]=r):r=e[2],Qt(r)}",
-        "function Aoi(){let e=ct(),t=Uw(),n=window.__codexMuxResetAccountId,"
-        "r=[`rate-limit-reset-credits`,n??`primary`];return Qt({"
-        "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):joi,"
-        "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
-        "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
-        "n.credit?.id??a:a;e.setQueryData(r,e=>eoi(e,o,t))}"
-        "Promise.all([t([`rate-limit-status`]),t(r)])}})}",
-    ),
-    usage_modal="E$s",
-    usage_header=(
-        "let _e;t[46]===he?_e=t[47]:"
-        "(_e=(0,I0.jsxs)(WL,{children:[he,ge]}),t[46]=he,t[47]=_e);",
-        "let _e=(0,I0.jsxs)(WL,{children:[he,ge,"
-        "window.__codexMuxResetAccountSelector??null]});",
-    ),
-    profile_avatar=(
-        "avatar:(0,$.jsxs)($.Fragment,{children:["
-        "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
-        "className:Le(`group relative flex size-20 rounded-full outline-none "
-        "focus-within:ring-1 focus-within:ring-ring`,",
-        "avatar:(0,$.jsxs)($.Fragment,{children:["
-        "globalThis.CodexMuxProfileAvatarStack?.("
-        "{onSelect:()=>M.refetch()})??null,"
-        "(0,$.jsxs)(`label`,{\"aria-disabled\":z.isPending,"
-        "className:Le(globalThis.CodexMuxProfileAvatarStack?`hidden`:"
-        "`group relative flex size-20 rounded-full outline-none "
-        "focus-within:ring-1 focus-within:ring-ring`,",
-    ),
-    profile_name=(
-        "displayName:Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
-        "defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
-        "displayName:globalThis.__codexMuxSelectedProfileAccountId?"
-        "(Ze??(0,$.jsx)(o,{id:`profile.nameFallback`,"
-        "defaultMessage:`ChatGPT user`,"
-        "description:`Fallback profile display name`})):null",
-    ),
-    profile_identity=(
-        "username:Ke==null?null:(0,$.jsx)(o,{id:`profile.usernameValue`,"
-        "defaultMessage:`@{username}`,"
-        "description:`Profile username shown with an at-sign prefix`,"
-        "values:{username:Ke}})",
-        "username:globalThis.__codexMuxSelectedProfileAccountId&&Ke!=null?"
-        "(0,$.jsx)(o,{id:`profile.usernameValue`,"
-        "defaultMessage:`@{username}`,"
-        "description:`Profile username shown with an at-sign prefix`,"
-        "values:{username:Ke}}):null",
-    ),
-    plugin_bundle_glob="plugins-page-*.js",
-    plugin_scope=(
-        "ee=(0,tc.jsxs)(tc.Fragment,{children:[H,U]})",
-        "ee=(0,tc.jsxs)(tc.Fragment,{children:["
-        "globalThis.CodexMuxPluginScope?.()??null,H,U]})",
-    ),
-    thread_identifiers={"K": "q"},
-    thread_anchor="function bE(){let e=(0,SE.c)(1)",
-    thread_sections=(
-        "children:[c,l,u,d,f,p,m,h,g,_,v,y,b,x]",
-        "children:[c,l,u,d,f,(0,CE.jsx)(CodexMuxThreadSubscription,{}),"
-        "p,m,h,g,_,v,y,b,x]",
-    ),
-)
-
-# Build 7746 splits the renderer: data access and RPC live in app-initial,
-# while the menu, usage, and alert surfaces render from app-primary.
-RENDERER_BUILD_7746 = RendererBuild(
-    marker=(
-        "function wb(e,t){let n=e.get(Tb);"
-        "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
-        "return n.forHost(t)}"
-    ),
-    data_anchor=(
-        "function wb(e,t){let n=e.get(Tb);"
-        "if(n==null)throw Error(`AppServerManager RPC is not connected`);"
-        "return n.forHost(t)}"
-    ),
-    menu_identifiers={
-        "e7": "Pq",
-        "kXc": "lgn",
-        "Lo": "DO",
-        "Q": "_S",
-        "BW": "ru",
-        "QLs": "jG",
-        "_H": "fa",
-        "CH": "Oo",
-        "jLa": "jB",
-        "lt": "Su",
-        "Rv": "zv",
-        "RD": "xR",
-    },
-    menu_anchor=(
-        "function $hn(e){let t=(0,tgn.c)(35),{accountIcon:n,accountLabel:r,"
-        "additionalItems:i,displayName:a,identityItems:o,isPetVisible:s,"
-        "onCopyUserId:c,onLogOut:l,onOpenProfile:u,onOpenSettings:d,"
-        "onOpenWorkspaceSettings:f,onTogglePet:p,personalPlanLabel:m,"
-        "petShortcut:h,settingsShortcut:g,usageItems:_,"
-        "workspaceSettingsRightIcon:v}=e"
-    ),
-    usage_slot=(
-        "(F=(0,Iq.jsx)($hn,{accountIcon:f,accountLabel:x,additionalItems:C,"
-        "displayName:T,identityItems:E,isPetVisible:o,onCopyUserId:D,onLogOut:O,"
-        "onOpenProfile:A,onOpenSettings:ct,onOpenWorkspaceSettings:j,"
-        "personalPlanLabel:_,onTogglePet:N,petShortcut:fe,settingsShortcut:de,"
-        "usageItems:Tt,workspaceSettingsRightIcon:P})",
-        "(F=(0,Iq.jsx)($hn,{accountIcon:f,accountLabel:x,additionalItems:C,"
-        "displayName:T,identityItems:E,isPetVisible:o,onCopyUserId:D,onLogOut:O,"
-        "onOpenProfile:A,onOpenSettings:ct,onOpenWorkspaceSettings:j,"
-        "personalPlanLabel:_,onTogglePet:N,petShortcut:fe,settingsShortcut:de,"
-        "usageItems:(0,Iq.jsx)(CodexMuxAccountMenu,{}),"
-        "workspaceSettingsRightIcon:P})",
-    ),
-    plugin_request=(
-        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
-        "`AppServerRequestClient is missing a message dispatcher`);"
-        "return e===`config/read`?",
-        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error("
-        "`AppServerRequestClient is missing a message dispatcher`);"
-        "t=codexMuxScopePluginRequest(e,t);return e===`config/read`?",
-    ),
-    plugin_request_checks=(
-        "listMcpServers(e,t){let n=JSON.stringify({options:t,params:e})",
-        "let i=this.sendRequest(`mcpServerStatus/list`,e,t);",
-    ),
-    reset_query=(
-        "function l2i(){let e=(0,RK.c)(1);HR(),lb(null);let t;return "
-        "e[0]===Symbol.for(`react.memo_cache_sentinel`)?"
-        "(t={queryKey:[`rate-limit-reset-credits`],queryFn:d2i,select:u2i,"
-        "refetchInterval:gD.ONE_MINUTE,staleTime:gD.FIVE_SECONDS},e[0]=t):"
-        "t=e[0],vb(t)}",
-        "function l2i(){HR(),lb(null);let e=window.__codexMuxResetAccountId;"
-        "return vb({queryKey:[`rate-limit-reset-credits`,e??`primary`],"
-        "queryFn:e?()=>codexMuxRateLimitResets(e):d2i,select:u2i,"
-        "refetchInterval:gD.ONE_MINUTE,staleTime:gD.FIVE_SECONDS})}",
-    ),
-    reset_mutation=(
-        "function f2i(){let e=(0,RK.c)(3),t=mb(),n=mD(),r;return "
-        "e[0]!==n||e[1]!==t?(r={mutationFn:p2i,onSuccess:(e,r)=>{"
-        "let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){"
-        "let n=e.code===`reset`?e.credit?.id??i:i;"
-        "t.setQueryData([`rate-limit-reset-credits`],e=>Y1i(e,a,n))}"
-        "Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},"
-        "e[0]=n,e[1]=t,e[2]=r):r=e[2],xb(r)}",
-        "function f2i(){let e=mb(),t=mD(),n=window.__codexMuxResetAccountId,"
-        "r=[`rate-limit-reset-credits`,n??`primary`];return xb({"
-        "mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):p2i,"
-        "onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;"
-        "if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?"
-        "n.credit?.id??a:a;e.setQueryData(r,e=>Y1i(e,o,t))}"
-        "Promise.all([t([`rate-limit-status`]),t(r)])}})}",
-    ),
-    usage_modal="jG",
-    usage_header=(
-        "let ge;t[46]===me?ge=t[47]:"
-        "(ge=(0,AG.jsxs)(Gv,{children:[me,he]}),t[46]=me,t[47]=ge);",
-        "let ge=(0,AG.jsxs)(Gv,{children:[me,he,"
-        "window.__codexMuxResetAccountSelector??null]});",
-    ),
-    profile_avatar=(
-        "avatar:(0,$.jsxs)($.Fragment,{children:["
-        "(0,$.jsxs)(`label`,{\"aria-disabled\":L.isPending,"
-        "className:re(`group relative flex size-20 rounded-full outline-none "
-        "focus-within:ring-1 focus-within:ring-ring`,",
-        "avatar:(0,$.jsxs)($.Fragment,{children:["
-        "globalThis.CodexMuxProfileAvatarStack?.("
-        "{onSelect:()=>j.refetch()})??null,"
-        "(0,$.jsxs)(`label`,{\"aria-disabled\":L.isPending,"
-        "className:re(globalThis.CodexMuxProfileAvatarStack?`hidden`:"
-        "`group relative flex size-20 rounded-full outline-none "
-        "focus-within:ring-1 focus-within:ring-ring`,",
-    ),
-    profile_name=(
-        "displayName:Re??(0,$.jsx)(J,{id:`profile.nameFallback`,"
-        "defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
-        "displayName:globalThis.__codexMuxSelectedProfileAccountId?"
-        "(Re??(0,$.jsx)(J,{id:`profile.nameFallback`,"
-        "defaultMessage:`ChatGPT user`,"
-        "description:`Fallback profile display name`})):null",
-    ),
-    profile_identity=(
-        "username:Ie==null?null:(0,$.jsx)(J,{id:`profile.usernameValue`,"
-        "defaultMessage:`@{username}`,"
-        "description:`Profile username shown with an at-sign prefix`,"
-        "values:{username:Ie}})",
-        "username:globalThis.__codexMuxSelectedProfileAccountId&&Ie!=null?"
-        "(0,$.jsx)(J,{id:`profile.usernameValue`,"
-        "defaultMessage:`@{username}`,"
-        "description:`Profile username shown with an at-sign prefix`,"
-        "values:{username:Ie}}):null",
-    ),
-    plugin_bundle_glob="plugins-settings-*.js",
-    plugin_scope=(
-        "subtitle:k,action:F,children:w})",
-        "subtitle:k,action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
-    ),
-    thread_identifiers={"K": "Q"},
-    thread_anchor=(
-        "function fT(e){let t=(0,pT.c)(4),{onOpenPullRequestSidePanel:n,"
-        "onForceShow:r,registerEnvironmentActionCommands:i}=e,a=zd(Gi);"
-    ),
-    thread_sections=(
-        "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,w,T,E,D]",
-        "children:[d,f,p,m,h,g,_,v,y,b,x,S,C,"
-        "(0,mT.jsx)(CodexMuxThreadSubscription,{}),w,T,E,D]",
-    ),
-    fork_titles=(
-        "function Xsr(e,t){let n=new Map,r=i=>{let a=n.get(i),"
-        "o=t.getConversation(i)?.title?.trim()??``;",
-        "function Xsr(e,t){codexMuxForkTitles(e,t);let n=new Map,r=i=>{let a=n.get(i),"
-        "o=t.getConversation(i)?.title?.trim()??``;",
-    ),
-    fork_identifiers={
-        "CODEX_MUX_SERVICES": "bX",
-        "codexMuxConversationTurns": "yUn",
-        "codexMuxTurnWithId": "bUn",
-        "codexMuxRememberDescription": "Hor",
-    },
-    composer_actions=(
-        (
-            "(0,D7.jsxs)(YV.FooterActions,{ref:Le,spacing:Tt,children:[Ct,Et]})",
-            "(0,D7.jsxs)(YV.FooterActions,{ref:Le,spacing:Tt,"
-            "children:[globalThis.codexMuxComposerAccount?.()??null,Ct,Et]})",
-        ),
-        (
-            "(0,D7.jsxs)(YV.FooterActions,{spacing:`none`,children:[Ct,"
-            "(0,D7.jsx)(`div`,{className:`ms-2 flex items-center`,children:nt})]})",
-            "(0,D7.jsxs)(YV.FooterActions,{spacing:`none`,"
-            "children:[globalThis.codexMuxComposerAccount?.()??null,Ct,"
-            "(0,D7.jsx)(`div`,{className:`ms-2 flex items-center`,children:nt})]})",
-        ),
-    ),
-    identifier_probes=(
-        "var Fq,lgn,Iq,Lq,ugn,dgn=t((()=>{Fq=X(),bD(),j_(),Of(),Rc(),lgn=n(Z(),1),",
-        "(0,Pq.jsxs)(fa,{className:u==null?`opacity-100`:void 0,"
-        "disabled:u==null&&c==null,",
-        "(0,Pq.jsx)(Oo.ItemIcon,{size:`sm`,children:n})",
-        "function jG(e){let t=(0,scn.c)(20),{defaultResetCreditsOpen:n,"
-        "initialAvailableCount:r,isRateLimitReached:i,onClose:a,onResetComplete:o}=e,"
-        "s=DO(_S),c=Aa(),l=Su(),",
-        "ru(l,qln,{availableResetCount:M,analyticsEnabled:r,",
-        "sK=e=>(0,oK.jsxs)(`svg`,{width:20,height:20,viewBox:`0 0 20 20`,fill:`none`,"
-        "xmlns:`http://www.w3.org/2000/svg`,...e,children:[(0,oK.jsx)(`path`,{d:`M10.8343 12.",
-        "function jB(e){return EHt(e).src}function EHt(e){let t=(0,kHt.c)(5),",
-        ",l=DO(zv),u=Aa(),d=(0,Pkt.useContext)(Qy),f=i===`restricted`||d===`restricted`,",
-        "bR=n(Z(),1),xR=n($x(),1),SR=Q(),",
-        "(0,mT.jsx)(Q.Section,{sectionKey:`usage`,title:(0,mT.jsx)(Z,"
-        "{id:`codex.localConversation.usage.title`,",
-        "bX=await iCa.services,bX.statsig!=null",
-        "function yUn(e){return e==null?null:nA(e)}"
-        "function bUn(e,t){return yUn(e)?.find(e=>e.turnId===t)??null}",
-        "qsr(t,i,t.getConversationCwd(i),()=>ME(e,man)).then(t=>{t!=null&&Hor(e,i,t)})",
-    ),
-)
-
-# Build 8881 (26.908.40834, Codex 0.154.0-alpha.6.2) adds a native account
-# switcher to the profile menu, moves the `/wham/usage` fetch into a helper,
-# and lets the profile page grow a larger avatar.
 RENDERER_BUILD_8881 = RendererBuild(
     marker=(
         "function Dm(e,t){let n=e.get(Om);"
@@ -1330,7 +921,7 @@ RENDERER_BUILD_8881 = RendererBuild(
         "function sji(){let e=(0,cG.c)(3),t=_m(),n=Xx(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:cji,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>Wki(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],wm(r)}",
         "function sji(){let e=_m(),t=Xx(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return wm({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):cji,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>Wki(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
     ),
-    usage_modal="NL",
+    usage_modal="function NL(e){let t=(0,_It.c)(20),{defaultResetCreditsOpen:n,",
     usage_header=(
         "(ge=(0,ML.jsx)(dC,{children:(0,ML.jsx)(Sh,{title:(0,ML.jsx)(MC,{asChild:!0,"
         "children:(0,ML.jsx)(`h2`,{className:`m-0`,children:(0,ML.jsx)(Z,"
@@ -1375,7 +966,6 @@ RENDERER_BUILD_8881 = RendererBuild(
         "description:`Profile username shown with an at-sign prefix`,"
         "values:{username:Et}}):null",
     ),
-    plugin_bundle_glob="plugins-settings-*.js",
     plugin_scope=(
         "subtitle:k,action:F,children:w})",
         "subtitle:k,action:F,children:[globalThis.CodexMuxPluginScope?.()??null,w]})",
@@ -1447,7 +1037,6 @@ RENDERER_BUILD_8881 = RendererBuild(
 )
 
 
-
 # Build 10492 (26.917.51856, Codex 0.155.0-alpha.16) moves the profile menu,
 # usage sheet, and reset-credit code into the initial bundle, drops title
 # reconsideration, and redesigns the profile page. React, the JSX runtime,
@@ -1490,7 +1079,7 @@ RENDERER_BUILD_10492 = RendererBuild(
         "function Hai(){let e=(0,uz.c)(3),t=ut(),n=Zg(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Uai,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>uai(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],qa(r)}",
         "function Hai(){let e=ut(),t=Zg(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return qa({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):Uai,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>uai(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
     ),
-    usage_modal="uIo",
+    usage_modal="function uIo(e){let t=(0,dIo.c)(19),{defaultResetCreditsOpen:n,",
     usage_header=(
         "(Se=(0,H$.jsx)(lo,{children:(0,H$.jsx)(_e,{title:(0,H$.jsx)(si,{asChild:!0,children:(0,H$.jsx)(`h2`,{className:`m-0`,children:(0,H$.jsx)(Y,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})})}),t[41]=Se)",
         "(Se=(0,H$.jsxs)(lo,{children:[(0,H$.jsx)(_e,{title:(0,H$.jsx)(si,{asChild:!0,children:(0,H$.jsx)(`h2`,{className:`m-0`,children:(0,H$.jsx)(Y,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})}),window.__codexMuxResetAccountSelector??null]}),t[41]=Se)",
@@ -1507,7 +1096,6 @@ RENDERER_BUILD_10492 = RendererBuild(
         "Ln=gn&&(0,$.jsx)(J,{id:`profile.usernameValue`,defaultMessage:`@{username}`,description:`Profile username shown with an at-sign prefix`,values:{username:gn}})",
         "Ln=globalThis.__codexMuxSelectedProfileAccountId&&gn&&(0,$.jsx)(J,{id:`profile.usernameValue`,defaultMessage:`@{username}`,description:`Profile username shown with an at-sign prefix`,values:{username:gn}})",
     ),
-    plugin_bundle_glob="plugins-settings-*.js",
     plugin_scope=(
         "subtitle:k,action:F,children:D})",
         "subtitle:k,action:F,children:[globalThis.CodexMuxPluginScope?.()??null,D]})",
@@ -1531,8 +1119,8 @@ RENDERER_BUILD_10492 = RendererBuild(
         ),
     ),
     fork_titles=(
-        "function v9t(e,t){t.addTurnCompletedListener(",
-        "function v9t(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(",
+        "function v9t(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
+        "function v9t(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
     ),
     fork_identifiers={
         "CODEX_MUX_SERVICES": "$H",
@@ -1541,15 +1129,16 @@ RENDERER_BUILD_10492 = RendererBuild(
         "codexMuxRememberDescription": "iEn",
     },
     identifier_probes=(
-        "var ays,j4;function oys(){return(oys=n((()=>{ays=c(),",
+        "var ays,j4;function oys(){return(oys=n((()=>{ays=c(),Cbe(),_te(),pe(),Cr(),gr(),xo(),j4=K()})))()}function sys(e){let t=(0,pys.c)(3),",
         "pys=c(),Shs(),Aa(),Sme(),Ase(),m_e(),Cbe(),_te(),Lae(),Ua(),W(),bs(),mys=Z(),",
-        "function Nj(e,t,n,r){e.set(Ij,",
+        "function Nj(e,t,n,r){e.set(Ij,e=>{let i=e.modals.find(e=>Dpr(e.ModalComponent,t)),a={",
         "function uIo(e){let t=(0,dIo.c)(19),{defaultResetCreditsOpen:n,initialAvailableCount:r,isRateLimitReached:i,onClose:a,onResetComplete:o}=e,s=Ar(X),",
         "function ads(e){return ods(e).src}",
         "Rb=hi(`RouteScope`",
         "(0,j4.jsx)(co.ItemIcon,{size:`sm`,children:n})",
+        "(0,j4.jsx)(Jr,{className:p==null?`opacity-100`:void 0,",
         "t=ut(),n=Zg(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Uai,",
-        "fPe=Ur(),",
+        "fPe=Ur(),Ec(),BMe(),pPe=(0,Oc.createContext)(null),mPe={draggable:",
         "$H=await jGi.services,$H.threadReadState!=null",
         "function g1t(e){return e==null?null:Ly(e)}function _1t(e,t){return g1t(e)?.find(e=>e.turnId===t)??null}",
         "function iEn(e,t,n){let r={...df(aEn,{}),[t]:n};",
@@ -1562,21 +1151,126 @@ RENDERER_BUILD_10492 = RendererBuild(
     ),
 )
 
-RENDERER_BUILDS = (
-    RENDERER_BUILD_6396,
-    RENDERER_BUILD_6662,
-    RENDERER_BUILD_7746,
-    RENDERER_BUILD_8881,
-    RENDERER_BUILD_10492,
+
+# Build 11645 (26.924.22138, Codex 0.158.0-alpha.2.1) moves the profile menu and
+# usage sheet into lazy chunks and the data layer into the shared chunk, and
+# ships the CLI as a nested CodexCLI.app. Our menu stays in app-initial.
+RENDERER_BUILD_11645 = RendererBuild(
+    marker="function GU(e,t){let n=e.get(KU);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
+    data_anchor="function GU(e,t){let n=e.get(KU);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
+    menu_identifiers={
+        "e7": "G()",
+        "kXc": "Yp()",
+        "Lo": "Jl",
+        "Q": "Q",
+        "BW": "tj",
+        "QLs": "ryr",
+        "_H": "Yge",
+        "CH": "yp",
+        "jLa": "zyi",
+        "lt": "kr",
+        "Rv": "kl",
+        "RD": "Ur()",
+    },
+    menu_anchor="function zyi(e){return Byi(e).src}",
+    usage_slot=(
+        "(D=(0,Y.jsx)(In,{accountIcon:o,accountSwitcher:rr,additionalItems:_,displayName:b,hasWorkspaceAccount:c,identityItems:x,isPetVisible:d,onCloseMenu:s,onCopyUserId:S,onLogOut:C,onOpenPersonalization:w,onOpenProfile:ee,onOpenSettings:J,onOpenWorkspaceSettings:T,personalPlanLabel:m,onTogglePet:E,petShortcut:bt,settingsShortcut:yt,usageItems:sr})",
+        "(D=(0,Y.jsx)(In,{accountIcon:o,accountSwitcher:rr,additionalItems:_,displayName:b,hasWorkspaceAccount:c,identityItems:x,isPetVisible:d,onCloseMenu:s,onCopyUserId:S,onLogOut:C,onOpenPersonalization:w,onOpenProfile:ee,onOpenSettings:J,onOpenWorkspaceSettings:T,personalPlanLabel:m,onTogglePet:E,petShortcut:bt,settingsShortcut:yt,usageItems:(0,Y.jsx)(globalThis.CodexMuxAccountMenu,{})})",
+    ),
+    plugin_request=(
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error(`AppServerRequestClient is missing a message dispatcher`);return e===`config/read`?",
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error(`AppServerRequestClient is missing a message dispatcher`);t=codexMuxScopePluginRequest(e,t);return e===`config/read`?",
+    ),
+    plugin_request_checks=(
+        "listMcpServers(e,t){return Y$t(this,this.mcpServerStatusPromises,e,t,",
+        "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
+    ),
+    reset_query=(
+        "function Ppn(){let e=(0,kP.c)(1);ko(),Z(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:Ipn,select:Fpn,refetchInterval:Ds.ONE_MINUTE,staleTime:Ds.FIVE_SECONDS},e[0]=t):t=e[0],oh(t)}",
+        "function Ppn(){ko(),Z(null);let e=window.__codexMuxResetAccountId;return oh({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):Ipn,select:Fpn,refetchInterval:Ds.ONE_MINUTE,staleTime:Ds.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function Lpn(){let e=(0,kP.c)(3),t=kr(),n=nr(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Rpn,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>spn(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],eu(r)}",
+        "function Lpn(){let e=kr(),t=nr(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return eu({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):Rpn,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>spn(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    usage_modal="function Et(e){let t=(0,Dt.c)(19),{defaultResetCreditsOpen:n,",
+    usage_header=(
+        "(Ae=(0,$.jsx)(r,{children:(0,$.jsx)(o,{title:(0,$.jsx)(s,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(O,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})})}),t[41]=Ae)",
+        "(Ae=(0,$.jsxs)(r,{children:[(0,$.jsx)(o,{title:(0,$.jsx)(s,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(O,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})}),window.__codexMuxResetAccountSelector??null]}),t[41]=Ae)",
+    ),
+    profile_avatar=(
+        "avatar:(0,$.jsxs)($.Fragment,{children:[(0,$.jsxs)(`div`,{\"aria-disabled\":$t,className:Se(`group relative flex rounded-full outline-none`,",
+        "avatar:(0,$.jsxs)($.Fragment,{children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>rt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":$t,className:Se(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
+    ),
+    profile_name=(
+        "Qn=kn??(0,$.jsx)(Y,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
+        "Qn=globalThis.__codexMuxSelectedProfileAccountId?(kn??(0,$.jsx)(Y,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})):null",
+    ),
+    profile_identity=(
+        "Tn=bn?wn:null,En=r?H?.display_name?.trim()||null:it?.displayName??null,",
+        "Tn=globalThis.__codexMuxSelectedProfileAccountId&&bn?wn:null,En=r?H?.display_name?.trim()||null:it?.displayName??null,",
+    ),
+    plugin_scope=(
+        "(C=(0,ao.jsx)(Pn,{title:h,subtitle:g,action:S,children:m})",
+        "(C=(0,ao.jsx)(Pn,{title:h,subtitle:g,action:S,children:[globalThis.CodexMuxPluginScope?.()??null,m]})",
+    ),
+    thread_identifiers={
+        "K": "Q",
+    },
+    thread_anchor="function yD(e){let t=(0,bD.c)(4),{onOpenPullRequestSidePanel:n,onForceShow:r,registerEnvironmentActionCommands:i}=e,a=zr(Er),",
+    thread_sections=(
+        "(k=(0,SD.jsxs)(SD.Fragment,{children:[x,S,C,w,T,E,D,O]})",
+        "(k=(0,SD.jsxs)(SD.Fragment,{children:[x,S,C,w,T,(0,SD.jsx)(CodexMuxThreadSubscription,{}),E,D,O]})",
+    ),
+    composer_actions=(
+        (
+            "(0,K8.jsxs)(nE.FooterActions,{ref:st,spacing:en,children:[tn,Qt,nn]})",
+            "(0,K8.jsxs)(nE.FooterActions,{ref:st,spacing:en,children:[globalThis.codexMuxComposerAccount?.()??null,tn,Qt,$t]})",
+        ),
+        (
+            "(0,K8.jsxs)(nE.FooterActions,{spacing:`none`,children:[Qt,(0,K8.jsx)(`div`,{className:`ms-2 flex items-center`,children:Ot})]})",
+            "(0,K8.jsxs)(nE.FooterActions,{spacing:`none`,children:[globalThis.codexMuxComposerAccount?.()??null,Qt,(0,K8.jsx)(`div`,{className:`ms-2 flex items-center`,children:Ot})]})",
+        ),
+    ),
+    fork_titles=(
+        "function nor(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
+        "function nor(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
+    ),
+    fork_identifiers={
+        "CODEX_MUX_SERVICES": "c5",
+        "codexMuxConversationTurns": "WRn",
+        "codexMuxTurnWithId": "f1",
+        "codexMuxRememberDescription": "Vjr",
+    },
+    identifier_probes=(
+        "function zyi(e){return Byi(e).src}",
+        "function tj(e,t,n,r){e.set(ij,e=>{let i=e.modals.find(e=>u6t(e.ModalComponent,t)),",
+        "function ryr(e){let t=(0,ayr.c)(7),n;t[0]===e.onClose?n=t[1]:(n=(0,nW.jsx)(iyr,{onClose:e.onClose}),t[0]=e.onClose,t[1]=n);let r;t[2]===e?r=t[3]:(r=(0,nW.jsx)(syr,{...e}),t[2]=e,t[3]=r);let i;return t[4]!==n||t[5]!==r?(i=(0,nW.jsx)(oyr.Suspense,{fallback:n,children:r}),t[4]=n,t[5]=r,t[6]=i):i=t[6],i}function iyr(e){let t=(0,ayr.c)(8),{onClose:n,failed:r}=e,i=r!==void 0&&r,a;t[0]===n?a=t[1]:(a=e=>{e||n()},t[0]=n,t[1]=a);let o;t[2]===i?o=t[3]:(o=i?(0,nW.jsx)(q,{id:`codex.rateLimitResetModal.loadError.title`,",
+        "c=Jl(Q),l=OU(),u=Ss(),d=Yi(),f=AU(),",
+        "r=Jl(kl),[i,a]=(0,Egt.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
+        "t=kr(),n=nr(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Rpn,",
+        "c5=await s5.services,c5.threadReadState!=null",
+        "function WRn(e){return e==null?null:d1(e)}function f1(e,t){return WRn(e)?.find(e=>e.turnId===t)??null}",
+        "function Vjr(e,t,n){let r={...VI(Hjr,{}),[t]:n};",
+        "let rt=xr(nt),it=r?Je:rt.data,",
+        "(r=(0,SD.jsx)(Q.Section,{sectionKey:`usage`,",
+        "w5e=G(),T5e=Uu(m5e)})))()}var D5e,O5e,",
+        "M5e=Yp(),E5e(),Ao(),A5e(),iv=G()})))()}function N5e({defaultWidth:e,",
+        "U7e=Ur(),Y(),W7e=Ld(Q,e=>({",
+        "W8e=Vo(Q,()=>up().homeModePreferences??ble({",
+        "let e=Vo(kl,[]),t=Ld(kl,e=>null);return{entries$:Oa(kl,({",
+        "w$.jsx)(Yge,{onSelect:()=>u?.(e),",
+        "p$.jsx)(yp.Item,{leftIconAsset:lPe,onClick:r,",
+        "n=kr(),r=Z(z$t),i;e[0]===t?i=e[1]:(i=e=>{",
+    ),
+    usage_status=(
+        "async function vPr({additionalHeaders:e,signal:t}){try{return ePr(await IW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":fW.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
+        "async function vPr({additionalHeaders:e,signal:t}){try{return ePr(await codexMuxFilterUsageStatus(await IW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":fW.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
+    ),
 )
 
-USAGE_QUERY_PATTERN = re.compile(
-    r"queryKey:\[`rate-limit-status`\],(?P<select>select:e=>e,)?"
-    r"queryFn:async\(\)=>\{try\{(?P<lead>return |let e=)await "
-    r"(?P<call>[A-Za-z_$][\w$]*\.safeGet\(`/wham/usage`"
-    r"(?:,\{additionalHeaders:\{\"OAI-App-Brand\":[A-Za-z_$][\w$]*"
-    r"\.toLowerCase\(\)\}\})?\))"
-)
+RENDERER_BUILDS = (RENDERER_BUILD_8881, RENDERER_BUILD_10492, RENDERER_BUILD_11645)
+
 PROFILE_QUERY_PATTERN = re.compile(
     r"let e=await [A-Za-z_$][\w$]*\.safeGet\(`/wham/profiles/me`\)"
 )
@@ -1593,6 +1287,7 @@ class RendererBundle:
     def __init__(self, path: Path) -> None:
         self.path = path
         self.text = path.read_text(encoding="utf-8")
+        self.original = self.text
 
     def replace(self, anchor: str, replacement: str, description: str) -> None:
         if self.text.count(anchor) != 1:
@@ -1610,15 +1305,17 @@ class RendererBundle:
         self.replace(anchor, source + "\n" + anchor, description)
 
     def save(self) -> None:
-        self.path.write_text(self.text, encoding="utf-8")
+        if self.text != self.original:
+            self.path.write_text(self.text, encoding="utf-8")
 
 
 class RendererBundleSet:
-    """The app's main renderer bundles. Builds move code between them, so
-    each patch lands in the one bundle that holds its anchor exactly once."""
+    """Every renderer bundle. Builds keep moving code between eager bundles
+    and lazy chunks, so each patch lands in the one bundle that holds its
+    anchor exactly once."""
 
-    def __init__(self, bundles: list[RendererBundle]) -> None:
-        self.bundles = bundles
+    def __init__(self, paths: list[Path]) -> None:
+        self.bundles = [RendererBundle(path) for path in paths]
 
     def _holder(self, anchor: str, description: str) -> RendererBundle:
         holders = [bundle for bundle in self.bundles if anchor in bundle.text]
@@ -1648,17 +1345,6 @@ class RendererBundleSet:
             bundle.save()
 
 
-def single_bundle(assets: Path, glob: str, anchor: str, description: str) -> Path:
-    matches = [
-        path
-        for path in assets.glob(glob)
-        if anchor in path.read_text(encoding="utf-8")
-    ]
-    if len(matches) != 1:
-        raise RuntimeError(f"expected one {description}, found {len(matches)}")
-    return matches[0]
-
-
 def injected_source(name: str, token: str, identifiers: dict[str, str]) -> str:
     source = (PROJECT_ROOT / "ui" / name).read_text(encoding="utf-8")
     source = source.replace("__CODEX_MUX_CONTROL_PORT__", str(CONTROL_PORT))
@@ -1682,29 +1368,18 @@ def patch_renderer(extracted: Path, token: str) -> None:
     index_path.write_text(index, encoding="utf-8")
 
     assets = webview / "assets"
-    initial_bundles = list(assets.glob("app-initial-*.js"))
-    if len(initial_bundles) != 1:
-        raise RuntimeError(
-            f"expected one ChatGPT initial renderer bundle, found {len(initial_bundles)}"
-        )
-    initial = RendererBundle(initial_bundles[0])
-    if "function codexMuxRequest(" in initial.text:
+    renderer = RendererBundleSet(sorted(assets.glob("*.js")))
+    if any("function codexMuxRequest(" in bundle.text for bundle in renderer.bundles):
         raise RuntimeError("source app already contains the Codex multiplexer")
     build = next(
-        (candidate for candidate in RENDERER_BUILDS if candidate.marker in initial.text),
+        (candidate for candidate in RENDERER_BUILDS if renderer.contains(candidate.marker)),
         None,
     )
     if build is None:
         raise RuntimeError("the ChatGPT renderer layout is not supported")
-    verify_identifier_probes(assets, build.identifier_probes)
-    primary_bundles = list(assets.glob("app-primary-*.js"))
-    if len(primary_bundles) > 1:
-        raise RuntimeError(
-            f"expected at most one ChatGPT primary renderer bundle, found {len(primary_bundles)}"
-        )
-    renderer = RendererBundleSet(
-        [initial, *(RendererBundle(path) for path in primary_bundles)]
-    )
+    for probe in build.identifier_probes:
+        if not renderer.contains(probe):
+            raise RuntimeError(f"could not verify an identifier probe: {probe[:60]!r}")
 
     renderer.inject(
         build.data_anchor,
@@ -1717,15 +1392,7 @@ def patch_renderer(extracted: Path, token: str) -> None:
                 "could not verify the native Plugins request-to-RPC mapping"
             )
     renderer.replace(*build.plugin_request, "the native app-server request bridge")
-    if build.usage_status is not None:
-        renderer.replace(*build.usage_status, "the native rate-limit status fetch")
-    else:
-        renderer.substitute(
-            USAGE_QUERY_PATTERN,
-            r"queryKey:[`rate-limit-status`],\g<select>queryFn:async()=>{try{"
-            r"\g<lead>await codexMuxFilterUsageStatus(await \g<call>)",
-            "the native rate-limit status query",
-        )
+    renderer.replace(*build.usage_status, "the native rate-limit status fetch")
     renderer.substitute(
         PROFILE_QUERY_PATTERN,
         "let e=await codexMuxProfileData("
@@ -1733,13 +1400,12 @@ def patch_renderer(extracted: Path, token: str) -> None:
         "the native profile stats request",
     )
     renderer.replace(*build.reset_query, "the native reset-credit query")
-    if build.fork_titles is not None:
-        renderer.inject(
-            build.fork_titles[0],
-            injected_source("fork-titles.js", token, build.fork_identifiers or {}),
-            "the native turn-completion setup",
-        )
-        renderer.replace(*build.fork_titles, "the native turn-completion setup")
+    renderer.inject(
+        build.fork_titles[0],
+        injected_source("fork-titles.js", token, build.fork_identifiers),
+        "the native turn-completion setup",
+    )
+    renderer.replace(*build.fork_titles, "the native turn-completion setup")
     renderer.replace(*build.reset_mutation, "the native reset-credit mutation")
 
     renderer.inject(
@@ -1749,8 +1415,10 @@ def patch_renderer(extracted: Path, token: str) -> None:
     )
     renderer.replace(*build.usage_slot, "the native ChatGPT usage menu slot")
     renderer.replace(
-        f"function {build.usage_modal}(e){{",
-        f"function {build.usage_modal}(e){{CodexMuxUseResetAccountState();",
+        build.usage_modal,
+        build.usage_modal.replace(
+            "(e){", "(e){globalThis.CodexMuxUseResetAccountState();", 1
+        ),
         "the native Usage modal component",
     )
     renderer.replace(
@@ -1767,60 +1435,19 @@ def patch_renderer(extracted: Path, token: str) -> None:
             "defaultMessage:`All connected subscriptions are depleted`",
             "a native subscription depletion alert",
         )
-    renderer.save()
-
-    profile = RendererBundle(
-        single_bundle(
-            assets,
-            "profile-*.js",
-            build.profile_avatar[0],
-            "native Profile settings bundle",
-        )
-    )
-    profile.replace(*build.profile_avatar, "the native Profile avatar")
-    profile.replace(*build.profile_name, "the native Profile display name")
-    profile.replace(
+    renderer.replace(*build.profile_avatar, "the native Profile avatar")
+    renderer.replace(*build.profile_name, "the native Profile display name")
+    renderer.replace(
         *build.profile_identity, "the native Profile username and plan badge"
     )
-    profile.save()
-
-    plugins = RendererBundle(
-        single_bundle(
-            assets,
-            build.plugin_bundle_glob,
-            build.plugin_scope[0],
-            "native Plugins settings bundle",
-        )
-    )
-    plugins.replace(*build.plugin_scope, "the native Plugins settings content")
-    plugins.save()
-
-    thread = RendererBundle(
-        single_bundle(
-            assets,
-            "local-conversation-thread-*.js",
-            build.thread_anchor,
-            "local conversation renderer bundle",
-        )
-    )
-    thread.inject(
+    renderer.replace(*build.plugin_scope, "the native Plugins settings content")
+    renderer.inject(
         build.thread_anchor,
         injected_source("thread-subscription.js", token, build.thread_identifiers),
         "the native thread summary sources component",
     )
-    thread.replace(*build.thread_sections, "the native thread summary section list")
-    thread.save()
-
-
-def verify_identifier_probes(assets: Path, probes: tuple[str, ...]) -> None:
-    """Every probe names identifiers the injected sources borrow; a build
-    that lost one has moved code the injected sources depend on."""
-    if not probes:
-        return
-    texts = [path.read_text(encoding="utf-8") for path in assets.glob("*.js")]
-    for probe in probes:
-        if sum(text.count(probe) for text in texts) != 1:
-            raise RuntimeError(f"could not verify an identifier probe: {probe[:60]!r}")
+    renderer.replace(*build.thread_sections, "the native thread summary section list")
+    renderer.save()
 
 
 def remove_updater_initialization(bootstrap: str) -> str:
@@ -2089,7 +1716,8 @@ def patch_app(
     source_build = str(source_info.get("CFBundleVersion", "unknown"))
     source_asar = source / "Contents" / "Resources" / "app.asar"
     source_asar_hash = hashlib.sha256(source_asar.read_bytes()).hexdigest()
-    expected_asar_hash = TESTED_SOURCE_BUILDS.get((source_version, source_build))
+    source_spec = SUPPORTED_BUILDS.get((source_version, source_build), UNTESTED_BUILD)
+    expected_asar_hash = source_spec.asar_sha256
     print(
         f"Source ChatGPT version: {source_version} ({source_build}), "
         f"app.asar {source_asar_hash}"
@@ -2141,13 +1769,9 @@ def patch_app(
         original_asar = resources / "app.asar"
         print("Patching desktop profile and renderer…")
         run([str(asar), "extract", str(original_asar), str(extracted)])
-        expected_cua_replacements = (
-            EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD.get(
-                (source_version, source_build),
-                EXPECTED_ASAR_CUA_IDENTIFIER_REPLACEMENTS,
-            )
+        patch_asar_computer_use_identity(
+            extracted, source_spec.asar_cua_identifier_replacements
         )
-        patch_asar_computer_use_identity(extracted, expected_cua_replacements)
         patch_desktop_profile(extracted, installed_computer_use_app)
         if signing_identity == "-":
             relax_native_pipe_peer_authorization(extracted)
@@ -2181,8 +1805,10 @@ def patch_app(
             dirs_exist_ok=True,
         )
 
-        bundled_codex = resources / "codex"
-        real_codex = resources / "codex.real"
+        # The official binary keeps its own signature beside the router, which
+        # finds it as `codex.real` in its own directory.
+        bundled_codex = codex_entrypoint(resources)
+        real_codex = bundled_codex.with_name("codex.real")
         if real_codex.exists():
             raise RuntimeError("source app already contains codex.real")
         bundled_codex.rename(real_codex)
@@ -2191,22 +1817,12 @@ def patch_app(
 
         patch_info_plist(staged_app, original_asar, team_identifier)
         print(f"Signing independent app copy with {signing_identity}…")
-        expected_cua_identity_replacements = (
-            EXPECTED_CUA_IDENTIFIER_REPLACEMENTS_BY_BUILD.get(
-                (source_version, source_build),
-                EXPECTED_CUA_IDENTIFIER_REPLACEMENTS,
-            )
-        )
-        cua_service_layout = EXPECTED_CUA_SERVICE_LAYOUT_BY_BUILD.get(
-            (source_version, source_build),
-            DEFAULT_CUA_SERVICE_LAYOUT,
-        )
         sign_independent_app(
             staged_app,
             signing_identity,
             team_identifier,
-            expected_cua_identity_replacements,
-            cua_service_layout,
+            source_spec.cua_identifier_replacements,
+            source_spec.cua_service_layout,
         )
         verify_signed_code(
             staged_app,

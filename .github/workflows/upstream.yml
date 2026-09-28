@@ -1,0 +1,36 @@
+name: Upstream
+
+# Fails when OpenAI ships a ChatGPT build the patcher does not support yet;
+# a port follows .agents/skills/port-chatgpt-build/SKILL.md.
+on:
+  schedule:
+    - cron: "17 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  newest-build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22.12"
+          package-manager-cache: false
+
+      - name: Install pinned asar
+        run: npm ci --ignore-scripts
+
+      - name: Fetch the newest official build
+        run: python3 scripts/appcast.py --fetch "$RUNNER_TEMP/sources"
+
+      - name: Verify the patch against it
+        run: python3 scripts/verify_build.py --source "$(ls -d "$RUNNER_TEMP"/sources/ChatGPT-*.app)"

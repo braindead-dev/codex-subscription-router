@@ -20,8 +20,7 @@ Renderer and main-process patches match exact upstream anchors. Every change
 must keep the official app untouched, fail closed when an anchor or binary
 constant is missing, preserve account isolation and thread ownership, and keep
 the control service on loopback behind its token. Test against the builds in
-[COMPATIBILITY.md](docs/COMPATIBILITY.md); if a new official build needs new
-anchors, update that file in the same change.
+[COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Pull requests
 
@@ -32,6 +31,11 @@ syntax checks, native C syntax, and release metadata consistency.
 ## Live move test
 
 `TestLiveMoveKeepsHistoryOnBothAccounts` drives two real Codex app-servers and
-runs two short model turns. It is skipped unless `CODEX_MUX_LIVE_HOME` names a
-Codex home with `auth.json`, `config.toml`, and a `tid` file holding a thread
-id, and `CODEX_MUX_LIVE_CODEX` names the Codex binary.
+runs short model turns on each. `python3 scripts/live_seed.py` builds its home
+from a short chat of the signed-in account and prints `CODEX_MUX_LIVE_HOME`;
+set `CODEX_MUX_LIVE_CODEX` to the real Codex binary (`codex.real` in a staged
+app) and run `go test -run TestLiveMove ./internal/mux`.
+
+## New official builds
+
+Follow `.agents/skills/port-chatgpt-build/SKILL.md`.
