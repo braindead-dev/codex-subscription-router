@@ -142,12 +142,30 @@ connections to an account.
 
 The thread's subscription appears in its pinned summary.
 
-## Update or rebuild
+## Updates
 
-The copy never self-updates. Update `/Applications/ChatGPT.app`, check the new
-build is listed in [COMPATIBILITY.md](docs/COMPATIBILITY.md), quit the router
-and its Computer Use helper, then `python3 scripts/patch_app.py --force`.
-Account state and credentials live outside the bundle and are untouched.
+The router updates from this repository's published releases, never from
+OpenAI's updater. Turn it on once:
+
+```sh
+python3 scripts/update.py enable --app "$HOME/Applications/Codex Subscription Router.app"
+```
+
+A launch agent checks every hour. Because releases carry source only, it
+builds the release against the newest official build that release supports,
+boots the result with `scripts/launch_check.py`, and only then shows the app's
+own **Update available** button. Clicking it quits the app, installs, and
+relaunches. With **Update automatically** checked in the profile menu, a ready
+update installs whenever the app quits. **Check for Updates…** in the app menu
+checks now. The updater keeps only the installed and staged release sources,
+one staged build, one backup, and the official builds a supported release can
+use.
+`python3 scripts/update.py status` shows the last result and
+`~/.codex-mux/logs/update.log` the details.
+
+To rebuild by hand, quit the router and its Computer Use helper, then run
+`python3 scripts/patch_app.py --force`. Account state and credentials live
+outside the bundle and are untouched.
 
 ## Local data
 
@@ -158,6 +176,7 @@ Account state and credentials live outside the bundle and are untouched.
 | `~/.codex-mux/state.json` | Accounts and thread ownership |
 | `~/.codex-mux/control-token` | Token for the loopback-only control API |
 | `~/.codex-mux/backups` | Previous builds and recovery copies |
+| `~/.codex-mux/update` | Updater settings, state, staged build, and release sources |
 | `~/Library/Application Support/Codex Subscription Router` | Desktop profile |
 
 The control API binds to `127.0.0.1` only and never returns OAuth tokens.

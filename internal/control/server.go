@@ -16,13 +16,14 @@ import (
 
 type Server struct {
 	token   string
+	root    string
 	mux     *mux.Multiplexer
 	uiTests bool
 	http    *http.Server
 }
 
-func New(address, token string, multiplexer *mux.Multiplexer, uiTests bool) *Server {
-	server := &Server{token: token, mux: multiplexer, uiTests: uiTests}
+func New(address, token, root string, multiplexer *mux.Multiplexer, uiTests bool) *Server {
+	server := &Server{token: token, root: root, mux: multiplexer, uiTests: uiTests}
 	router := http.NewServeMux()
 	router.HandleFunc("/v1/health", server.health)
 	router.HandleFunc("/v1/accounts", server.accounts)
@@ -31,6 +32,7 @@ func New(address, token string, multiplexer *mux.Multiplexer, uiTests bool) *Ser
 	router.HandleFunc("/v1/preferred-account", server.preferredAccount)
 	router.HandleFunc("/v1/profile/combined", server.combinedProfile)
 	router.HandleFunc("/v1/events", server.events)
+	router.HandleFunc("/v1/update", server.update)
 	if uiTests {
 		router.HandleFunc("/v1/test/rate-limits", server.rateLimitPreview)
 		router.HandleFunc("/v1/test/rate-limit-resets", server.resetCreditsPreview)

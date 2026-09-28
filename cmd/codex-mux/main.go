@@ -102,6 +102,7 @@ func run() error {
 		controlServer := control.New(
 			listener.Addr().String(),
 			token,
+			root,
 			multiplexer,
 			os.Getenv("CODEX_MUX_UI_TESTS") == "1",
 		)

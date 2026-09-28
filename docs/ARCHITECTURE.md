@@ -53,8 +53,15 @@ Each isolated account forces file-backed CLI and MCP OAuth credentials.
 ## Desktop integration
 
 The patcher extracts `app.asar`, verifies exact upstream anchors, inserts the
-account UI, disables self-update, and repacks the archive with an updated
-integrity hash. The app receives a separate Chromium profile and URL scheme.
+account UI, and repacks the archive with an updated integrity hash, which it
+also restamps into the Electron framework's integrity seal. The app receives a
+separate Chromium profile and URL scheme.
+
+Sparkle never starts. `ui/router-updater.cjs` takes its place behind the
+desktop's own update manager, so the rail button, Check for Updates, and the
+install confirmation reflect `scripts/update.py`: a launch agent that builds
+the newest published release into `~/.codex-mux/update/staged`, boots it, and
+swaps it in after the app quits.
 
 The copied Computer Use service, Node runtime, and callers are re-signed under
 one Apple team. The helper uses a separate bundle identity and socket, avoiding

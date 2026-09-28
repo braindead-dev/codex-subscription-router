@@ -14,4 +14,6 @@ file, signing material, or account data.
    and `python3 scripts/verify_build.py` on each supported build.
 5. Push, wait for CI, then tag the commit `vX.Y.Z` and push the tag. The
    release workflow repeats the checks and drafts a GitHub release with
-   generated notes; review and publish it.
+   generated notes; review and publish it. Publishing is the rollout: every
+   Mac with `scripts/update.py enable` builds it within the hour and offers
+   it in the app.

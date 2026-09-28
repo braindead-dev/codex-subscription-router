@@ -57,10 +57,3 @@ func Success(id json.RawMessage, result json.RawMessage) Message {
 func Failure(id json.RawMessage, code int, message string) Message {
 	return Message{ID: id, Error: &RPCError{Code: code, Message: message}}
 }
-
-func MarshalParams(value any) (json.RawMessage, error) {
-	if value == nil {
-		return nil, nil
-	}
-	return json.Marshal(value)
-}

@@ -164,9 +164,11 @@ function CodexMuxAccountMenu() {
   const [pairing, setPairing] = kXc.useState(null);
   const [expandedAccountId, setExpandedAccountId] = kXc.useState(null);
   const [emailCopied, setEmailCopied] = kXc.useState(false);
+  const [update, setUpdate] = kXc.useState(null);
   const loginAccountId = login?.accountId || null;
 
   const refresh = kXc.useCallback(async () => {
+    codexMuxRequest("/update").then(setUpdate, () => {});
     try {
       const nextAccounts = await codexMuxFetchAccounts();
       setAccounts(nextAccounts);
@@ -325,6 +327,19 @@ function CodexMuxAccountMenu() {
     }
   }
 
+  async function toggleAutomaticUpdates(event) {
+    event.preventDefault();
+    try {
+      const result = await codexMuxRequest("/update", {
+        method: "PATCH",
+        body: JSON.stringify({ auto: !update.auto }),
+      });
+      setUpdate({ ...update, auto: result.auto });
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
   async function copyPairingCode(event) {
     event.preventDefault();
     if (!pairing?.code) return;
@@ -480,8 +495,45 @@ function CodexMuxAccountMenu() {
       ),
     );
   }
+  if (update?.enabled) {
+    rows.push(
+      (0, e7.jsx)(
+        _H,
+        {
+          LeftIcon: CodexMuxUpdateIcon,
+          SubText: codexMuxUpdateCaption(update),
+          subTextAllowWrap: true,
+          rightIcon: update.auto
+            ? (0, e7.jsx)(CodexMuxCheckIcon, { className: "size-4 shrink-0" })
+            : undefined,
+          onSelect: toggleAutomaticUpdates,
+          children: "Update automatically",
+        },
+        "codex-mux-update",
+      ),
+    );
+  }
   rows.push((0, e7.jsx)(CH.Separator, {}, "codex-mux-separator"));
   return (0, e7.jsx)(e7.Fragment, { children: rows });
+}
+
+function codexMuxUpdateCaption({ auto, state }) {
+  switch (state?.status) {
+    case "ready":
+      return auto
+        ? `${state.available} installs when you quit`
+        : `${state.available} is ready · Update in the sidebar`;
+    case "building":
+      return `Preparing ${state.available}…`;
+    case "installing":
+      return `Installing ${state.available}…`;
+    case "failed":
+      return state.message;
+    case "up-to-date":
+      return `Up to date · ${state.installed}`;
+    default:
+      return "Checks for new releases every hour";
+  }
 }
 
 function codexMuxPairingRow(pairing, onCopy) {
@@ -598,6 +650,22 @@ function CodexMuxPlusIcon(props) {
   });
 }
 
+function CodexMuxUpdateIcon(props) {
+  return (0, e7.jsx)("svg", {
+    viewBox: "0 0 20 20",
+    fill: "none",
+    "aria-hidden": true,
+    ...props,
+    children: (0, e7.jsx)("path", {
+      d: "M15.5 9.25a5.75 5.75 0 1 1-1.7-4.1M15.75 3.75v3.5h-3.5",
+      stroke: "currentColor",
+      strokeWidth: 1.5,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+    }),
+  });
+}
+
 function CodexMuxCopyIcon(props) {
   return (0, e7.jsx)("svg", {
     viewBox: "0 0 20 20",
@@ -665,30 +733,6 @@ function CodexMuxAccountAvatar({ imageUrl, label, className }) {
     className: `${className || "icon-sm"} flex items-center justify-center rounded-full bg-token-charts-purple/10 text-[9px] leading-none text-token-charts-purple`,
     "aria-hidden": true,
     children: initials || "?",
-  });
-}
-
-function CodexMuxOverlappingAvatars({ accounts, size = "size-20" }) {
-  const overlapClass = size === "size-20" ? "-ml-10" : "-ml-2";
-  return (0, e7.jsx)("div", {
-    className: "flex items-center justify-center",
-    children: accounts.map((account, index) =>
-      (0, e7.jsx)(
-        "span",
-        {
-          className: `${index === 0 ? "" : overlapClass} rounded-full border-4 border-token-bg-primary`,
-          title: account.planLabel
-            ? `${account.label} · ${account.planLabel}`
-            : account.label,
-          children: (0, e7.jsx)(CodexMuxAccountAvatar, {
-            imageUrl: account.profileImageUrl,
-            label: account.label,
-            className: size,
-          }),
-        },
-        account.id,
-      ),
-    ),
   });
 }
 

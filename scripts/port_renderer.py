@@ -220,10 +220,6 @@ def python_literal(value: object, depth: int) -> str:
     return "(\n" + items + pad + ")"
 
 
-def bundle_glob(name: str) -> str:
-    return re.sub(r"-[0-9a-f]{12}\.js$", "-*.js", name)
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)

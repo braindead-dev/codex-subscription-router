@@ -288,10 +288,6 @@ func planLabel(planType string) string {
 	}
 }
 
-func (m *Multiplexer) chooseAccount(ctx context.Context) (state.Account, RouteReason, error) {
-	return m.chooseAccountExcluding(ctx, nil)
-}
-
 func (m *Multiplexer) chooseAccountExcluding(ctx context.Context, excluded map[string]struct{}) (state.Account, RouteReason, error) {
 	snapshots := m.routingSnapshots(ctx)
 	type candidate struct {
@@ -548,8 +544,4 @@ func duration(window *RateLimitWindow) int64 {
 		return 0
 	}
 	return *window.WindowDurationMins
-}
-
-func contextWithControlTimeout(parent context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(parent, 20*time.Second)
 }

@@ -80,10 +80,6 @@ func Start(accountID, codexHome, executable string, args, baseEnv []string, inbo
 	return child, nil
 }
 
-func (c *Child) AccountID() string {
-	return c.accountID
-}
-
 func (c *Child) Send(message protocol.Message) error {
 	encoded, err := protocol.Encode(message)
 	if err != nil {

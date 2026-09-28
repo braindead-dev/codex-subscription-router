@@ -27,7 +27,8 @@ NEEDS_PORT = 10
 HEADERS = {"User-Agent": "codex-subscription-router/appcast"}
 
 
-def newest_build() -> tuple[str, str, str]:
+def builds() -> list[tuple[str, str, str]]:
+    """Every (version, build, archive url) the appcast offers, newest first."""
     request = urllib.request.Request(APPCAST, headers=HEADERS)
     with urllib.request.urlopen(request, timeout=60) as response:
         channel = ElementTree.fromstring(response.read()).find("channel")
@@ -38,8 +39,11 @@ def newest_build() -> tuple[str, str, str]:
         enclosure = item.find("enclosure")
         if build.isdigit() and enclosure is not None:
             items.append((int(build), version, enclosure.get("url", "")))
-    build, version, url = max(items)
-    return version, str(build), url
+    return [(version, str(build), url) for build, version, url in sorted(items, reverse=True)]
+
+
+def newest_build() -> tuple[str, str, str]:
+    return builds()[0]
 
 
 def supported(version: str, build: str) -> bool:

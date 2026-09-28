@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Boot a staged router app until its window talks to Codex, then quit it.
 
-    python3 scripts/launch_check.py --app "$HOME/Applications/router-next/Codex (router).app"
+    python3 scripts/launch_check.py --app ~/.codex-mux/port-stage/"Codex (router).app"
 
 Starts the app's Electron binary with a throwaway desktop profile and passes
 once the renderer is running and the multiplexed app-server has answered.

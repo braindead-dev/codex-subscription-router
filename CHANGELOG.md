@@ -5,6 +5,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-28
+
+### Added
+
+- Updates from this repository's published releases. `scripts/update.py
+  enable` installs a launch agent that builds each new release on the Mac
+  against the newest official build it supports, boots it with
+  `launch_check.py`, and hands it to the app's own update UI: the
+  **Update available** button, **Check for Updates…**, and the install
+  confirmation. Installing quits, swaps, and relaunches the app; with
+  **Update automatically** checked in the profile menu, a ready update
+  installs when the app quits. Old release sources, staged builds, and
+  unsupported official builds are removed as it goes.
+- `patch_app.py --stage` builds for an installed app while it keeps running,
+  and `--install-staged` swaps that build in once the app has quit.
+
+### Removed
+
+- `patch_app.py --discard-existing`; stage with `--stage` instead, and delete
+  a broken install by path before replacing it.
+- Unused code: five unreachable Go functions, an unused avatar component, and
+  a porting helper.
+
+### Fixed
+
+- The installer's running-app check never matched a path with parentheses,
+  such as `Codex (router).app`, and counted Chromium's lingering crash
+  reporters as a running app.
+
 ## [0.2.1] - 2026-09-28
 
 ### Fixed
@@ -134,7 +163,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.0
 [0.2.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.1
 [0.2.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.0
 [0.1.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.1.0

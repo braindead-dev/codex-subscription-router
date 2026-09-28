@@ -96,10 +96,16 @@ def parse_args() -> argparse.Namespace:
         help="Replace an existing destination after moving it to a timestamped backup.",
     )
     parser.add_argument(
-        "--discard-existing",
-        action="store_true",
-        help="With --force, delete the existing destination instead of keeping a "
-        "backup; for staging builds that are rebuilt often.",
+        "--stage",
+        type=Path,
+        help="Build for --destination but leave the app pair in this directory "
+        "instead of replacing the installed one; the app may keep running.",
+    )
+    parser.add_argument(
+        "--install-staged",
+        type=Path,
+        metavar="STAGE",
+        help="Install the pair a --stage run left in STAGE; the app must be quit.",
     )
     parser.add_argument(
         "--allow-adhoc-signing",
@@ -218,18 +224,30 @@ def existing_signing_team(path: Path) -> str | None:
     return team
 
 
+def pgrep_literal(text: str) -> str:
+    """Escape a path for pgrep's extended regular expressions."""
+    return re.sub(r"([][.^$*+?(){}|\\])", r"\\\1", text)
+
+
+def running_components(path: Path) -> list[str]:
+    """Processes started from PATH, leaving out Chromium's crash reporters,
+    which outlive the app and are safe to replace under."""
+    result = subprocess.run(
+        ["pgrep", "-fl", pgrep_literal(str(path))],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return [
+        line for line in result.stdout.splitlines()
+        if line.strip() and "crashpad_handler" not in line
+    ]
+
+
 def ensure_components_are_stopped(paths: tuple[Path, ...]) -> None:
     for path in paths:
-        if not path.exists():
-            continue
-        result = subprocess.run(
-            ["pgrep", "-f", str(path)],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        if result.returncode == 0 and result.stdout.strip():
+        if path.exists() and running_components(path):
             raise RuntimeError(
                 f"quit the running component before replacing it: {path}"
             )
@@ -1451,24 +1469,37 @@ def patch_renderer(extracted: Path, token: str) -> None:
     renderer.save()
 
 
-def remove_updater_initialization(bootstrap: str) -> str:
-    """Drop the one updater `initialize()` the bootstrap awaits between
-    importing the main process and running it, whether it stands as its own
-    statement or leads a comma expression."""
+def attach_router_updater(bootstrap: str) -> str:
+    """Hand the updater the bootstrap initializes between importing the main
+    process and running it to ui/router-updater.cjs, which serves the app's
+    own update UI from the router's updater instead of Sparkle."""
     start = bootstrap.find("phase:`bootstrap-import-main`")
     end = bootstrap.find("runMainAppStartup:", start)
     if start < 0 or end < 0:
-        raise RuntimeError("could not disable updates in the copied ChatGPT app")
+        raise RuntimeError("could not find the updater in the copied ChatGPT app")
     window = bootstrap[start:end]
-    calls = list(re.finditer(r"await [A-Za-z_$][\w$]*\.initialize\(\)[;,]", window))
+    calls = list(re.finditer(r"await ([A-Za-z_$][\w$]*)\.initialize\(\)(?=[;,])", window))
     if len(calls) != 1:
-        raise RuntimeError("could not disable updates in the copied ChatGPT app")
+        raise RuntimeError("could not find the updater in the copied ChatGPT app")
     call = calls[0]
-    return bootstrap[: start + call.start()] + bootstrap[start + call.end() :]
+    attach = (
+        "await require(require(`node:path`).join(__dirname,`router-updater.cjs`))"
+        f".attach({call.group(1)})"
+    )
+    return bootstrap[: start + call.start()] + attach + bootstrap[start + call.end() :]
+
+
+UPDATER_MANAGER_API = (
+    "setUpdateReady(e){",
+    "setUpdateLifecycleState(e){",
+    "inAppUpdatesLaunchPolicyResolution=",
+    "hasUpdater(){return this.updater!=null}",
+)
 
 
 def disable_updater_lifecycle(extracted: Path) -> None:
-    """Keep every updater entry point (launch gate, menu, IPC) from starting Sparkle."""
+    """Keep every updater entry point (launch gate, menu, IPC) from starting
+    Sparkle, and check the manager still has what router-updater.cjs drives."""
     updater_anchor = (
         "initializeUpdater(){return this.options.enableUpdater?"
         "(this.updaterInitialization??=this.initializeUpdaterOnce(),"
@@ -1487,12 +1518,10 @@ def disable_updater_lifecycle(extracted: Path) -> None:
     bundle = bundle_path.read_text(encoding="utf-8")
     if bundle.count(updater_anchor) != 1:
         raise RuntimeError("could not find the desktop updater lifecycle")
-    bundle = bundle.replace(
-        updater_anchor,
-        "initializeUpdater(){return this.lastUnavailableReason="
-        f"`disabled by {DESKTOP_PROFILE_NAME}`,Promise.resolve()}}",
-        1,
-    )
+    missing = [marker for marker in UPDATER_MANAGER_API if marker not in bundle]
+    if missing:
+        raise RuntimeError(f"the desktop updater manager changed shape: {missing}")
+    bundle = bundle.replace(updater_anchor, "initializeUpdater(){return Promise.resolve()}", 1)
     bundle_path.write_text(bundle, encoding="utf-8")
 
 
@@ -1568,8 +1597,8 @@ def patch_desktop_profile(
     if replacements != 1:
         raise RuntimeError("could not isolate the copied ChatGPT desktop profile")
 
-    # The copied app must never replace itself with an unpatched official update.
-    bootstrap = remove_updater_initialization(bootstrap)
+    # Updates come from the router's own releases, never an unpatched official build.
+    bootstrap = attach_router_updater(bootstrap)
     bootstrap_path.write_text(bootstrap, encoding="utf-8")
     disable_updater_lifecycle(extracted)
 
@@ -1616,8 +1645,8 @@ def patch_desktop_profile(
         strict_computer_use_instruction,
         1,
     )
-    ui_test_bridge = extracted / ".vite" / "build" / "ui-test-bridge.cjs"
-    shutil.copy2(PROJECT_ROOT / "ui" / "ui-test-bridge.cjs", ui_test_bridge)
+    for module in ("ui-test-bridge.cjs", "router-updater.cjs"):
+        shutil.copy2(PROJECT_ROOT / "ui" / module, extracted / ".vite" / "build" / module)
     main += (
         "\n;if(process.env.CODEX_MUX_UI_TESTS===`1`)"
         "require(require(`node:path`).join(__dirname,`ui-test-bridge.cjs`)).start();"
@@ -1699,6 +1728,7 @@ def patch_info_plist(
     info["CFBundleExecutable"] = "CodexSubscriptionRouterLauncher"
     info["BundleSigningBaseName"] = "CodexSubscriptionRouter"
     info["CodexMuxSigningTeamIdentifier"] = team_identifier or "adhoc"
+    info["CodexMuxVersion"] = PROJECT_VERSION
     info["CrProductDirName"] = DESKTOP_PROFILE_NAME
     for key in list(info):
         if key.startswith("SU"):
@@ -1741,9 +1771,12 @@ def patch_app(
     allow_adhoc_signing: bool,
     allow_untested_source: bool,
     allow_signing_team_change: bool,
-    discard_existing: bool = False,
+    stage: Path | None = None,
 ) -> None:
+    """Build the router app for DESTINATION and install it there, or with
+    STAGE leave the finished pair in that directory for install_staged."""
     source = source.expanduser().resolve()
+    stage = stage.expanduser().resolve() if stage is not None else None
     destination = destination.expanduser().resolve()
     if not source.is_dir() or not (source / "Contents" / "Resources" / "app.asar").is_file():
         raise RuntimeError(f"not a ChatGPT app bundle: {source}")
@@ -1752,7 +1785,7 @@ def patch_app(
             "source and destination must be different; "
             "the original app is never patched in place"
         )
-    if destination.exists() and not force:
+    if destination.exists() and not force and stage is None:
         raise RuntimeError(
             f"destination exists: {destination} "
             "(pass --force to create a recoverable backup)"
@@ -1798,10 +1831,12 @@ def patch_app(
             )
     destination.parent.mkdir(parents=True, exist_ok=True)
     installed_computer_use_app = destination.parent / COMPUTER_USE_APP_NAME
-    if force:
+    if force and stage is None:
         ensure_components_are_stopped((destination, installed_computer_use_app))
+    work_parent = destination.parent if stage is None else stage.parent
+    work_parent.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(prefix=".codex-subscription-router-", dir=destination.parent) as temporary:
+    with tempfile.TemporaryDirectory(prefix=".codex-subscription-router-", dir=work_parent) as temporary:
         temporary_path = Path(temporary)
         staged_app = temporary_path / destination.name
         staged_computer_use_app = temporary_path / COMPUTER_USE_APP_NAME
@@ -1900,46 +1935,90 @@ def patch_app(
             team_identifier,
         )
 
-        backup_suffix = time.strftime("%Y%m%d-%H%M%S")
-        backup_directory = DEFAULT_STATE_ROOT / "backups" / backup_suffix
-        app_backup = backup_directory / destination.name
-        helper_backup = backup_directory / installed_computer_use_app.name
-        had_app = destination.exists()
-        had_helper = installed_computer_use_app.exists()
-        if discard_existing:
-            if had_app:
-                shutil.rmtree(destination)
-            if had_helper:
-                shutil.rmtree(installed_computer_use_app)
-            had_app = had_helper = False
-        if had_app or had_helper:
-            prune_backups(DEFAULT_STATE_ROOT / "backups", keep=0)
-            backup_directory.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            backup_directory.parent.chmod(0o700)
-            backup_directory.mkdir(mode=0o700, parents=True, exist_ok=False)
-        try:
-            if had_app:
-                destination.rename(app_backup)
-                print(f"Existing copy moved to {app_backup}")
-            if had_helper:
-                installed_computer_use_app.rename(helper_backup)
-                print(f"Existing Computer Use helper moved to {helper_backup}")
-            staged_app.rename(destination)
-            staged_computer_use_app.rename(installed_computer_use_app)
-        except OSError:
-            failed_directory = backup_directory / "failed-install"
-            failed_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-            if destination.exists():
-                destination.rename(failed_directory / destination.name)
-            if installed_computer_use_app.exists():
-                installed_computer_use_app.rename(
-                    failed_directory / installed_computer_use_app.name
-                )
-            if app_backup.exists():
-                app_backup.rename(destination)
-            if helper_backup.exists():
-                helper_backup.rename(installed_computer_use_app)
-            raise
+        if stage is not None:
+            stage.mkdir(mode=0o700, exist_ok=True)
+            for built, name in (
+                (staged_app, destination.name),
+                (staged_computer_use_app, COMPUTER_USE_APP_NAME),
+            ):
+                if (stage / name).exists():
+                    shutil.rmtree(stage / name)
+                built.rename(stage / name)
+            print(stage / destination.name)
+            return
+        install_built(
+            staged_app,
+            staged_computer_use_app,
+            destination,
+            installed_computer_use_app,
+        )
+
+
+def install_staged(stage: Path, destination: Path) -> None:
+    """Swap in a pair --stage built for this destination; the app must be quit."""
+    stage = stage.expanduser().resolve()
+    destination = destination.expanduser().resolve()
+    staged_app = stage / destination.name
+    staged_computer_use_app = stage / COMPUTER_USE_APP_NAME
+    installed_computer_use_app = destination.parent / COMPUTER_USE_APP_NAME
+    if not staged_app.is_dir() or not staged_computer_use_app.is_dir():
+        raise RuntimeError(f"no staged build for {destination.name} in {stage}")
+    if destination.exists() and existing_signing_team(destination) != existing_signing_team(
+        staged_app
+    ):
+        raise RuntimeError("the staged build is signed by a different team than the installed one")
+    ensure_components_are_stopped((destination, installed_computer_use_app))
+    install_built(
+        staged_app,
+        staged_computer_use_app,
+        destination,
+        installed_computer_use_app,
+    )
+    stage.rmdir()
+
+
+def install_built(
+    staged_app: Path,
+    staged_computer_use_app: Path,
+    destination: Path,
+    installed_computer_use_app: Path,
+) -> None:
+    """Move a finished app pair into place, keeping the replaced pair as the
+    one backup."""
+    backup_suffix = time.strftime("%Y%m%d-%H%M%S")
+    backup_directory = DEFAULT_STATE_ROOT / "backups" / backup_suffix
+    app_backup = backup_directory / destination.name
+    helper_backup = backup_directory / installed_computer_use_app.name
+    had_app = destination.exists()
+    had_helper = installed_computer_use_app.exists()
+    if had_app or had_helper:
+        prune_backups(DEFAULT_STATE_ROOT / "backups", keep=0)
+        backup_directory.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        backup_directory.parent.chmod(0o700)
+        backup_directory.mkdir(mode=0o700, parents=True, exist_ok=False)
+    try:
+        if had_app:
+            destination.rename(app_backup)
+            print(f"Existing copy moved to {app_backup}")
+        if had_helper:
+            installed_computer_use_app.rename(helper_backup)
+            print(f"Existing Computer Use helper moved to {helper_backup}")
+        staged_app.rename(destination)
+        staged_computer_use_app.rename(installed_computer_use_app)
+    except OSError:
+        failed_directory = backup_directory / "failed-install"
+        failed_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if destination.exists():
+            destination.rename(failed_directory / destination.name)
+        if installed_computer_use_app.exists():
+            installed_computer_use_app.rename(
+                failed_directory / installed_computer_use_app.name
+            )
+        if app_backup.exists():
+            app_backup.rename(destination)
+        if helper_backup.exists():
+            helper_backup.rename(installed_computer_use_app)
+        raise
 
     if LAUNCH_SERVICES_REGISTER.is_file():
         run(
@@ -1959,6 +2038,9 @@ def patch_app(
 def main() -> int:
     args = parse_args()
     try:
+        if args.install_staged:
+            install_staged(args.install_staged, args.destination)
+            return 0
         patch_app(
             args.source,
             args.destination,
@@ -1966,7 +2048,7 @@ def main() -> int:
             args.allow_adhoc_signing,
             args.allow_untested_source,
             args.allow_signing_team_change,
-            args.discard_existing,
+            args.stage,
         )
     except (RuntimeError, OSError, subprocess.CalledProcessError) as error:
         print(f"patch failed: {error}", file=sys.stderr)

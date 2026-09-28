@@ -56,7 +56,7 @@ profile after the newest one, add it to `RENDERER_BUILDS`, and add the build to
   holds their anchor, so moved code needs a new anchor, not a new mechanism.
 - When main-process code or packaging changes shape, teach the one helper
   both shapes instead of branching per build (see `codex_entrypoint` and
-  `remove_updater_initialization`).
+  `attach_router_updater`).
 
 The port is finished when the new build ports onto itself cleanly:
 `port_renderer.py --source <app> --reference <build>` exits 0.
@@ -70,12 +70,12 @@ python3 scripts/verify_build.py --source <app>
 
 `verify_build.py` applies every app.asar patch in a temporary directory, parses
 each changed file, and prints the hash for `SUPPORTED_BUILDS`. On Henry's Mac,
-also stage and exercise the real app:
+also build the real app into a stage while his keeps running:
 
 ```sh
-CODEX_MUX_SIGNING_IDENTITY=- python3 scripts/patch_app.py --source <app> \
-  --destination "$HOME/Applications/router-next/Codex (router).app" \
-  --allow-adhoc-signing --force --discard-existing
+CODEX_MUX_DISPLAY_NAME="Codex (router)" CODEX_MUX_SIGNING_IDENTITY=- \
+  python3 scripts/patch_app.py --source <app> --allow-adhoc-signing \
+  --destination "$HOME/Applications/Codex (router).app" --stage ~/.codex-mux/port-stage
 ```
 
 The staged app must boot: `python3 scripts/launch_check.py --app <staged>`
@@ -84,10 +84,11 @@ crash otherwise. Electron hardening (fuses, integrity seals, signing) only
 shows up here. Every entrypoint must launch too: the router, `codex.real` next
 to it, and `codex-cli/bin/codex` print the Codex version. Then run the live
 move test against the staged `codex.real` (`scripts/live_seed.py` prepares its
-home). After his "go", install over `~/Applications/Codex (router).app` with
-`--discard-existing` only if the installed copy is broken, run the launch
-check on it, relaunch with `launchctl setenv CODEX_MUX_UI_TESTS 1`, and check
-the profile menu, composer account picker, usage sheet, and thread panel
+home). After his "go", quit the app, install with
+`patch_app.py --install-staged ~/.codex-mux/port-stage --destination <app>`
+(delete a broken installed copy by exact path first so the backup stays the
+last good build), relaunch with `launchctl setenv CODEX_MUX_UI_TESTS 1`, and
+check the profile menu, composer account picker, usage sheet, and thread panel
 through the bridge on port 48124. Unset the variable afterwards.
 
 ## 4. Release
@@ -98,12 +99,14 @@ through the bridge on port 48124. Unset the variable afterwards.
 3. `npm run release:check`, push, and let CI pass.
 4. Tag `v<version>` and push the tag; the release workflow drafts the release.
    Summarize the upstream Codex changelog since the last port for Henry.
+   Publishing the draft ships it to every updater, so it waits for his go.
 
 ## 5. Housekeeping
 
 Delete by exact path: source apps in `~/.codex-mux/sources` that are no longer
-supported, and scratch extractions. The patcher already keeps a single install
-backup. Leave the diff smaller than you found it.
+supported, and scratch extractions. The patcher keeps a single install backup
+and the updater prunes release sources and older official builds. Leave the
+diff smaller than you found it.
 
 ## Keeping this skill current
 

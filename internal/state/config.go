@@ -370,15 +370,3 @@ func projectSectionHeaders(contents string) []string {
 func isProjectSection(section string) bool {
 	return section == "projects" || strings.HasPrefix(section, "projects.")
 }
-
-func samePath(left, right string) bool {
-	if left == "" || right == "" {
-		return false
-	}
-	leftAbsolute, leftErr := filepath.Abs(left)
-	rightAbsolute, rightErr := filepath.Abs(right)
-	if leftErr != nil || rightErr != nil {
-		return filepath.Clean(left) == filepath.Clean(right)
-	}
-	return filepath.Clean(leftAbsolute) == filepath.Clean(rightAbsolute)
-}
