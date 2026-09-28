@@ -11,6 +11,7 @@ import plistlib
 import re
 import secrets
 import shutil
+import signal
 import stat
 import struct
 import subprocess
@@ -229,9 +230,12 @@ def pgrep_literal(text: str) -> str:
     return re.sub(r"([][.^$*+?(){}|\\])", r"\\\1", text)
 
 
-def running_components(path: Path) -> list[str]:
-    """Processes started from PATH, leaving out Chromium's crash reporters,
-    which outlive the app and are safe to replace under."""
+# Helpers that outlive the app: Chromium's crash reporters and the desktop's
+# modifier-key monitor. They hold no state and are ended when the bundle is replaced.
+LINGERING_HELPERS = ("crashpad_handler", "bare-modifier-monitor")
+
+
+def bundle_processes(path: Path) -> list[tuple[int, str]]:
     result = subprocess.run(
         ["pgrep", "-fl", pgrep_literal(str(path))],
         check=False,
@@ -239,10 +243,28 @@ def running_components(path: Path) -> list[str]:
         stderr=subprocess.PIPE,
         text=True,
     )
+    processes = []
+    for line in result.stdout.splitlines():
+        pid, _, command = line.strip().partition(" ")
+        if pid.isdigit():
+            processes.append((int(pid), command))
+    return processes
+
+
+def running_components(path: Path) -> list[str]:
     return [
-        line for line in result.stdout.splitlines()
-        if line.strip() and "crashpad_handler" not in line
+        command for _, command in bundle_processes(path)
+        if not any(helper in command for helper in LINGERING_HELPERS)
     ]
+
+
+def stop_lingering_helpers(path: Path) -> None:
+    for pid, command in bundle_processes(path):
+        if any(helper in command for helper in LINGERING_HELPERS):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
 
 
 def ensure_components_are_stopped(paths: tuple[Path, ...]) -> None:
@@ -1996,6 +2018,8 @@ def install_built(
         backup_directory.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         backup_directory.parent.chmod(0o700)
         backup_directory.mkdir(mode=0o700, parents=True, exist_ok=False)
+    if had_app:
+        stop_lingering_helpers(destination)
     try:
         if had_app:
             destination.rename(app_backup)

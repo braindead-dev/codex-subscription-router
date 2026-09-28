@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-28
+
+### Fixed
+
+- Installing an update failed while the desktop's modifier-key monitor,
+  which outlives the app, was still running. It and Chromium's crash
+  reporters no longer count as a running app, and an install ends the ones
+  the replaced bundle left behind.
+- The updater agent ran a version-pinned Python path that breaks when
+  Homebrew upgrades Python; it now uses `python3` from `PATH`.
+
 ## [0.3.0] - 2026-09-28
 
 ### Added
@@ -163,7 +174,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.1
 [0.3.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.0
 [0.2.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.1
 [0.2.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.0

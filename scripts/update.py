@@ -278,14 +278,16 @@ def enable(app: Path) -> int:
     installed(app)
     ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
     LOG.parent.mkdir(parents=True, exist_ok=True)
+    # The PATH entry survives interpreter upgrades; sys.executable names a version.
+    python = shutil.which("python3") or sys.executable
     settings = read_json(ROOT / "settings.json") or {"auto": False}
-    settings.update(app=str(app), python=sys.executable)
+    settings.update(app=str(app), python=python)
     write_json(ROOT / "settings.json", settings)
     if Path(__file__).resolve() != (ROOT / "update.py").resolve():
         shutil.copy2(Path(__file__).resolve(), ROOT / "update.py")
     agent = {
         "Label": LABEL,
-        "ProgramArguments": [sys.executable, str(ROOT / "update.py"), "check"],
+        "ProgramArguments": [python, str(ROOT / "update.py"), "check"],
         "RunAtLoad": True,
         "StartInterval": 3600,
         "ProcessType": "Background",
