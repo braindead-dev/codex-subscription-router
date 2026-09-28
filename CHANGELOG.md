@@ -5,16 +5,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-27
+
 ### Added
 
+- Compatibility with official ChatGPT builds `8881`, `10492`, and `11645`
+  (Codex 0.154 to 0.158); builds `6396`, `6662`, and `7746` are no longer
+  supported. Renderer patches land in whichever bundle holds their anchor,
+  and the patcher wraps the Codex CLI whether it ships loose or as the nested
+  `CodexCLI.app`.
+- A composer account picker: choose the subscription a chat runs on, move a
+  chat there with its history, or pin new chats to one subscription.
+- Purchased credits count as capacity: an account holding credits keeps
+  routing, and the menus show its balance instead of calling it depleted.
+- Forks get their own generated title after their first turn.
+- Porting tooling: `scripts/appcast.py` detects and fetches new official
+  builds, `scripts/port_renderer.py` derives a build profile from the newest
+  supported one, `scripts/verify_build.py` applies every app.asar patch and
+  parses the result, `scripts/live_seed.py` prepares the live move test, and
+  the `port-chatgpt-build` agent skill describes the whole procedure.
 - Model-aware routing: a new chat that names an OpenAI model goes to a
   subscription the backend lets run it, and switching an existing chat to a
   model its subscription cannot run is refused with the subscriptions that
   can, instead of the backend's error. Models served through another
   provider are not gated.
-- Compatibility with official ChatGPT `26.810.52044` (build `6662`) and
-  `26.901.22334` (build `7746`), whose renderer splits data access and UI
-  across bundles.
 - One-command installer with prerequisite checks, signed rebuilds, recoverable
   upgrades, and automatic launch.
 - Reset-aware routing that prioritizes weekly quota at risk of expiring and
@@ -103,5 +117,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.0
 [0.1.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.1.0

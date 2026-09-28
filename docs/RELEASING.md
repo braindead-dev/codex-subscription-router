@@ -1,22 +1,17 @@
 # Releasing
 
 Releases are source-only. Never attach a patched app, ASAR, extracted official
-file, signing certificate, provisioning profile, or account data.
+file, signing material, or account data.
 
-1. Update `VERSION`, `package.json`, and both version fields in
-   `package-lock.json`.
-2. Move changelog entries from Unreleased into `## [x.y.z] - YYYY-MM-DD`.
-3. Record the tested official app version, build, architecture, and ASAR hash in
-   `docs/COMPATIBILITY.md`.
-4. Run `npm ci --ignore-scripts`, `npm run check`, and
-   `npm run release:check` on macOS.
-5. Complete `docs/SMOKE-TEST.md` with a team-backed signature and record the
-   exact commit, macOS version, and signing team in the release draft.
-6. Review `git diff --check` and confirm no ignored credentials or app bundles
-   are staged.
-7. Configure the protected `release` environment, tag the reviewed commit as
-   `vX.Y.Z`, and push the tag.
-
-The release workflow verifies that the tag matches `VERSION`, repeats all
-checks, and creates a draft GitHub source release with generated notes. Review
-the draft and smoke-test record before publishing it manually.
+1. Bump the minor version in `VERSION`, `package.json`, and both version
+   fields of `package-lock.json`. Each newly supported official build is a
+   minor release.
+2. Move the Unreleased changelog entries under `## [x.y.z] - YYYY-MM-DD` and
+   add the release link at the bottom.
+3. Rewrite the `## Release x.y.z` table in `docs/COMPATIBILITY.md` with the
+   supported builds.
+4. Run `npm ci --ignore-scripts`, `npm run check`, `npm run release:check`,
+   and `python3 scripts/verify_build.py` on each supported build.
+5. Push, wait for CI, then tag the commit `vX.Y.Z` and push the tag. The
+   release workflow repeats the checks and drafts a GitHub release with
+   generated notes; review and publish it.
