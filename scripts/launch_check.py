@@ -16,25 +16,29 @@ import argparse
 import os
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from patch_app import stop_lingering_helpers  # noqa: E402
+
 READY = ("Electron renderer console", "[AppServerConnection] response_routed")
 
 
-def stop(process: subprocess.Popen[str]) -> None:
+def stop(process: subprocess.Popen[str], app: Path) -> None:
     if process.poll() is None:
         process.terminate()
         try:
             process.wait(timeout=30)
         except subprocess.TimeoutExpired:
             pass
-    # Crashpad and native monitors outlive the browser process in its group.
     try:
         os.killpg(process.pid, signal.SIGTERM)
     except ProcessLookupError:
         pass
+    stop_lingering_helpers(app)
 
 
 def main() -> int:
@@ -43,7 +47,8 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=120)
     args = parser.parse_args()
 
-    executable = args.app.expanduser() / "Contents" / "MacOS" / "ChatGPT"
+    app = args.app.expanduser().resolve()
+    executable = app / "Contents" / "MacOS" / "ChatGPT"
     with tempfile.TemporaryDirectory(prefix="codex-router-launch-") as profile:
         log_path = Path(profile) / "launch.log"
         with log_path.open("w") as log:
@@ -65,7 +70,7 @@ def main() -> int:
                     break
                 time.sleep(1)
         finally:
-            stop(process)
+            stop(process, app)
         output = log_path.read_text(errors="replace")
 
     if len(seen) == len(READY) and "FATAL:" not in output:

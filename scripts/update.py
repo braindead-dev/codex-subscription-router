@@ -210,13 +210,23 @@ def wait_for_exit(pid: int, seconds: float) -> bool:
 
 
 def apply(settings: dict, relaunch: bool, after_pid: int | None) -> int:
+    """Install the staged build once the app has quit; with RELAUNCH the app
+    reopens whether or not the install went through."""
     app = Path(settings["app"])
+    try:
+        if after_pid is not None and not wait_for_exit(after_pid, 600):
+            print("the app did not quit; the update stays ready", flush=True)
+            return 1
+        return install_stage(app)
+    finally:
+        if relaunch:
+            run(["open", str(app)])
+
+
+def install_stage(app: Path) -> int:
     stage = read_json(ROOT / "stage.json")
     if stage is None or not (STAGE / app.name).is_dir():
         print("no staged update", flush=True)
-        return 1
-    if after_pid is not None and not wait_for_exit(after_pid, 600):
-        print("the app did not quit; the update stays ready", flush=True)
         return 1
     source = Path(stage["source"])
     running = load_module(source, "patch_app").running_components
@@ -234,15 +244,11 @@ def apply(settings: dict, relaunch: bool, after_pid: int | None) -> int:
         )
     except subprocess.CalledProcessError:
         set_state("ready", f"Installing {target} failed; see {LOG}")
-        if relaunch:
-            run(["open", str(app)])
         return 1
     shutil.copy2(source / "scripts" / "update.py", ROOT / "update.py")
     (ROOT / "stage.json").unlink()
     set_state("up-to-date", installed=target, available=None)
     collect_garbage(app)
-    if relaunch:
-        run(["open", str(app)])
     return 0
 
 

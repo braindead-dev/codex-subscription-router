@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-09-28
+
+### Fixed
+
+- Clicking **Update available** without a staged build closed the app for
+  good; the updater now reopens it whether or not the install went through.
+- Each launch check left the staged app's modifier-key monitor running.
+
 ## [0.3.1] - 2026-09-28
 
 ### Fixed
@@ -174,7 +182,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.2
 [0.3.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.1
 [0.3.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.0
 [0.2.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.2.1
