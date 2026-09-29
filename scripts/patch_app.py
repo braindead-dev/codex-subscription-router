@@ -888,7 +888,7 @@ class RendererBuild:
     thread_identifiers: dict[str, str]
     thread_anchor: str
     thread_sections: tuple[str, str]
-    composer_actions: tuple[tuple[str, str], ...]
+    composer_actions: tuple[str, ...]
     fork_titles: tuple[str, str]
     fork_identifiers: dict[str, str]
     # Snippets that exist once in the build and name identifiers the
@@ -1022,18 +1022,9 @@ RENDERER_BUILD_8881 = RendererBuild(
         "(0,oO.jsx)(CodexMuxThreadSubscription,{}),y,b,x]})",
     ),
     composer_actions=(
-        (
-            "(0,B8.jsxs)(CP.FooterActions,{ref:Ke,spacing:Rt,children:[zt,It,Bt]})",
-            "(0,B8.jsxs)(CP.FooterActions,{ref:Ke,spacing:Rt,"
-            "children:[globalThis.codexMuxComposerAccount?.()??null,zt,It,Bt]})",
-        ),
-        (
-            "(0,B8.jsxs)(CP.FooterActions,{spacing:`none`,children:[It,"
-            "(0,B8.jsx)(`div`,{className:`ms-2 flex items-center`,children:pt})]})",
-            "(0,B8.jsxs)(CP.FooterActions,{spacing:`none`,"
-            "children:[globalThis.codexMuxComposerAccount?.()??null,It,"
-            "(0,B8.jsx)(`div`,{className:`ms-2 flex items-center`,children:pt})]})",
-        ),
+        "(0,B8.jsxs)(CP.FooterActions,{ref:Ke,spacing:Rt,children:[zt,It,Bt]})",
+        "(0,B8.jsxs)(CP.FooterActions,{spacing:`none`,children:[It,"
+        "(0,B8.jsx)(`div`,{className:`ms-2 flex items-center`,children:pt})]})",
     ),
     fork_titles=(
         "function PUn(e,t){let n=new Map,r=i=>{let a=n.get(i),"
@@ -1150,14 +1141,8 @@ RENDERER_BUILD_10492 = RendererBuild(
         "(A=(0,DE.jsxs)(DE.Fragment,{children:[S,C,w,T,E,(0,DE.jsx)(CodexMuxThreadSubscription,{}),D,O,k]})",
     ),
     composer_actions=(
-        (
-            "(0,D3.jsxs)(BS.FooterActions,{ref:$e,spacing:Ut,children:[Wt,Vt,Gt]})",
-            "(0,D3.jsxs)(BS.FooterActions,{ref:$e,spacing:Ut,children:[globalThis.codexMuxComposerAccount?.()??null,Wt,Vt,Gt]})",
-        ),
-        (
-            "(0,D3.jsxs)(BS.FooterActions,{spacing:`none`,children:[Vt,(0,D3.jsx)(`div`,{className:`ms-2 flex items-center`,children:bt})]})",
-            "(0,D3.jsxs)(BS.FooterActions,{spacing:`none`,children:[globalThis.codexMuxComposerAccount?.()??null,Vt,(0,D3.jsx)(`div`,{className:`ms-2 flex items-center`,children:bt})]})",
-        ),
+        "(0,D3.jsxs)(BS.FooterActions,{ref:$e,spacing:Ut,children:[Wt,Vt,Gt]})",
+        "(0,D3.jsxs)(BS.FooterActions,{spacing:`none`,children:[Vt,(0,D3.jsx)(`div`,{className:`ms-2 flex items-center`,children:bt})]})",
     ),
     fork_titles=(
         "function v9t(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
@@ -1264,14 +1249,8 @@ RENDERER_BUILD_11645 = RendererBuild(
         "(k=(0,SD.jsxs)(SD.Fragment,{children:[x,S,C,w,T,(0,SD.jsx)(CodexMuxThreadSubscription,{}),E,D,O]})",
     ),
     composer_actions=(
-        (
-            "(0,K8.jsxs)(nE.FooterActions,{ref:st,spacing:en,children:[tn,Qt,nn]})",
-            "(0,K8.jsxs)(nE.FooterActions,{ref:st,spacing:en,children:[globalThis.codexMuxComposerAccount?.()??null,tn,Qt,$t]})",
-        ),
-        (
-            "(0,K8.jsxs)(nE.FooterActions,{spacing:`none`,children:[Qt,(0,K8.jsx)(`div`,{className:`ms-2 flex items-center`,children:Ot})]})",
-            "(0,K8.jsxs)(nE.FooterActions,{spacing:`none`,children:[globalThis.codexMuxComposerAccount?.()??null,Qt,(0,K8.jsx)(`div`,{className:`ms-2 flex items-center`,children:Ot})]})",
-        ),
+        "(0,K8.jsxs)(nE.FooterActions,{ref:st,spacing:en,children:[tn,Qt,nn]})",
+        "(0,K8.jsxs)(nE.FooterActions,{spacing:`none`,children:[Qt,(0,K8.jsx)(`div`,{className:`ms-2 flex items-center`,children:Ot})]})",
     ),
     fork_titles=(
         "function nor(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
@@ -1468,8 +1447,12 @@ def patch_renderer(extracted: Path, token: str) -> None:
         "the native usage-window selection",
     )
     renderer.replace(*build.usage_header, "the native Usage sheet header")
-    for anchor, replacement in build.composer_actions:
-        renderer.replace(anchor, replacement, "the native composer footer actions")
+    for anchor in build.composer_actions:
+        renderer.replace(
+            anchor,
+            anchor.replace("children:[", "children:[globalThis.codexMuxComposerAccount?.()??null,", 1),
+            "the native composer footer actions",
+        )
     for depleted_anchor in DEPLETED_ALERT_ANCHORS:
         renderer.replace(
             depleted_anchor,

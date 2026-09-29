@@ -263,7 +263,8 @@ def main() -> int:
     thread = port.locate(reference.thread_anchor, "thread_anchor")
     profile["thread_anchor"] = thread[1] if thread else reference.thread_anchor
     profile["composer_actions"] = tuple(
-        port.port_pair(pair, "composer_actions") for pair in reference.composer_actions
+        (port.locate(anchor, "composer_actions") or (None, anchor))[1]
+        for anchor in reference.composer_actions
     )
     profile["fork_titles"] = port.port_pair(reference.fork_titles, "fork_titles")
     profile["usage_status"] = port.port_pair(reference.usage_status, "usage_status")

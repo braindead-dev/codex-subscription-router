@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-09-29
+
+### Fixed
+
+- Build `11645` showed the model picker twice in the composer: its footer
+  patch stored a hand-kept replacement that named the wrong element. Composer
+  patches now keep only the anchor and insert the account picker into it, so
+  a port can no longer get the replacement wrong.
+
 ## [0.3.2] - 2026-09-28
 
 ### Fixed
@@ -182,7 +191,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.3
 [0.3.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.2
 [0.3.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.1
 [0.3.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.0
