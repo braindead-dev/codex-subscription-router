@@ -26,6 +26,12 @@ import (
 
 const defaultControlPort = 48123
 
+// startupHandoff is how long a new connection waits for a multiplexer slot
+// claimed just before it. The desktop's startup preflight claims the slot a
+// moment before the chat connection starts and is ended right after its one
+// read.
+const startupHandoff = 10 * time.Second
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "codex-mux: %v\n", err)
@@ -51,7 +57,7 @@ func run() error {
 	if root == "" {
 		root = filepath.Join(home, ".codex-mux")
 	}
-	lock, err := acquireMultiplexerLock(root)
+	lock, err := acquireMultiplexerLock(root, startupHandoff)
 	if err != nil {
 		return err
 	}
@@ -95,6 +101,7 @@ func run() error {
 			port = parsed
 		}
 	}
+	stopControl := func() {}
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "codex-mux: account UI unavailable: %v\n", err)
@@ -112,25 +119,45 @@ func run() error {
 				fmt.Fprintf(os.Stderr, "codex-mux: control server: %v\n", serveErr)
 			}
 		}()
-		defer func() {
+		stopControl = func() {
 			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer shutdownCancel()
 			_ = controlServer.Shutdown(shutdownCtx)
-		}()
+		}
+		defer stopControl()
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 64*1024), 64*1024*1024)
-	for scanner.Scan() {
-		message, parseErr := protocol.Parse(scanner.Bytes())
-		if parseErr != nil {
-			fmt.Fprintf(os.Stderr, "codex-mux: ignore invalid client JSON: %v\n", parseErr)
-			continue
+	lines := make(chan []byte)
+	go func() {
+		defer close(lines)
+		for scanner.Scan() {
+			lines <- append([]byte(nil), scanner.Bytes()...)
 		}
-		multiplexer.HandleClient(message)
+	}()
+	for {
+		select {
+		case <-ctx.Done():
+			// The desktop ends a connection with a signal and keeps its stdin
+			// open, so the slot and control port are handed back here, before
+			// the children shut down, for the connection that follows.
+			stopControl()
+			lock.Close()
+			return nil
+		case line, ok := <-lines:
+			if !ok {
+				cancel()
+				return scanner.Err()
+			}
+			message, parseErr := protocol.Parse(line)
+			if parseErr != nil {
+				fmt.Fprintf(os.Stderr, "codex-mux: ignore invalid client JSON: %v\n", parseErr)
+				continue
+			}
+			multiplexer.HandleClient(message)
+		}
 	}
-	cancel()
-	return scanner.Err()
 }
 
 // acquireMultiplexerLock claims the one multiplexer slot for a state root.
@@ -139,23 +166,36 @@ func run() error {
 // desktop's connection may multiplex: a second multiplexer would start a
 // second live app-server on every subscription's home. When the slot is
 // taken the caller gets nil and hands the request to the real binary on the
-// account its environment already names.
-func acquireMultiplexerLock(root string) (*os.File, error) {
+// account its environment already names. A slot claimed less than handoff
+// ago belongs to a connection the desktop is about to end, so the caller
+// waits that long for it first.
+func acquireMultiplexerLock(root string, handoff time.Duration) (*os.File, error) {
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return nil, fmt.Errorf("create state root: %w", err)
 	}
-	lock, err := os.OpenFile(filepath.Join(root, "multiplexer.lock"), os.O_CREATE|os.O_RDWR, 0o600)
+	path := filepath.Join(root, "multiplexer.lock")
+	lock, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open multiplexer lock: %w", err)
 	}
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		lock.Close()
-		if errors.Is(err, syscall.EWOULDBLOCK) {
+	for {
+		err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			now := time.Now()
+			_ = os.Chtimes(path, now, now)
+			return lock, nil
+		}
+		if !errors.Is(err, syscall.EWOULDBLOCK) {
+			lock.Close()
+			return nil, fmt.Errorf("lock multiplexer slot: %w", err)
+		}
+		info, statErr := lock.Stat()
+		if statErr != nil || time.Since(info.ModTime()) >= handoff {
+			lock.Close()
 			return nil, nil
 		}
-		return nil, fmt.Errorf("lock multiplexer slot: %w", err)
+		time.Sleep(50 * time.Millisecond)
 	}
-	return lock, nil
 }
 
 func resolveRealExecutable() (string, error) {

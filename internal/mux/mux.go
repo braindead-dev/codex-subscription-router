@@ -322,7 +322,7 @@ func (m *Multiplexer) routeExistingRequest(message protocol.Message) {
 	}
 	threadID := threadIDFromParams(message.Params)
 	if threadID != "" {
-		accountID, _ = m.store.ThreadOwner(threadID)
+		accountID, _ = m.threadOwner(threadID)
 	}
 	var move *sectionMove
 	if message.Method == "thread/section/move" {
@@ -819,6 +819,25 @@ func (m *Multiplexer) sectionFields(threadID, answeringAccountID string) (map[st
 		return nil, false
 	}
 	return m.sections.copies[threadID], true
+}
+
+// threadOwner is the subscription a chat belongs to: the recorded one or, for
+// a chat the router never saw start, the first account whose home holds its
+// rollout, which is recorded from then on.
+func (m *Multiplexer) threadOwner(threadID string) (string, bool) {
+	if owner, ok := m.store.ThreadOwner(threadID); ok {
+		return owner, true
+	}
+	for _, account := range m.store.Accounts() {
+		if len(threadRollouts(account.CodexHome, threadID)) == 0 {
+			continue
+		}
+		if err := m.store.SetThreadOwner(threadID, account.ID); err != nil {
+			return "", false
+		}
+		return account.ID, true
+	}
+	return "", false
 }
 
 func (m *Multiplexer) child(accountID string) (*backend.Child, bool) {

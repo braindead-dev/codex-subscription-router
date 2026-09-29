@@ -170,7 +170,7 @@ func (m *Multiplexer) UpdateAccount(ctx context.Context, id string, label *strin
 }
 
 func (m *Multiplexer) ThreadAccount(ctx context.Context, threadID string) (AccountSnapshot, error) {
-	accountID, ok := m.store.ThreadOwner(threadID)
+	accountID, ok := m.threadOwner(threadID)
 	if !ok {
 		return AccountSnapshot{}, fmt.Errorf("thread %q has no subscription assignment", threadID)
 	}

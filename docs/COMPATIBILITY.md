@@ -5,7 +5,7 @@ every modified renderer, main-process, and native binary anchor and stops
 instead of applying a partial patch. Only the newest official build is
 ported, and at most three builds stay supported.
 
-## Release 0.4.2
+## Release 0.4.3
 
 | Official ChatGPT version | Bundle build | Codex CLI | `app.asar` SHA-256 |
 | --- | --- | --- | --- |

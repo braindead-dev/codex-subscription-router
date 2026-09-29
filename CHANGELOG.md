@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-09-29
+
+### Fixed
+
+- Chats bypassed the router since build 11645. The desktop's startup
+  preflight became the multiplexer, and ignored the signal that ends it
+  because its stdin stays open, so it kept the slot and the chat connection
+  that starts a second later ran as a plain app-server on Primary: no
+  pooling, failover, or subscription choice. The multiplexer now hands back
+  the slot and control port on that signal, and a connection that finds the
+  slot claimed moments ago waits for it.
+- Moving or inspecting a chat the router never saw start failed with "has no
+  subscription assignment"; such a chat now belongs to the account whose home
+  holds it.
+
 ## [0.4.2] - 2026-09-29
 
 ### Fixed
@@ -225,7 +240,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.3
 [0.4.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.2
 [0.4.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.1
 [0.4.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.0

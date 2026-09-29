@@ -13,7 +13,7 @@ import (
 // MoveThread reassigns a chat to another subscription at the user's request,
 // carrying its history over and closing the session the previous owner held.
 func (m *Multiplexer) MoveThread(ctx context.Context, threadID, accountID string) (AccountSnapshot, error) {
-	owner, ok := m.store.ThreadOwner(threadID)
+	owner, ok := m.threadOwner(threadID)
 	if !ok {
 		return AccountSnapshot{}, fmt.Errorf("thread %q has no subscription assignment", threadID)
 	}
