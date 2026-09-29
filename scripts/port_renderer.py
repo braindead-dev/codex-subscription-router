@@ -89,7 +89,9 @@ def is_minified(parts: list[tuple[str, str]], position: int) -> bool:
 def pattern_for(anchor: str) -> tuple[re.Pattern[str], list[str]]:
     parts = tokens(anchor)
     names: list[str] = []
-    regex: list[str] = []
+    # Start at an identifier boundary, not every suffix of a long embedded
+    # string. Otherwise a leading wildcard retries quadratically on base64.
+    regex: list[str] = [r"(?<![\w$])"] if parts and parts[0][0] == "identifier" else []
     for position, (kind, text) in enumerate(parts):
         if kind == "identifier" and is_minified(parts, position):
             if text in names:
@@ -258,8 +260,13 @@ def main() -> int:
         (port.locate(check, "plugin_request_checks") or (None, check))[1]
         for check in reference.plugin_request_checks
     )
-    modal = port.locate(reference.usage_modal, "usage_modal")
-    profile["usage_modal"] = modal[1] if modal else reference.usage_modal
+    profile["depleted_alerts"] = tuple(
+        (port.locate(alert, "depleted_alerts") or (None, alert))[1]
+        for alert in reference.depleted_alerts
+    )
+    for field in ("usage_modal", "usage_windows"):
+        located = port.locate(getattr(reference, field), field)
+        profile[field] = located[1] if located else getattr(reference, field)
     thread = port.locate(reference.thread_anchor, "thread_anchor")
     profile["thread_anchor"] = thread[1] if thread else reference.thread_anchor
     profile["composer_actions"] = tuple(

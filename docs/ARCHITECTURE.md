@@ -8,9 +8,8 @@ privacy grants, connected accounts, and sticky thread ownership continue to
 work.
 
 Codex Subscription Router replaces the copied app's bundled `codex` executable
-(`Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex` since build 11645,
-`Resources/codex` before) with a small Go multiplexer and keeps the original
-binary beside it as `codex.real`.
+(`Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`) with a small Go
+multiplexer and keeps the original binary beside it as `codex.real`.
 
 ## Request routing
 

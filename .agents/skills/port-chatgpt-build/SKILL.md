@@ -14,9 +14,10 @@ one profile, proves it, and ships it. Done means: the newest build is in
 
 - Anchors fail closed. Never weaken a check, count, or hash to make a build
   pass; find the new code instead.
-- Support the newest three builds. Adding one removes the oldest profile, its
-  `SUPPORTED_BUILDS` entry, its `COMPATIBILITY.md` row, its source copy, and
-  any code only it used.
+- Port only the newest official build; updates always build against it, so
+  skipped intermediate builds are never needed. Keep at most three profiles:
+  adding one past that removes the oldest, with its `SUPPORTED_BUILDS` entry,
+  `COMPATIBILITY.md` row, source copy, and any code only it used.
 - Never commit an app, archive, credential, or account state.
 - Never quit, relaunch, or install over Henry's running app without his "go"
   in the same message. Unattended runs stop at a pull request.
@@ -55,8 +56,10 @@ profile after the newest one, add it to `RENDERER_BUILDS`, and add the build to
   chunks only call it through `globalThis`. Patches land in whichever bundle
   holds their anchor, so moved code needs a new anchor, not a new mechanism.
 - When main-process code or packaging changes shape, teach the one helper
-  both shapes instead of branching per build (see `codex_entrypoint` and
-  `attach_router_updater`).
+  both shapes instead of branching per build (see `attach_router_updater`),
+  and drop the old shape with the last build that had it. A string that moves
+  between builds belongs in the profile, and a replacement that only inserts
+  code is derived from its anchor (see `composer_actions`).
 
 The port is finished when the new build ports onto itself cleanly:
 `port_renderer.py --source <app> --reference <build>` exits 0.
