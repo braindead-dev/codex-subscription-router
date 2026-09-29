@@ -15,15 +15,22 @@ import (
 )
 
 type Server struct {
-	token   string
-	root    string
-	mux     *mux.Multiplexer
-	uiTests bool
-	http    *http.Server
+	token           string
+	root            string
+	modelManagerURL string
+	mux             *mux.Multiplexer
+	uiTests         bool
+	http            *http.Server
 }
 
-func New(address, token, root string, multiplexer *mux.Multiplexer, uiTests bool) *Server {
-	server := &Server{token: token, root: root, mux: multiplexer, uiTests: uiTests}
+func New(address, token, root, modelManagerURL string, multiplexer *mux.Multiplexer, uiTests bool) *Server {
+	server := &Server{
+		token:           token,
+		root:            root,
+		modelManagerURL: modelManagerURL,
+		mux:             multiplexer,
+		uiTests:         uiTests,
+	}
 	router := http.NewServeMux()
 	router.HandleFunc("/v1/health", server.health)
 	router.HandleFunc("/v1/accounts", server.accounts)
@@ -33,6 +40,7 @@ func New(address, token, root string, multiplexer *mux.Multiplexer, uiTests bool
 	router.HandleFunc("/v1/profile/combined", server.combinedProfile)
 	router.HandleFunc("/v1/events", server.events)
 	router.HandleFunc("/v1/update", server.update)
+	router.HandleFunc("/v1/model-manager", server.modelManager)
 	if uiTests {
 		router.HandleFunc("/v1/test/rate-limits", server.rateLimitPreview)
 		router.HandleFunc("/v1/test/rate-limit-resets", server.resetCreditsPreview)
@@ -161,6 +169,20 @@ func (s *Server) threadAccount(response http.ResponseWriter, request *http.Reque
 	default:
 		methodNotAllowed(response)
 	}
+}
+
+// modelManager tells the profile menu where the models the picker shows are
+// chosen: the local proxy's model page, or nothing without one.
+func (s *Server) modelManager(response http.ResponseWriter, request *http.Request) {
+	if !s.authorized(request) {
+		writeJSON(response, http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		return
+	}
+	if request.Method != http.MethodGet {
+		methodNotAllowed(response)
+		return
+	}
+	writeJSON(response, http.StatusOK, map[string]any{"url": s.modelManagerURL})
 }
 
 func (s *Server) preferredAccount(response http.ResponseWriter, request *http.Request) {

@@ -3,6 +3,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -127,6 +128,32 @@ func tomlStringValue(line, key string) (string, bool) {
 		return "", false
 	}
 	return value, true
+}
+
+// ModelManagerURL is the model page of the local proxy the Primary home sends
+// OpenAI traffic through (opencodex serves its dashboard on that origin), or
+// "" when requests go straight to OpenAI.
+func ModelManagerURL(primaryCodexHome string) string {
+	contents, err := readConfig(filepath.Join(primaryCodexHome, "config.toml"))
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(contents), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[") {
+			return ""
+		}
+		value, ok := tomlStringValue(trimmed, "openai_base_url")
+		if !ok {
+			continue
+		}
+		base, err := url.Parse(value)
+		if err != nil || (base.Hostname() != "127.0.0.1" && base.Hostname() != "localhost") {
+			return ""
+		}
+		return base.Scheme + "://" + base.Host + "/#/models"
+	}
+	return ""
 }
 
 // marketplaceUnder returns the marketplace directory name when source is a

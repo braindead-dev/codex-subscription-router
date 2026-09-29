@@ -165,10 +165,12 @@ function CodexMuxAccountMenu() {
   const [expandedAccountId, setExpandedAccountId] = kXc.useState(null);
   const [emailCopied, setEmailCopied] = kXc.useState(false);
   const [update, setUpdate] = kXc.useState(null);
+  const [modelManagerUrl, setModelManagerUrl] = kXc.useState("");
   const loginAccountId = login?.accountId || null;
 
   const refresh = kXc.useCallback(async () => {
     codexMuxRequest("/update").then(setUpdate, () => {});
+    codexMuxRequest("/model-manager").then((body) => setModelManagerUrl(body.url || ""), () => {});
     try {
       const nextAccounts = await codexMuxFetchAccounts();
       setAccounts(nextAccounts);
@@ -495,6 +497,20 @@ function CodexMuxAccountMenu() {
       ),
     );
   }
+  if (modelManagerUrl) {
+    rows.push(
+      (0, e7.jsx)(
+        _H,
+        {
+          LeftIcon: CodexMuxModelsIcon,
+          SubText: "Choose the models the picker shows",
+          onSelect: () => window.open(modelManagerUrl, "_blank", "noopener,noreferrer"),
+          children: "Models…",
+        },
+        "codex-mux-models",
+      ),
+    );
+  }
   if (update?.enabled) {
     rows.push(
       (0, e7.jsx)(
@@ -643,6 +659,21 @@ function CodexMuxPlusIcon(props) {
     ...props,
     children: (0, e7.jsx)("path", {
       d: "M10 4.25v11.5M4.25 10h11.5",
+      stroke: "currentColor",
+      strokeWidth: 1.5,
+      strokeLinecap: "round",
+    }),
+  });
+}
+
+function CodexMuxModelsIcon(props) {
+  return (0, e7.jsx)("svg", {
+    viewBox: "0 0 20 20",
+    fill: "none",
+    "aria-hidden": true,
+    ...props,
+    children: (0, e7.jsx)("path", {
+      d: "M4 6h12M4 10h12M4 14h12M7 4.5v3M13 8.5v3M9 12.5v3",
       stroke: "currentColor",
       strokeWidth: 1.5,
       strokeLinecap: "round",

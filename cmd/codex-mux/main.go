@@ -103,6 +103,7 @@ func run() error {
 			listener.Addr().String(),
 			token,
 			root,
+			state.ModelManagerURL(primaryCodexHome),
 			multiplexer,
 			os.Getenv("CODEX_MUX_UI_TESTS") == "1",
 		)

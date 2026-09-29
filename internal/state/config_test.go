@@ -145,3 +145,20 @@ source = "https://example.com/plugins.git"
 		t.Fatalf("second sync must be idempotent: %v", err)
 	}
 }
+
+func TestModelManagerURLFollowsALocalProxy(t *testing.T) {
+	for _, tc := range []struct{ config, want string }{
+		{"model = \"gpt-6-sol\"\nopenai_base_url = \"http://127.0.0.1:10100/v1\"\n", "http://127.0.0.1:10100/#/models"},
+		{"openai_base_url = \"https://api.example.com/v1\"\n", ""},
+		{"[model_providers.proxy]\nopenai_base_url = \"http://127.0.0.1:10100/v1\"\n", ""},
+		{"model = \"gpt-6-sol\"\n", ""},
+	} {
+		home := t.TempDir()
+		if err := os.WriteFile(filepath.Join(home, "config.toml"), []byte(tc.config), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if got := ModelManagerURL(home); got != tc.want {
+			t.Errorf("ModelManagerURL(%q) = %q, want %q", tc.config, got, tc.want)
+		}
+	}
+}

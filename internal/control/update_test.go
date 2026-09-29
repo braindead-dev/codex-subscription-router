@@ -12,7 +12,7 @@ import (
 
 func TestUpdateSettingKeepsTheUpdaterFields(t *testing.T) {
 	root := t.TempDir()
-	server := New("127.0.0.1:0", "token", root, nil, false)
+	server := New("127.0.0.1:0", "token", root, "", nil, false)
 	call := func(method, body string) (int, map[string]any) {
 		request := httptest.NewRequest(method, "/v1/update", strings.NewReader(body))
 		request.Header.Set("X-Codex-Mux-Token", "token")

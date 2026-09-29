@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-29
+
+### Added
+
+- A **Models…** row in the profile menu when the Primary Codex home sends
+  OpenAI traffic through a local proxy such as opencodex; it opens that
+  proxy's model page, where the models the picker shows are chosen.
+
 ## [0.4.0] - 2026-09-29
 
 ### Added
@@ -209,7 +217,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.1
 [0.4.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.0
 [0.3.3]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.3
 [0.3.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.2
