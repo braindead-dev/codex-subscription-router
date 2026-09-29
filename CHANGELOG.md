@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-29
+
+### Fixed
+
+- Choosing the subscription new chats start on failed with "Failed to fetch":
+  the control API's CORS preflight did not allow the `PUT` the composer
+  account picker sends. A test now checks every method the renderer sends.
+
 ## [0.4.1] - 2026-09-29
 
 ### Added
@@ -217,7 +225,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.2
 [0.4.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.1
 [0.4.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.0
 [0.3.3]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.3.3
