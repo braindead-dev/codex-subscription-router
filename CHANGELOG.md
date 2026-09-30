@@ -14,6 +14,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Compatibility with build `12111` (26.924.51851) to cover the newest three
   official builds alongside `12246`.
 
+### Changed
+
+- The `CODEX_MUX_TRACE` log names the MCP server, tool, or resource each
+  plugin request targets, without its arguments.
+
 ### Removed
 
 - Compatibility with build `11645`.

@@ -389,7 +389,7 @@ func (m *Multiplexer) forwardRoute(route externalRoute) error {
 		return fmt.Errorf("account %s is unavailable", accountID)
 	}
 	key := protocol.RequestIDKey(message.ID)
-	m.traceEvent(map[string]any{"routed": message.Method, "id": key, "account": accountID, "thread": threadIDFromParams(message.Params)})
+	m.traceEvent(traceRoute(message, key, accountID))
 	m.externalMu.Lock()
 	m.externalRoutes[key] = route
 	m.externalMu.Unlock()
@@ -675,6 +675,23 @@ func (m *Multiplexer) handleInbound(inbound backend.Inbound) {
 		return
 	}
 	m.traceEvent(map[string]any{"dropped": message.Method, "account": inbound.AccountID})
+}
+
+// traceRoute names a routed request; for an MCP call it adds the server,
+// tool, or resource it targets, never the arguments.
+func traceRoute(message protocol.Message, key, accountID string) map[string]any {
+	fields := map[string]any{"routed": message.Method, "id": key, "account": accountID, "thread": threadIDFromParams(message.Params)}
+	if strings.HasPrefix(message.Method, "mcpServer/") {
+		var target struct {
+			Server string `json:"server"`
+			Tool   string `json:"tool"`
+			URI    string `json:"uri"`
+		}
+		if json.Unmarshal(message.Params, &target) == nil {
+			fields["server"], fields["tool"], fields["uri"] = target.Server, target.Tool, target.URI
+		}
+	}
+	return fields
 }
 
 func (m *Multiplexer) traceEvent(fields map[string]any) {
