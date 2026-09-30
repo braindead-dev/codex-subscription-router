@@ -76,13 +76,22 @@ func run() error {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	multiplexer, err := mux.New(mux.Options{
+	options := mux.Options{
 		RealExecutable: realExecutable,
 		RealArgs:       args,
 		Environment:    os.Environ(),
 		Store:          store,
 		Output:         os.Stdout,
-	})
+	}
+	if path := os.Getenv("CODEX_MUX_TRACE"); path != "" {
+		trace, traceErr := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		if traceErr != nil {
+			return fmt.Errorf("open trace: %w", traceErr)
+		}
+		defer trace.Close()
+		options.Trace = trace
+	}
+	multiplexer, err := mux.New(options)
 	if err != nil {
 		return err
 	}

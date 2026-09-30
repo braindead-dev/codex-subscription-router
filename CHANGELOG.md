@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-09-29
+
+### Fixed
+
+- Chats on a subscription other than Primary lost every notification outside
+  a few thread and turn prefixes, including MCP server startup status, MCP
+  app event streams, resolved approvals, errors, warnings, and process
+  output. Code Review, which opens its own chat on the subscription new chats
+  start on, could not load pull requests. Notifications about a chat, or
+  answering a request routed to that subscription, now reach the app; only
+  account-wide ones stay limited to Primary.
+
+### Added
+
+- `CODEX_MUX_TRACE` records the multiplexer's routing and replies for
+  debugging; see CONTRIBUTING.md.
+
 ## [0.4.3] - 2026-09-29
 
 ### Fixed
@@ -240,7 +257,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.4
 [0.4.3]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.3
 [0.4.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.2
 [0.4.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.4.1

@@ -36,6 +36,13 @@ from a short chat of the signed-in account and prints `CODEX_MUX_LIVE_HOME`;
 set `CODEX_MUX_LIVE_CODEX` to the real Codex binary (`codex.real` in a staged
 app) and run `go test -run TestLiveMove ./internal/mux`.
 
+## Tracing the router
+
+With `launchctl setenv CODEX_MUX_TRACE ~/.codex-mux/logs/mux-trace.log` before
+the app starts, the multiplexer appends one JSON line per routed request, its
+reply or error, and each notification it drops. Lines carry methods, ids, and
+accounts only. Unset the variable and delete the file when done.
+
 ## New official builds
 
 Follow `.agents/skills/port-chatgpt-build/SKILL.md`.

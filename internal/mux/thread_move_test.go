@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/b-nnett/codex-subscription-router/internal/protocol"
 	"github.com/b-nnett/codex-subscription-router/internal/state"
 )
 
@@ -59,5 +60,44 @@ func TestUnrecordedThreadBelongsToTheHomeHoldingIt(t *testing.T) {
 	}
 	if _, ok := m.threadOwner("01a0ffff-0000-7000-8000-000000000000"); ok {
 		t.Fatal("a chat no home holds has no owner")
+	}
+}
+
+func TestSecondaryAccountsForwardChatAndRequestNotifications(t *testing.T) {
+	root := t.TempDir()
+	store, err := state.Open(filepath.Join(root, "mux"), filepath.Join(root, "primary"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	work, err := store.AddAccount("Work")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := &Multiplexer{store: store}
+	notification := func(method, params string) protocol.Message {
+		return protocol.Message{Method: method, Params: json.RawMessage(params)}
+	}
+	for _, forwarded := range []protocol.Message{
+		notification("turn/started", `{"threadId":"t"}`),
+		notification("mcpServer/startupStatus/updated", `{"threadId":"t","name":"code-review","status":"ready"}`),
+		notification("serverRequest/resolved", `{"threadId":"t","requestId":"r"}`),
+		notification("mcpServer/event/stream/notification", `{"streamId":"s"}`),
+		notification("process/outputDelta", `{"processId":"p"}`),
+	} {
+		if !m.shouldForwardNotification(work.ID, forwarded) {
+			t.Errorf("%s from a secondary account was dropped", forwarded.Method)
+		}
+	}
+	for _, dropped := range []protocol.Message{
+		notification("skills/changed", `{}`),
+		notification("mcpServer/startupStatus/updated", `{"threadId":null,"name":"code-review"}`),
+		notification("remoteControl/status/changed", `{}`),
+	} {
+		if m.shouldForwardNotification(work.ID, dropped) {
+			t.Errorf("account-wide %s from a secondary account was forwarded", dropped.Method)
+		}
+	}
+	if !m.shouldForwardNotification("primary", notification("skills/changed", `{}`)) {
+		t.Error("the controller's account-wide notifications must pass")
 	}
 }

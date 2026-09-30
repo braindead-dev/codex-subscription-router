@@ -28,6 +28,9 @@ type Options struct {
 	Environment    []string
 	Store          *state.Store
 	Output         io.Writer
+	// Trace, when set, receives one JSON line per routed request, its reply,
+	// and each dropped notification: methods, ids, and accounts, never payloads.
+	Trace io.Writer
 }
 
 type externalRoute struct {
@@ -58,6 +61,8 @@ type Multiplexer struct {
 	environment    []string
 	store          *state.Store
 	output         io.Writer
+	trace          io.Writer
+	traceMu        sync.Mutex
 
 	childrenMu sync.RWMutex
 	children   map[string]*backend.Child
@@ -112,6 +117,7 @@ func New(options Options) (*Multiplexer, error) {
 		environment:          append([]string(nil), options.Environment...),
 		store:                options.Store,
 		output:               options.Output,
+		trace:                options.Trace,
 		children:             make(map[string]*backend.Child),
 		inbound:              make(chan backend.Inbound, 1024),
 		externalRoutes:       make(map[string]externalRoute),
@@ -383,6 +389,7 @@ func (m *Multiplexer) forwardRoute(route externalRoute) error {
 		return fmt.Errorf("account %s is unavailable", accountID)
 	}
 	key := protocol.RequestIDKey(message.ID)
+	m.traceEvent(map[string]any{"routed": message.Method, "id": key, "account": accountID, "thread": threadIDFromParams(message.Params)})
 	m.externalMu.Lock()
 	m.externalRoutes[key] = route
 	m.externalMu.Unlock()
@@ -618,6 +625,11 @@ func (m *Multiplexer) handleInbound(inbound backend.Inbound) {
 		}
 		m.externalMu.Unlock()
 		if ok {
+			reply := map[string]any{"reply": route.method, "id": key, "account": inbound.AccountID}
+			if message.Error != nil {
+				reply["error"] = message.Error.Message
+			}
+			m.traceEvent(reply)
 			if route.method == "turn/start" && isUsageLimitResponse(message) {
 				m.snapshots.forget(inbound.AccountID)
 				go m.retryTurnAfterUsageLimit(route, inbound.AccountID)
@@ -658,9 +670,25 @@ func (m *Multiplexer) handleInbound(inbound backend.Inbound) {
 	if m.mutedNotification(inbound.AccountID, message.Params) {
 		return
 	}
-	if m.shouldForwardNotification(inbound.AccountID, message.Method) {
+	if m.shouldForwardNotification(inbound.AccountID, message) {
 		m.writeRaw(inbound.Raw)
+		return
 	}
+	m.traceEvent(map[string]any{"dropped": message.Method, "account": inbound.AccountID})
+}
+
+func (m *Multiplexer) traceEvent(fields map[string]any) {
+	if m.trace == nil {
+		return
+	}
+	fields["at"] = time.Now().Format(time.RFC3339Nano)
+	line, err := json.Marshal(fields)
+	if err != nil {
+		return
+	}
+	m.traceMu.Lock()
+	defer m.traceMu.Unlock()
+	_, _ = m.trace.Write(append(line, '\n'))
 }
 
 func (m *Multiplexer) rememberRateLimitUpdate(accountID string, params json.RawMessage) {
@@ -721,16 +749,39 @@ func (m *Multiplexer) forwardServerRequest(inbound backend.Inbound) {
 	m.write(inbound.Message)
 }
 
-func (m *Multiplexer) shouldForwardNotification(accountID, method string) bool {
+// requestScopedNotifications only follow a request the desktop sent that
+// account: a command or process it runs, an MCP event stream it opened, or a
+// file search it started.
+var requestScopedNotifications = []string{
+	"command/exec/",
+	"process/",
+	"mcpServer/event/stream/",
+	"fuzzyFileSearch/",
+}
+
+// shouldForwardNotification passes on everything the controller says, and
+// from the other accounts whatever concerns one of their chats or answers a
+// request routed to them. Their account-wide notifications (skills, apps,
+// remote control) would repeat the controller's.
+func (m *Multiplexer) shouldForwardNotification(accountID string, message protocol.Message) bool {
 	controller, ok := m.store.Controller()
 	if ok && controller.ID == accountID {
 		return true
 	}
-	return strings.HasPrefix(method, "thread/") ||
-		strings.HasPrefix(method, "turn/") ||
-		strings.HasPrefix(method, "item/") ||
-		strings.HasPrefix(method, "hook/") ||
-		strings.HasPrefix(method, "rawResponse")
+	for _, prefix := range []string{"thread/", "turn/", "item/", "hook/", "rawResponse"} {
+		if strings.HasPrefix(message.Method, prefix) {
+			return true
+		}
+	}
+	if threadIDFromParams(message.Params) != "" {
+		return true
+	}
+	for _, prefix := range requestScopedNotifications {
+		if strings.HasPrefix(message.Method, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *Multiplexer) learnThreadOwner(route externalRoute, accountID string, result json.RawMessage) {
