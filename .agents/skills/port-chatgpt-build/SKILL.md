@@ -14,10 +14,10 @@ one profile, proves it, and ships it. Done means: the newest build is in
 
 - Anchors fail closed. Never weaken a check, count, or hash to make a build
   pass; find the new code instead.
-- Port only the newest official build; updates always build against it, so
-  skipped intermediate builds are never needed. Keep at most three profiles:
-  adding one past that removes the oldest, with its `SUPPORTED_BUILDS` entry,
-  `COMPATIBILITY.md` row, source copy, and any code only it used.
+- Port the newest official build. If the request requires the newest three
+  official builds, also fill any gaps in that appcast window. Keep at most
+  three profiles; retire older profiles with their `SUPPORTED_BUILDS` entry,
+  `COMPATIBILITY.md` row, source copy, and any code only they used.
 - Never commit an app, archive, credential, or account state.
 - Never quit, relaunch, or install over Henry's running app without his "go"
   in the same message. Unattended runs stop at a pull request.
