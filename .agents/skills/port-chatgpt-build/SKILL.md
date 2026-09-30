@@ -8,7 +8,7 @@ description: Port the router patch to a new official ChatGPT (Codex) macOS build
 The patch anchors on minified code that every official release renames and
 sometimes reshapes. A port finds the same code in the new build, records it as
 one profile, proves it, and ships it. Done means: the newest build is in
-`SUPPORTED_BUILDS`, every check below passes, and a release is drafted.
+`SUPPORTED_BUILDS`, every check below passes, and the port is pushed to `main`.
 
 ## Rules
 
@@ -20,7 +20,7 @@ one profile, proves it, and ships it. Done means: the newest build is in
   `COMPATIBILITY.md` row, source copy, and any code only they used.
 - Never commit an app, archive, credential, or account state.
 - Never quit, relaunch, or install over Henry's running app without his "go"
-  in the same message. Unattended runs stop at a pull request.
+  in the same message. Land verified ports directly on `main` without PRs.
 
 ## 1. Detect and fetch
 
@@ -30,8 +30,9 @@ The daily `Upstream` workflow fails when a new build needs a port. Locally:
 python3 scripts/appcast.py --fetch ~/.codex-mux/sources
 ```
 
-Exit 0 means the newest build is already supported: stop. Exit 10 means port
-it. The script prints the unpacked app's path.
+Exit 0 means the newest build is supported; exit 10 means port it. For a
+newest-three request, stop only if `appcast.supported(version, build)` passes
+for all of `appcast.builds()[:3]`; fetch gaps with `appcast.fetch`.
 
 ## 2. Port the profile
 
@@ -99,7 +100,8 @@ through the bridge on port 48124. Unset the variable afterwards.
 1. Commit as `Support ChatGPT build <build> (<version>, Codex <cli version>)`.
 2. Update `docs/COMPATIBILITY.md`, the Unreleased section of `CHANGELOG.md`,
    and bump the minor version as `docs/RELEASING.md` describes.
-3. `npm run release:check`, push, and let CI pass.
+3. Run `npm run release:check`, fetch current `main`, integrate the verified
+   port into `main` without a PR, push, and let CI pass. Preserve others’ work.
 4. Tag `v<version>` and push the tag; the release workflow drafts the release.
    Summarize the upstream Codex changelog since the last port for Henry.
    Publishing the draft ships it to every updater, so it waits for his go.
