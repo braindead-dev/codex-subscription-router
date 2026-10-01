@@ -104,7 +104,8 @@ through the bridge on port 48124. Unset the variable afterwards.
    port into `main` without a PR, push, and let CI pass. Preserve others’ work.
 4. Tag `v<version>` and push the tag; the release workflow drafts the release.
    Summarize the upstream Codex changelog since the last port for Henry.
-   Publishing the draft ships it to every updater, so it waits for his go.
+   After verification and CI pass, review and publish the draft automatically;
+   no further go is needed. Publishing enables the installed Update button.
 
 ## 5. Housekeeping
 
@@ -114,6 +115,5 @@ and the updater prunes release sources and older official builds. Leave the
 diff smaller than you found it.
 
 ## Keeping this skill current
-
 If a step here was wrong, missing, or unnecessary, fix this file in the same
 commit. Replace text rather than appending, and keep it under 120 lines.
