@@ -260,10 +260,6 @@ def main() -> int:
         (port.locate(check, "plugin_request_checks") or (None, check))[1]
         for check in reference.plugin_request_checks
     )
-    profile["depleted_alerts"] = tuple(
-        (port.locate(alert, "depleted_alerts") or (None, alert))[1]
-        for alert in reference.depleted_alerts
-    )
     for field in ("usage_modal", "usage_windows"):
         located = port.locate(getattr(reference, field), field)
         profile[field] = located[1] if located else getattr(reference, field)

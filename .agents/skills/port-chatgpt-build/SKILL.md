@@ -47,7 +47,8 @@ profile after the newest one, add it to `RENDERER_BUILDS`, and add the build to
 
 - Find the moved code by a string literal or property name from the old
   anchor, and copy the new anchor verbatim from the bundle. Never retype it.
-- Make each anchor long enough to be unique by shape, not just by text.
+- Make anchors unique by shape; choose profile markers that distinguish
+  supported builds, since adjacent builds can share the RPC accessor.
 - Borrow only imports, hoisted functions, or variables of a module the patched
   component itself initializes. Otherwise draw it (see the usage icon) or read
   it through a live import.
@@ -62,8 +63,7 @@ profile after the newest one, add it to `RENDERER_BUILDS`, and add the build to
   between builds belongs in the profile, and a replacement that only inserts
   code is derived from its anchor (see `composer_actions`).
 
-The port is finished when the new build ports onto itself cleanly:
-`port_renderer.py --source <app> --reference <build>` exits 0.
+Finish with `port_renderer.py --source <app> --reference <build>` exiting 0.
 
 ## 3. Verify
 
