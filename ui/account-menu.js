@@ -164,13 +164,9 @@ function CodexMuxAccountMenu() {
   const [pairing, setPairing] = kXc.useState(null);
   const [expandedAccountId, setExpandedAccountId] = kXc.useState(null);
   const [emailCopied, setEmailCopied] = kXc.useState(false);
-  const [update, setUpdate] = kXc.useState(null);
-  const [modelManagerUrl, setModelManagerUrl] = kXc.useState("");
   const loginAccountId = login?.accountId || null;
 
   const refresh = kXc.useCallback(async () => {
-    codexMuxRequest("/update").then(setUpdate, () => {});
-    codexMuxRequest("/model-manager").then((body) => setModelManagerUrl(body.url || ""), () => {});
     try {
       const nextAccounts = await codexMuxFetchAccounts();
       setAccounts(nextAccounts);
@@ -329,19 +325,6 @@ function CodexMuxAccountMenu() {
     }
   }
 
-  async function toggleAutomaticUpdates(event) {
-    event.preventDefault();
-    try {
-      const result = await codexMuxRequest("/update", {
-        method: "PATCH",
-        body: JSON.stringify({ auto: !update.auto }),
-      });
-      setUpdate({ ...update, auto: result.auto });
-    } catch (requestError) {
-      setError(requestError.message);
-    }
-  }
-
   async function copyPairingCode(event) {
     event.preventDefault();
     if (!pairing?.code) return;
@@ -497,41 +480,84 @@ function CodexMuxAccountMenu() {
       ),
     );
   }
-  if (modelManagerUrl) {
-    rows.push(
-      (0, e7.jsx)(
-        _H,
-        {
-          LeftIcon: CodexMuxModelsIcon,
-          SubText: "Choose the models the picker shows",
-          onSelect: () => window.open(modelManagerUrl, "_blank", "noopener,noreferrer"),
-          children: "Models…",
-        },
-        "codex-mux-models",
-      ),
-    );
-  }
-  if (update?.enabled) {
-    rows.push(
-      (0, e7.jsx)(
-        _H,
-        {
-          LeftIcon: CodexMuxUpdateIcon,
-          SubText: codexMuxUpdateCaption(update),
-          subTextAllowWrap: true,
-          rightIcon: update.auto
-            ? (0, e7.jsx)(CodexMuxCheckIcon, { className: "size-4 shrink-0" })
-            : undefined,
-          onSelect: toggleAutomaticUpdates,
-          children: "Update automatically",
-        },
-        "codex-mux-update",
-      ),
-    );
-  }
   rows.push((0, e7.jsx)(CH.Separator, {}, "codex-mux-separator"));
   return (0, e7.jsx)(e7.Fragment, { children: rows });
 }
+
+function CodexMuxSettings({ Group, Stack, Row, Button, Switch }) {
+  const [update, setUpdate] = kXc.useState(null);
+  const [modelManagerUrl, setModelManagerUrl] = kXc.useState("");
+  const [busy, setBusy] = kXc.useState(false);
+  const [error, setError] = kXc.useState("");
+  const revision = kXc.useRef(0);
+
+  kXc.useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      const current = revision.current;
+      const [updater, models] = await Promise.allSettled([
+        codexMuxRequest("/update"), codexMuxRequest("/model-manager"),
+      ]);
+      if (!active) return;
+      if (updater.status === "fulfilled" && current === revision.current) setUpdate(updater.value);
+      if (models.status === "fulfilled") setModelManagerUrl(models.value.url || "");
+      const failed = [updater, models].find(result => result.status === "rejected");
+      if (failed) setError(failed.reason.message);
+    };
+    refresh();
+    const timer = setInterval(refresh, 30_000);
+    return () => { active = false; clearInterval(timer); };
+  }, []);
+
+  async function toggleAutomaticUpdates(auto) {
+    if (busy) return;
+    revision.current++;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await codexMuxRequest("/update", {
+        method: "PATCH", body: JSON.stringify({ auto }),
+      });
+      setUpdate(current => ({ ...current, auto: result.auto }));
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      revision.current++;
+      setBusy(false);
+    }
+  }
+
+  return (0, e7.jsxs)(Group, {
+    id: "codex-mux-settings",
+    children: [
+      (0, e7.jsx)(Group.Header, { title: "Models and updates" }),
+      (0, e7.jsx)(Group.Content, {
+        children: (0, e7.jsxs)(Stack, { children: [
+          (0, e7.jsx)(Row, {
+            label: "Models",
+            description: "Choose the models the picker shows",
+            control: (0, e7.jsx)(Button, {
+              color: "secondary", size: "toolbar", disabled: !modelManagerUrl,
+              onClick: () => window.open(modelManagerUrl, "_blank", "noopener,noreferrer"),
+              children: "Manage models",
+            }),
+          }),
+          update?.enabled && (0, e7.jsx)(Row, {
+            label: "Update automatically",
+            description: codexMuxUpdateCaption(update),
+            control: (0, e7.jsx)(Switch, {
+              checked: update.auto, disabled: busy,
+              onChange: toggleAutomaticUpdates, ariaLabel: "Update automatically",
+            }),
+          }),
+          error && (0, e7.jsx)("div", { role: "alert", className: "text-sm text-danger", children: error }),
+        ] }),
+      }),
+    ],
+  });
+}
+
+globalThis.CodexMuxSettings = CodexMuxSettings;
 
 function codexMuxUpdateCaption({ auto, state }) {
   switch (state?.status) {
@@ -662,37 +688,6 @@ function CodexMuxPlusIcon(props) {
       stroke: "currentColor",
       strokeWidth: 1.5,
       strokeLinecap: "round",
-    }),
-  });
-}
-
-function CodexMuxModelsIcon(props) {
-  return (0, e7.jsx)("svg", {
-    viewBox: "0 0 20 20",
-    fill: "none",
-    "aria-hidden": true,
-    ...props,
-    children: (0, e7.jsx)("path", {
-      d: "M4 6h12M4 10h12M4 14h12M7 4.5v3M13 8.5v3M9 12.5v3",
-      stroke: "currentColor",
-      strokeWidth: 1.5,
-      strokeLinecap: "round",
-    }),
-  });
-}
-
-function CodexMuxUpdateIcon(props) {
-  return (0, e7.jsx)("svg", {
-    viewBox: "0 0 20 20",
-    fill: "none",
-    "aria-hidden": true,
-    ...props,
-    children: (0, e7.jsx)("path", {
-      d: "M15.5 9.25a5.75 5.75 0 1 1-1.7-4.1M15.75 3.75v3.5h-3.5",
-      stroke: "currentColor",
-      strokeWidth: 1.5,
-      strokeLinecap: "round",
-      strokeLinejoin: "round",
     }),
   });
 }

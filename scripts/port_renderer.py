@@ -250,10 +250,14 @@ def main() -> int:
         (port.locate(probe, "identifier_probes") or (None, probe))[1]
         for probe in reference.identifier_probes
     )
+    profile["settings_probes"] = tuple(
+        (port.locate(probe, "settings_probes") or (None, probe))[1]
+        for probe in reference.settings_probes
+    )
     for field in (
         "plugin_request", "reset_query", "reset_mutation",
         "usage_header", "profile_avatar", "profile_name", "profile_identity",
-        "plugin_scope", "thread_sections",
+        "plugin_scope", "thread_sections", "settings_slot",
     ):
         profile[field] = port.port_pair(getattr(reference, field), field)
     profile["plugin_request_checks"] = tuple(

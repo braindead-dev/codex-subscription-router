@@ -865,6 +865,8 @@ class RendererBuild:
     menu_identifiers: dict[str, str]
     menu_anchor: str
     usage_slot: str
+    settings_slot: tuple[str, str]
+    settings_probes: tuple[str, ...]
     plugin_request_checks: tuple[str, ...]
     reset_query: tuple[str, str]
     reset_mutation: tuple[str, str]
@@ -909,6 +911,15 @@ RENDERER_BUILD_12553 = RendererBuild(
     },
     menu_anchor="function SHa(e,t){return CHa(e,t).src}",
     usage_slot="(O=(0,$.jsx)(Pi,{accountIcon:o,accountSwitcher:Fn,additionalItems:g,displayName:_,hasWorkspaceAccount:c,identityItems:v,isPetVisible:d,onCloseMenu:s,onCopyUserId:x,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:_n,onOpenWorkspaceSettings:E,personalPlanLabel:f,onTogglePet:D,petShortcut:et,settingsShortcut:$e,usageItems:Kn})",
+    settings_slot=(
+        "(a=(0,$.jsxs)(br,{title:r,children:[n,i]})",
+        "(a=(0,$.jsxs)(br,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:H,Stack:Kt,Row:V,Button:nt,Switch:zt}),i]})",
+    ),
+    settings_probes=(
+        "(o=(0,$.jsx)(V,{label:n,description:r,control:(0,$.jsx)(nt,{color:`secondary`,size:`toolbar`,onClick:i,children:a})})",
+        "(f=(0,$.jsx)(V,{label:s,description:c,control:(0,$.jsx)(zt,{checked:l,onChange:u,ariaLabel:d})})",
+        "(0,$.jsxs)(H,{id:`notifications`,children:[A,(0,$.jsx)(H.Content,{children:(0,$.jsx)(Kt,{children:(0,$.jsx)(ji,{})})})]})",
+    ),
     plugin_request_checks=(
         "listMcpServers(e,t){return Gen(this,this.mcpServerStatusPromises,e,t,",
         "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
@@ -1011,6 +1022,15 @@ RENDERER_BUILD_12694 = RendererBuild(
     },
     menu_anchor="function ZHa(e,t){return QHa(e,t).src}",
     usage_slot="(O=(0,$.jsx)(Pi,{accountIcon:s,accountSwitcher:In,additionalItems:_,displayName:y,hasWorkspaceAccount:u,identityItems:b,isPetVisible:l,onCloseMenu:o,onCopyUserId:x,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:bn,onOpenWorkspaceSettings:E,personalPlanLabel:p,onTogglePet:D,petShortcut:nt,settingsShortcut:tt,usageItems:Hn})",
+    settings_slot=(
+        "(a=(0,$.jsxs)(qr,{title:r,children:[n,i]})",
+        "(a=(0,$.jsxs)(qr,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:U,Stack:Jt,Row:H,Button:$e,Switch:Bt}),i]})",
+    ),
+    settings_probes=(
+        "(o=(0,$.jsx)(H,{label:n,description:r,control:(0,$.jsx)($e,{color:`secondary`,size:`toolbar`,onClick:i,children:a})})",
+        "(d=(0,$.jsx)(H,{label:o,description:s,control:(0,$.jsx)(Bt,{checked:c,onChange:l,ariaLabel:u})})",
+        "(0,$.jsxs)(U,{id:`notifications`,children:[A,(0,$.jsx)(U.Content,{children:(0,$.jsx)(Jt,{children:(0,$.jsx)(Ai,{})})})]})",
+    ),
     plugin_request_checks=(
         "listMcpServers(e,t){return Gen(this,this.mcpServerStatusPromises,e,t,",
         "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
@@ -1113,6 +1133,15 @@ RENDERER_BUILD_12776 = RendererBuild(
     },
     menu_anchor="function vHa(e,t){return yHa(e,t).src}",
     usage_slot="(O=(0,$.jsx)(Pi,{accountIcon:o,accountSwitcher:In,additionalItems:g,displayName:_,hasWorkspaceAccount:s,identityItems:v,isPetVisible:m,onCloseMenu:c,onCopyUserId:y,onLogOut:b,onOpenChatGptAnalytics:S,onOpenPersonalization:C,onOpenProfile:T,onOpenSettings:_n,onOpenWorkspaceSettings:E,personalPlanLabel:u,onTogglePet:D,petShortcut:nt,settingsShortcut:tt,usageItems:Gn})",
+    settings_slot=(
+        "(a=(0,$.jsxs)(or,{title:r,children:[n,i]})",
+        "(a=(0,$.jsxs)(or,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:U,Stack:Fe,Row:N,Button:ue,Switch:Vt}),i]})",
+    ),
+    settings_probes=(
+        "(o=(0,$.jsx)(N,{label:n,description:r,control:(0,$.jsx)(ue,{color:`secondary`,size:`toolbar`,onClick:i,children:a})})",
+        "(d=(0,$.jsx)(N,{label:o,description:s,control:(0,$.jsx)(Vt,{checked:c,onChange:l,ariaLabel:u})})",
+        "(0,$.jsxs)(U,{id:`notifications`,children:[k,(0,$.jsx)(U.Content,{children:(0,$.jsx)(Fe,{children:(0,$.jsx)(Ai,{})})})]})",
+    ),
     plugin_request_checks=(
         "listMcpServers(e,t){return itn(this,this.mcpServerStatusPromises,e,t,",
         "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
@@ -1299,7 +1328,7 @@ def patch_renderer(extracted: Path, token: str) -> None:
     )
     if build is None:
         raise RuntimeError("the ChatGPT renderer layout is not supported")
-    for probe in build.identifier_probes:
+    for probe in (*build.identifier_probes, *build.settings_probes):
         if not renderer.contains(probe):
             raise RuntimeError(f"could not verify an identifier probe: {probe[:60]!r}")
 
@@ -1365,6 +1394,7 @@ def patch_renderer(extracted: Path, token: str) -> None:
         *build.profile_identity, "the native Profile username and plan badge"
     )
     renderer.replace(*build.plugin_scope, "the native Plugins settings content")
+    renderer.replace(*build.settings_slot, "the native General settings content")
     renderer.inject(
         build.thread_anchor,
         injected_source("thread-subscription.js", token, build.thread_identifiers),

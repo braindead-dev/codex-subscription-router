@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-02
+
+### Changed
+
+- Moved Models and automatic-update controls from the profile menu into
+  Settings > General, using native settings rows, button, and switch.
+  Model management and update status remain available in the new section.
+
 ## [0.8.0] - 2026-10-02
 
 ### Added
@@ -295,7 +303,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.8.1
 [0.8.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.8.0
 [0.6.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.6.0
 [0.5.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.5.0
