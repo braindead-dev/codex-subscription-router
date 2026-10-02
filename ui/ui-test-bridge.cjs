@@ -359,6 +359,28 @@ async function capture(action, delayMs, includeDebug) {
 
 function start() {
   if (process.env.CODEX_MUX_UI_TESTS !== "1") return;
+  if (process.env.CODEX_MUX_LAUNCH_CHECK === "1") {
+    const timer = setInterval(async () => {
+      const window = mainWindow() ?? BrowserWindow.getAllWindows().find(window => !window.isDestroyed());
+      if (!window) return;
+      try {
+        const state = await window.webContents.executeJavaScript(`({
+          loaded: document.readyState === "complete",
+          root: document.querySelector("#root")?.childElementCount > 0,
+          mounted: Object.keys(document.querySelector("#root > *") ?? {}).some(key => key.startsWith("__reactFiber$")),
+          menu: typeof globalThis.CodexMuxAccountMenu === "function",
+          react: typeof globalThis.codexMuxReact?.().useState === "function",
+          jsx: typeof globalThis.codexMuxJsx?.().jsx === "function"
+        })`);
+        if (Object.values(state).every(Boolean)) {
+          clearInterval(timer);
+          console.log("codex-router-renderer-ready");
+        }
+      } catch {}
+    }, 500);
+    app.once("before-quit", () => clearInterval(timer));
+    return;
+  }
   app.on("web-contents-created", (_event, contents) => {
     contents.on("console-message", (_consoleEvent, level, message, line, sourceId) => {
       recordDiagnostic("console", { level, message, line, sourceId });

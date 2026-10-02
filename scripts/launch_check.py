@@ -22,9 +22,9 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from patch_app import stop_lingering_helpers  # noqa: E402
+from patch_app import codex_entrypoint, stop_lingering_helpers  # noqa: E402
 
-READY = ("Electron renderer console", "[AppServerConnection] response_routed")
+READY = ("codex-router-renderer-ready", "[AppServerConnection] response_routed")
 
 
 def stop(process: subprocess.Popen[str], app: Path) -> None:
@@ -54,7 +54,13 @@ def main() -> int:
         with log_path.open("w") as log:
             process = subprocess.Popen(
                 [str(executable), f"--user-data-dir={profile}/user-data"],
-                env={**os.environ, "ELECTRON_ENABLE_LOGGING": "1"},
+                env={
+                    **os.environ,
+                    "ELECTRON_ENABLE_LOGGING": "1",
+                    "CODEX_CLI_PATH": str(codex_entrypoint(app / "Contents" / "Resources")),
+                    "CODEX_MUX_UI_TESTS": "1",
+                    "CODEX_MUX_LAUNCH_CHECK": "1",
+                },
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
@@ -66,6 +72,9 @@ def main() -> int:
             while time.monotonic() < deadline and process.poll() is None:
                 output = log_path.read_text(errors="replace")
                 seen = {marker for marker in READY if marker in output}
+                if any("initialize_handshake_result" in line and "outcome=success" in line
+                       for line in output.splitlines()):
+                    seen.add(READY[1])
                 if len(seen) == len(READY) or "FATAL:" in output:
                     break
                 time.sleep(1)

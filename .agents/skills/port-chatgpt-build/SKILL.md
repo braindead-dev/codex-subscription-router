@@ -83,10 +83,10 @@ CODEX_MUX_DISPLAY_NAME="Codex (router)" CODEX_MUX_SIGNING_IDENTITY=- \
 ```
 
 The staged app must boot: `python3 scripts/launch_check.py --app <staged>`
-exits 0 only once the renderer runs and the app-server answers, and prints the
-crash otherwise. Electron hardening (fuses, integrity seals, signing) only
-shows up here. Every entrypoint must launch too: the router, `codex.real` next
-to it, and `codex-cli/bin/codex` print the Codex version. Then run the live
+targets the staged CLI with an isolated desktop profile. It requires a rendered
+UI and an initialized app-server, without a test-server port. Signing and
+Electron hardening only show up here. The router, adjacent `codex.real`, and
+`codex-cli/bin/codex` must each print the Codex version. Then run the live
 move test against the staged `codex.real` (`scripts/live_seed.py` prepares its
 home). After his "go", quit the app, install with
 `patch_app.py --install-staged ~/.codex-mux/port-stage --destination <app>`
