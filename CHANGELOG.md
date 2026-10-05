@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-05
+
+### Added
+
+- Compatibility with official ChatGPT build `13100` (26.930.51102),
+  bundling Codex 0.160.0. Builds `12947` and `13022` remain supported;
+  build `12913` is retired.
+
 ## [0.11.0] - 2026-10-04
 
 ### Added
@@ -319,7 +327,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.12.0
 [0.11.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.11.0
 [0.10.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.10.0
 [0.8.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.8.1
