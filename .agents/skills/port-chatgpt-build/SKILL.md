@@ -41,9 +41,10 @@ python3 scripts/port_renderer.py --source <app> > /tmp/profile.py
 ```
 
 It matches every anchor of the newest profile by shape and prints a ready
-`RENDERER_BUILD_<build>` plus a list of what it could not resolve. Paste the
-profile after the newest one, add it to `RENDERER_BUILDS`, and add the build to
-`SUPPORTED_BUILDS` (hash from step 3). Then fix only what it listed:
+`RENDERER_BUILD_<build>` plus a list of what it could not resolve. Register the
+profile in `RENDERER_BUILDS` and the build in `SUPPORTED_BUILDS` (hash from
+step 3). If the generated profile equals an existing one in every field,
+alias it and register the shared profile once. Fix only what it listed:
 
 - Find the moved code by a string literal or property name from the old
   anchor, and copy the new anchor verbatim from the bundle. Never retype it.
@@ -115,5 +116,4 @@ and the updater prunes release sources and older official builds. Leave the
 diff smaller than you found it.
 
 ## Keeping this skill current
-If a step here was wrong, missing, or unnecessary, fix this file in the same
-commit. Replace text rather than appending, and keep it under 120 lines.
+Fix incorrect steps in the same commit; replace text and keep this under 120 lines.

@@ -72,14 +72,14 @@ class SourceBuild:
 # The newest three official builds, keyed by (version, build). Adding a build
 # removes the oldest one here and its RENDERER_BUILD profile.
 SUPPORTED_BUILDS = {
-    ("26.930.31730", "12947"): SourceBuild(
-        "87a934de9a00a04d2e534693db87756321ca4f3413f6caa55d3a0d32a5543836"
-    ),
     ("26.930.41038", "13022"): SourceBuild(
         "60e98fe5dd78b34fb1db604c48c1018c56516663000529dce913b48c3d49300e"
     ),
     ("26.930.51102", "13100"): SourceBuild(
         "a159b8f5b78ed1ba89fc70d5c8448d822a46c4fc2a4a9f18ec348f3cc2f6b8c9"
+    ),
+    ("26.930.61225", "13232"): SourceBuild(
+        "88b8cce6f627771bf341f5a6bb464ad220749b0d442d44f618d7741c2de7318b"
     ),
 }
 # Counts assumed for a build passed with --allow-untested-source.
@@ -892,117 +892,6 @@ class RendererBuild:
     )
 
 
-RENDERER_BUILD_12947 = RendererBuild(
-    marker="function $Wa(e,t){return eGa(e,t).src}",
-    data_anchor="function nI(e,t){let n=e.get(rI);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
-    menu_identifiers={
-        "e7": "W()",
-        "kXc": "Zm()",
-        "Lo": "Wp",
-        "Q": "G",
-        "BW": "SVt",
-        "QLs": "FRi",
-        "_H": "Ake",
-        "CH": "wu",
-        "jLa": "$Wa",
-        "lt": "Jl",
-        "Rv": "Lr",
-        "RD": "Fl()",
-    },
-    menu_anchor="function $Wa(e,t){return eGa(e,t).src}",
-    usage_slot="(O=(0,$.jsx)(Pi,{accountIcon:s,accountSwitcher:Hn,additionalItems:g,displayName:_,hasWorkspaceAccount:c,identityItems:v,isPetVisible:f,onCloseMenu:o,onCopyUserId:b,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:Tn,onOpenWorkspaceSettings:E,personalPlanLabel:d,onTogglePet:D,petShortcut:rt,settingsShortcut:nt,usageItems:Xn})",
-    settings_slot=(
-        "(a=(0,$.jsxs)(Sr,{title:r,children:[n,i]})",
-        "(a=(0,$.jsxs)(Sr,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:H,Stack:Ye,Row:F,Button:be,Switch:Jt}),i]})",
-    ),
-    settings_probes=(
-        "(o=(0,$.jsx)(F,{label:n,description:r,control:(0,$.jsx)(be,{color:`secondary`,size:`toolbar`,onClick:i,children:a})})",
-        "(d=(0,$.jsx)(F,{label:o,description:s,control:(0,$.jsx)(Jt,{checked:c,onChange:l,ariaLabel:u})})",
-        "(0,$.jsxs)(H,{id:`notifications`,children:[k,(0,$.jsx)(H.Content,{children:(0,$.jsx)(Ye,{children:(0,$.jsx)(ji,{})})})]})",
-    ),
-    plugin_request_checks=(
-        "listMcpServers(e,t){return Y7t(this,this.mcpServerStatusPromises,e,t,",
-        "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
-    ),
-    reset_query=(
-        "function Fsr(){let e=(0,gL.c)(1);wi(),$(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:Lsr,select:Isr,refetchInterval:Zc.ONE_MINUTE,staleTime:Zc.FIVE_SECONDS},e[0]=t):t=e[0],Zu(t)}",
-        "function Fsr(){wi(),$(null);let e=window.__codexMuxResetAccountId;return Zu({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):Lsr,select:Isr,refetchInterval:Zc.ONE_MINUTE,staleTime:Zc.FIVE_SECONDS})}",
-    ),
-    reset_mutation=(
-        "function Rsr(){let e=(0,gL.c)(3),t=Jl(),n=Ef(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:zsr,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>usr(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],Yo(r)}",
-        "function Rsr(){let e=Jl(),t=Ef(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return Yo({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):zsr,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>usr(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
-    ),
-    usage_modal="function Et(e){let n=(0,Dt.c)(19),{defaultResetCreditsOpen:r,",
-    usage_windows="let y=v;if(g!=null){",
-    usage_header=(
-        "(Ae=(0,$.jsx)(p,{children:(0,$.jsx)(c,{title:(0,$.jsx)(z,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(x,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})})}),t[41]=Ae)",
-        "(Ae=(0,$.jsxs)(p,{children:[(0,$.jsx)(c,{title:(0,$.jsx)(z,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(x,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})}),window.__codexMuxResetAccountSelector??null]}),t[41]=Ae)",
-    ),
-    profile_avatar=(
-        "avatar:(0,$.jsxs)($.Fragment,{children:[(0,$.jsxs)(`div`,{\"aria-disabled\":Cn,onPointerEnter:e=>Jt(e.pointerType!==`touch`),onPointerLeave:()=>Jt(!1),onPointerCancel:()=>Jt(!1),className:$e(`group relative flex rounded-full outline-none`,",
-        "avatar:(0,$.jsxs)($.Fragment,{children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>Tt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":Cn,onPointerEnter:e=>Jt(e.pointerType!==`touch`),onPointerLeave:()=>Jt(!1),onPointerCancel:()=>Jt(!1),className:$e(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
-    ),
-    profile_name=(
-        "br=Jn??(0,$.jsx)(q,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
-        "br=globalThis.__codexMuxSelectedProfileAccountId?(Jn??(0,$.jsx)(q,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})):null",
-    ),
-    profile_identity=(
-        "Wn=Vn?Un:null,Gn=i?ae?.display_name?.trim()||null:Et?.displayName??null,",
-        "Wn=globalThis.__codexMuxSelectedProfileAccountId&&Vn?Un:null,Gn=i?ae?.display_name?.trim()||null:Et?.displayName??null,",
-    ),
-    plugin_scope=(
-        "(C=(0,ao.jsx)(Fn,{title:h,subtitle:g,action:S,children:m})",
-        "(C=(0,ao.jsx)(Fn,{title:h,subtitle:g,action:S,children:[globalThis.CodexMuxPluginScope?.()??null,m]})",
-    ),
-    thread_identifiers={
-        "K": "Z",
-    },
-    thread_anchor="function vE(e){let t=(0,yE.c)(4),{onOpenPullRequestSidePanel:n,onForceShow:r,registerEnvironmentActionCommands:i}=e,a=La(N),",
-    thread_sections=(
-        "(O=(0,xE.jsxs)(xE.Fragment,{children:[y,b,x,S,C,w,T,E,D]})",
-        "(O=(0,xE.jsxs)(xE.Fragment,{children:[y,b,x,S,C,w,(0,xE.jsx)(CodexMuxThreadSubscription,{}),T,E,D]})",
-    ),
-    composer_actions=(
-        "(0,HW.jsxs)(wE.FooterActions,{ref:dt,spacing:nn,children:[rn,en,an]})",
-        "(0,HW.jsxs)(wE.FooterActions,{spacing:`none`,children:[en,(0,HW.jsx)(`div`,{className:`ms-2 flex items-center`,children:Mt})]})",
-    ),
-    fork_titles=(
-        "function fvr(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
-        "function fvr(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
-    ),
-    fork_identifiers={
-        "CODEX_MUX_SERVICES": "r6",
-        "codexMuxConversationTurns": "HJn",
-        "codexMuxTurnWithId": "h$",
-        "codexMuxRememberDescription": "tKr",
-    },
-    identifier_probes=(
-        "function $Wa(e,t){return eGa(e,t).src}",
-        "function SVt(e,t,n,r){e.set(fz,e=>{let i=e.modals.find(e=>dz(e.ModalComponent,t)),",
-        "function FRi(e){let t=(0,LRi.c)(7),n;t[0]===e.onClose?n=t[1]:(n=(0,rG.jsx)(IRi,{onClose:e.onClose}),t[0]=e.onClose,t[1]=n);let r;t[2]===e?r=t[3]:(r=(0,rG.jsx)(zRi,{...e}),t[2]=e,t[3]=r);let i;return t[4]!==n||t[5]!==r?(i=(0,rG.jsx)(RRi.Suspense,{fallback:n,children:r}),t[4]=n,t[5]=r,t[6]=i):i=t[6],i}function IRi(e){let t=(0,LRi.c)(8),{onClose:n,failed:r}=e,i=r!==void 0&&r,a;t[0]===n?a=t[1]:(a=e=>{e||n()},t[0]=n,t[1]=a);let o;t[2]===i?o=t[3]:(o=i?(0,rG.jsx)(J,{id:`codex.rateLimitResetModal.loadError.title`,",
-        "c=Wp(G),l=UNi(),u=Wa(),d=Cm(),f=Nai(),p=mm(),",
-        "r=Wp(Lr),[i,a]=(0,tKr.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
-        "t=Jl(),n=Ef(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:zsr,",
-        "r6=await n6.services,r6.threadReadState!=null",
-        "function HJn(e){return e==null?null:m$(e)}function h$(e,t){return HJn(e)?.find(e=>e.turnId===t)??null}",
-        "function tKr(e,t,n){let r={...BR(nKr,{}),[t]:n};",
-        "let Tt=mr(wt),Et=i?ht:Tt.data,",
-        "(r=(0,xE.jsx)(Z.Section,{sectionKey:`usage`,",
-        "sAr=W(),cAr=yo(Zkr)})))()}var uAr,dAr,fAr,pAr,",
-        "Qut=Zm(),$ut=(0,Qut.createContext)(Iit)})))()}var tdt,ndt,rdt,idt,adt,odt,sdt,cdt,ldt,udt,ddt,fdt,pdt,sb,mdt,hdt,gdt,_dt,vdt,ydt,bdt,xdt,cb,Sdt,Cdt,wdt,Tdt,Edt;",
-        "g5n=Fl(),WF(),G6n(),_5n=(0,qF.createContext)(null)",
-        "Ajt=Qs(G,()=>Wm().homeModePreferences??e$e({",
-        "let e=Qs(Lr,[]),t=aa(Lr,e=>null);return{entries$:Ia(Lr,({",
-        "x$.jsx)(Ake,{onSelect:()=>u?.(e),",
-        "(s=(0,u$.jsx)(wu.Item,{leftIconAsset:dbe,onClick:r,children:o})",
-    ),
-    usage_status=(
-        "async function zJr({additionalHeaders:e,signal:t}){try{return xJr(await dq.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":XK.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
-        "async function zJr({additionalHeaders:e,signal:t}){try{return xJr(await codexMuxFilterUsageStatus(await dq.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":XK.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
-    ),
-)
-
-
 RENDERER_BUILD_13022 = RendererBuild(
     marker="(O=(0,$.jsx)(Pi,{accountIcon:o,accountSwitcher:Hn,additionalItems:g,displayName:_,hasWorkspaceAccount:c,identityItems:v,isPetVisible:f,onCloseMenu:s,onCopyUserId:b,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:Tn,onOpenWorkspaceSettings:E,personalPlanLabel:d,onTogglePet:D,petShortcut:at,settingsShortcut:rt,usageItems:Xn})",
     data_anchor="function nI(e,t){let n=e.get(rI);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
@@ -1225,7 +1114,10 @@ RENDERER_BUILD_13100 = RendererBuild(
 )
 
 
-RENDERER_BUILDS = (RENDERER_BUILD_12947, RENDERER_BUILD_13022, RENDERER_BUILD_13100)
+# Build 13232 retains every renderer anchor and identifier from build 13100.
+RENDERER_BUILD_13232 = RENDERER_BUILD_13100
+
+RENDERER_BUILDS = (RENDERER_BUILD_13022, RENDERER_BUILD_13232)
 
 PROFILE_QUERY_PATTERN = re.compile(
     r"let e=await [A-Za-z_$][\w$]*\.safeGet\(`/wham/profiles/me`\)"
