@@ -72,14 +72,14 @@ class SourceBuild:
 # The newest three official builds, keyed by (version, build). Adding a build
 # removes the oldest one here and its RENDERER_BUILD profile.
 SUPPORTED_BUILDS = {
-    ("26.930.41038", "13022"): SourceBuild(
-        "60e98fe5dd78b34fb1db604c48c1018c56516663000529dce913b48c3d49300e"
-    ),
-    ("26.930.51102", "13100"): SourceBuild(
-        "a159b8f5b78ed1ba89fc70d5c8448d822a46c4fc2a4a9f18ec348f3cc2f6b8c9"
-    ),
     ("26.930.61225", "13232"): SourceBuild(
         "88b8cce6f627771bf341f5a6bb464ad220749b0d442d44f618d7741c2de7318b"
+    ),
+    ("26.930.61225", "13520"): SourceBuild(
+        "2801c7cf820be653e302d6e6f4ac74a59df0ec219e078e31a83dd88f7aed9ffe"
+    ),
+    ("26.1002.52244", "13536"): SourceBuild(
+        "40efd7acdf03a24817fcd7f35684fc2173b154df06774243cb4ab227e36fa915"
     ),
 }
 # Counts assumed for a build passed with --allow-untested-source.
@@ -864,7 +864,6 @@ class RendererBuild:
     data_anchor: str
     menu_identifiers: dict[str, str]
     menu_anchor: str
-    usage_slot: str
     settings_slot: tuple[str, str]
     settings_probes: tuple[str, ...]
     plugin_request_checks: tuple[str, ...]
@@ -892,118 +891,7 @@ class RendererBuild:
     )
 
 
-RENDERER_BUILD_13022 = RendererBuild(
-    marker="(O=(0,$.jsx)(Pi,{accountIcon:o,accountSwitcher:Hn,additionalItems:g,displayName:_,hasWorkspaceAccount:c,identityItems:v,isPetVisible:f,onCloseMenu:s,onCopyUserId:b,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:Tn,onOpenWorkspaceSettings:E,personalPlanLabel:d,onTogglePet:D,petShortcut:at,settingsShortcut:rt,usageItems:Xn})",
-    data_anchor="function nI(e,t){let n=e.get(rI);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
-    menu_identifiers={
-        "e7": "X()",
-        "kXc": "Nu()",
-        "Lo": "pp",
-        "Q": "W",
-        "BW": "CVt",
-        "QLs": "sRi",
-        "_H": "Cke",
-        "CH": "wu",
-        "jLa": "bGa",
-        "lt": "Xl",
-        "Rv": "Vr",
-        "RD": "is()",
-    },
-    menu_anchor="function bGa(e,t){return xGa(e,t).src}",
-    usage_slot="(O=(0,$.jsx)(Pi,{accountIcon:o,accountSwitcher:Hn,additionalItems:g,displayName:_,hasWorkspaceAccount:c,identityItems:v,isPetVisible:f,onCloseMenu:s,onCopyUserId:b,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:Tn,onOpenWorkspaceSettings:E,personalPlanLabel:d,onTogglePet:D,petShortcut:at,settingsShortcut:rt,usageItems:Xn})",
-    settings_slot=(
-        "(a=(0,$.jsxs)(Sr,{title:r,children:[n,i]})",
-        "(a=(0,$.jsxs)(Sr,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:H,Stack:qe,Row:N,Button:me,Switch:Yt}),i]})",
-    ),
-    settings_probes=(
-        "(o=(0,$.jsx)(N,{label:n,description:r,control:(0,$.jsx)(me,{color:`secondary`,size:`toolbar`,onClick:i,children:a})})",
-        "(d=(0,$.jsx)(N,{label:o,description:s,control:(0,$.jsx)(Yt,{checked:c,onChange:l,ariaLabel:u})})",
-        "(0,$.jsxs)(H,{id:`notifications`,children:[k,(0,$.jsx)(H.Content,{children:(0,$.jsx)(qe,{children:(0,$.jsx)(ji,{})})})]})",
-    ),
-    plugin_request_checks=(
-        "listMcpServers(e,t){return X7t(this,this.mcpServerStatusPromises,e,t,",
-        "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
-    ),
-    reset_query=(
-        "function Osr(){let e=(0,wL.c)(1);Ei(),$(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:Asr,select:ksr,refetchInterval:rl.ONE_MINUTE,staleTime:rl.FIVE_SECONDS},e[0]=t):t=e[0],Qu(t)}",
-        "function Osr(){Ei(),$(null);let e=window.__codexMuxResetAccountId;return Qu({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):Asr,select:ksr,refetchInterval:rl.ONE_MINUTE,staleTime:rl.FIVE_SECONDS})}",
-    ),
-    reset_mutation=(
-        "function jsr(){let e=(0,wL.c)(3),t=Xl(),n=bf(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Msr,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>rsr(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],es(r)}",
-        "function jsr(){let e=Xl(),t=bf(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return es({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):Msr,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>rsr(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
-    ),
-    usage_modal="function Et(e){let n=(0,Dt.c)(19),{defaultResetCreditsOpen:r,",
-    usage_windows="let y=v;if(g!=null){let e;return t[7]!==m",
-    usage_header=(
-        "(Ae=(0,$.jsx)(l,{children:(0,$.jsx)(a,{title:(0,$.jsx)(R,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(_,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})})}),t[41]=Ae)",
-        "(Ae=(0,$.jsxs)(l,{children:[(0,$.jsx)(a,{title:(0,$.jsx)(R,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(_,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})}),window.__codexMuxResetAccountSelector??null]}),t[41]=Ae)",
-    ),
-    profile_avatar=(
-        "avatar:(0,$.jsxs)($.Fragment,{children:[(0,$.jsxs)(`div`,{\"aria-disabled\":wn,onPointerEnter:e=>Yt(e.pointerType!==`touch`),onPointerLeave:()=>Yt(!1),onPointerCancel:()=>Yt(!1),className:oe(`group relative flex rounded-full outline-none`,",
-        "avatar:(0,$.jsxs)($.Fragment,{children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>Dt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":wn,onPointerEnter:e=>Yt(e.pointerType!==`touch`),onPointerLeave:()=>Yt(!1),onPointerCancel:()=>Yt(!1),className:oe(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
-    ),
-    profile_name=(
-        "yr=qn??(0,$.jsx)(K,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
-        "yr=globalThis.__codexMuxSelectedProfileAccountId?(qn??(0,$.jsx)(K,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})):null",
-    ),
-    profile_identity=(
-        "Wn=Vn?Un:null,Gn=i?ce?.display_name?.trim()||null:Ot?.displayName??null,",
-        "Wn=globalThis.__codexMuxSelectedProfileAccountId&&Vn?Un:null,Gn=i?ce?.display_name?.trim()||null:Ot?.displayName??null,",
-    ),
-    plugin_scope=(
-        "(C=(0,ao.jsx)(Fn,{title:h,subtitle:g,action:S,children:m})",
-        "(C=(0,ao.jsx)(Fn,{title:h,subtitle:g,action:S,children:[globalThis.CodexMuxPluginScope?.()??null,m]})",
-    ),
-    thread_identifiers={
-        "K": "Z",
-    },
-    thread_anchor="function vE(e){let t=(0,yE.c)(4),{onOpenPullRequestSidePanel:n,onForceShow:r,registerEnvironmentActionCommands:i}=e,a=xa(N),",
-    thread_sections=(
-        "(O=(0,xE.jsxs)(xE.Fragment,{children:[y,b,x,S,C,w,T,E,D]})",
-        "(O=(0,xE.jsxs)(xE.Fragment,{children:[y,b,x,S,C,w,(0,xE.jsx)(CodexMuxThreadSubscription,{}),T,E,D]})",
-    ),
-    composer_actions=(
-        "(0,UW.jsxs)(jE.FooterActions,{ref:dt,spacing:rn,children:[an,tn,on]})",
-        "(0,UW.jsxs)(jE.FooterActions,{spacing:`none`,children:[tn,(0,UW.jsx)(`div`,{className:`ms-2 flex items-center`,children:Mt})]})",
-    ),
-    fork_titles=(
-        "function pvr(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
-        "function pvr(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
-    ),
-    fork_identifiers={
-        "CODEX_MUX_SERVICES": "i6",
-        "codexMuxConversationTurns": "UJn",
-        "codexMuxTurnWithId": "h$",
-        "codexMuxRememberDescription": "nKr",
-    },
-    identifier_probes=(
-        "function bGa(e,t){return xGa(e,t).src}",
-        "function CVt(e,t,n,r){e.set(fz,e=>{let i=e.modals.find(e=>dz(e.ModalComponent,t)),",
-        "function sRi(e){let t=(0,lRi.c)(7),n;t[0]===e.onClose?n=t[1]:(n=(0,MG.jsx)(cRi,{onClose:e.onClose}),t[0]=e.onClose,t[1]=n);let r;t[2]===e?r=t[3]:(r=(0,MG.jsx)(dRi,{...e}),t[2]=e,t[3]=r);let i;return t[4]!==n||t[5]!==r?(i=(0,MG.jsx)(uRi.Suspense,{fallback:n,children:r}),t[4]=n,t[5]=r,t[6]=i):i=t[6],i}function cRi(e){let t=(0,lRi.c)(8),{onClose:n,failed:r}=e,i=r!==void 0&&r,a;t[0]===n?a=t[1]:(a=e=>{e||n()},t[0]=n,t[1]=a);let o;t[2]===i?o=t[3]:(o=i?(0,MG.jsx)(q,{id:`codex.rateLimitResetModal.loadError.title`,",
-        "c=pp(W),l=uNi(),u=vs(),d=rf(),f=oW(),p=gm(),",
-        "r=pp(Vr),[i,a]=(0,pKr.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
-        "t=Xl(),n=bf(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Msr,",
-        "i6=await r6.services,i6.threadReadState!=null",
-        "function UJn(e){return e==null?null:m$(e)}function h$(e,t){return UJn(e)?.find(e=>e.turnId===t)??null}",
-        "function nKr(e,t,n){let r={...BR(rKr,{}),[t]:n};",
-        "let Dt=pr(Et),Ot=i?gt:Dt.data,",
-        "(r=(0,xE.jsx)(Z.Section,{sectionKey:`usage`,",
-        "oAr=X(),sAr=Eo(Xkr)})))()}var lAr,uAr,dAr,fAr,",
-        "Yut=Nu(),Xut=(0,Yut.createContext)(Mit)})))()}var Qut,$ut,edt,tdt,ndt,rdt,idt,adt,odt,sdt,cdt,ldt,udt,db,ddt,fdt,pdt,mdt,hdt,gdt,_dt,vdt,ydt,bdt,xdt,Sdt,Cdt,wdt;",
-        "e5n=is(),sI(),k6n(),t5n=(0,uI.createContext)(null)",
-        "Ajt=zc(W,()=>Zm().homeModePreferences??t$e({",
-        "let e=zc(Vr,[]),t=Ua(Vr,e=>null);return{entries$:ds(Vr,({",
-        "t$.jsx)(Cke,{onSelect:()=>u?.(e),",
-        "(s=(0,WQ.jsx)(wu.Item,{leftIconAsset:Qye,onClick:r,children:o})",
-    ),
-    usage_status=(
-        "async function BJr({additionalHeaders:e,signal:t}){try{return SJr(await dq.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":XK.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
-        "async function BJr({additionalHeaders:e,signal:t}){try{return SJr(await codexMuxFilterUsageStatus(await dq.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":XK.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
-    ),
-)
-
-
-RENDERER_BUILD_13100 = RendererBuild(
+RENDERER_BUILD_13232 = RendererBuild(
     marker="(O=(0,$.jsx)(Pi,{accountIcon:o,accountSwitcher:Hn,additionalItems:g,displayName:_,hasWorkspaceAccount:c,identityItems:v,isPetVisible:f,onCloseMenu:s,onCopyUserId:b,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:On,onOpenWorkspaceSettings:E,personalPlanLabel:d,onTogglePet:D,petShortcut:at,settingsShortcut:rt,usageItems:qn})",
     data_anchor="function nI(e,t){let n=e.get(rI);if(n==null)throw Error(`AppServerManager RPC is not connected`);return n.forHost(t)}",
     menu_identifiers={
@@ -1021,7 +909,6 @@ RENDERER_BUILD_13100 = RendererBuild(
         "RD": "is()",
     },
     menu_anchor="function bGa(e,t){return xGa(e,t).src}",
-    usage_slot="(O=(0,$.jsx)(Pi,{accountIcon:o,accountSwitcher:Hn,additionalItems:g,displayName:_,hasWorkspaceAccount:c,identityItems:v,isPetVisible:f,onCloseMenu:s,onCopyUserId:b,onLogOut:S,onOpenChatGptAnalytics:C,onOpenPersonalization:w,onOpenProfile:T,onOpenSettings:On,onOpenWorkspaceSettings:E,personalPlanLabel:d,onTogglePet:D,petShortcut:at,settingsShortcut:rt,usageItems:qn})",
     settings_slot=(
         "(a=(0,$.jsxs)(vr,{title:r,children:[n,i]})",
         "(a=(0,$.jsxs)(vr,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:H,Stack:qe,Row:N,Button:me,Switch:Yt}),i]})",
@@ -1114,10 +1001,119 @@ RENDERER_BUILD_13100 = RendererBuild(
 )
 
 
-# Build 13232 retains every renderer anchor and identifier from build 13100.
-RENDERER_BUILD_13232 = RENDERER_BUILD_13100
+# Build 13520 retains every renderer anchor and identifier from build 13232.
+RENDERER_BUILD_13520 = RENDERER_BUILD_13232
 
-RENDERER_BUILDS = (RENDERER_BUILD_13022, RENDERER_BUILD_13232)
+RENDERER_BUILD_13536 = RendererBuild(
+    marker="(A=(0,$.jsx)(Vi,{accountIcon:o,accountSwitcher:En,additionalItems:h,displayName:_,hasWorkspaceAccount:c,identityItems:y,isOverlayOpen:g,onCloseMenu:s,onCopyUserId:b,onLogOut:x,onOpenChatGptAnalytics:S,onOpenPersonalization:w,onOpenProfile:E,onOpenSettings:pn,onOpenWorkspaceSettings:D,personalPlanLabel:d,onTogglePet:O,petShortcut:ot,settingsShortcut:it,usageItems:k})",
+    data_anchor="function jI(e,t){try{var n=AI();let r=e.get(DI,t),i=e.get(MI);",
+    menu_identifiers={
+        "e7": "Z()",
+        "kXc": "rf()",
+        "Lo": "vf",
+        "Q": "X",
+        "BW": "Aa",
+        "QLs": "nHi",
+        "_H": "fhe",
+        "CH": "jl",
+        "jLa": "H8a",
+        "lt": "Zm",
+        "Rv": "Hl",
+        "RD": "Td()",
+    },
+    menu_anchor="function H8a(e,t){return U8a(e,t).src}",
+    settings_slot=(
+        "(o=(0,$.jsxs)(Vn,{title:r,children:[n,a]})",
+        "(o=(0,$.jsxs)(Vn,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:H,Stack:Ot,Row:V,Button:Dn,Switch:wn}),a]})",
+    ),
+    settings_probes=(
+        "(o=(0,$.jsx)(V,{label:n,description:r,control:(0,$.jsx)(Dn,{color:`secondary`,size:`toolbar`,onClick:i,children:a})})",
+        "(c=(0,$.jsx)(V,{label:i,description:a,control:(0,$.jsx)(wn,{checked:r,onChange:o,ariaLabel:s})})",
+        "(0,$.jsxs)(H,{id:`notifications`,children:[A,(0,$.jsx)(H.Content,{children:(0,$.jsx)(Ot,{children:(0,$.jsx)(Hi,{})})})]})",
+    ),
+    plugin_request_checks=(
+        "listMcpServers(e,t){return Lin(this,this.mcpServerStatusPromises,e,t,",
+        "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
+    ),
+    reset_query=(
+        "function Ldr(){let e=(0,_L.c)(1);ks(),J(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:zdr,select:Rdr,refetchInterval:wn.ONE_MINUTE,staleTime:wn.FIVE_SECONDS},e[0]=t):t=e[0],ch(t)}",
+        "function Ldr(){ks(),J(null);let e=window.__codexMuxResetAccountId;return ch({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):zdr,select:Rdr,refetchInterval:wn.ONE_MINUTE,staleTime:wn.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function Bdr(){let e=(0,_L.c)(3),t=Zm(),n=Mc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Vdr,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>fdr(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],na(r)}",
+        "function Bdr(){let e=Zm(),t=Mc(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return na({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):Vdr,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>fdr(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    usage_modal="function Et(e){let t=(0,Dt.c)(19),{defaultResetCreditsOpen:n,",
+    usage_windows="let y=v;if(g!=null){let e;return t[7]!==m",
+    usage_header=(
+        "(Me=(0,$.jsx)(_,{children:(0,$.jsx)(g,{title:(0,$.jsx)(S,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(d,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})})}),n[41]=Me)",
+        "(Me=(0,$.jsxs)(_,{children:[(0,$.jsx)(g,{title:(0,$.jsx)(S,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(d,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})}),window.__codexMuxResetAccountSelector??null]}),n[41]=Me)",
+    ),
+    profile_avatar=(
+        "avatar:(0,$.jsxs)($.Fragment,{children:[(0,$.jsxs)(`div`,{\"aria-disabled\":On,onPointerEnter:e=>Zt(e.pointerType!==`touch`),onPointerLeave:()=>Zt(!1),onPointerCancel:()=>Zt(!1),className:We(`group relative flex rounded-full outline-none`,",
+        "avatar:(0,$.jsxs)($.Fragment,{children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>kt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":On,onPointerEnter:e=>Zt(e.pointerType!==`touch`),onPointerLeave:()=>Zt(!1),onPointerCancel:()=>Zt(!1),className:We(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
+    ),
+    profile_name=(
+        "Dr=ir??(0,$.jsx)(P,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
+        "Dr=globalThis.__codexMuxSelectedProfileAccountId?(ir??(0,$.jsx)(P,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})):null",
+    ),
+    profile_identity=(
+        "Qn=Jn?Zn:null,tr=r?re?.display_name?.trim()||null:At?.displayName??null,",
+        "Qn=globalThis.__codexMuxSelectedProfileAccountId&&Jn?Zn:null,tr=r?re?.display_name?.trim()||null:At?.displayName??null,",
+    ),
+    plugin_scope=(
+        "(E=(0,yo.jsx)(tn,{title:_,subtitle:v,action:T,children:g})",
+        "(E=(0,yo.jsx)(tn,{title:_,subtitle:v,action:T,children:[globalThis.CodexMuxPluginScope?.()??null,g]})",
+    ),
+    thread_identifiers={
+        "K": "Z",
+    },
+    thread_anchor="function lE(e){let t=(0,uE.c)(4),{onOpenPullRequestSidePanel:n,onForceShow:r,registerEnvironmentActionCommands:i}=e,a=$i(Sr),",
+    thread_sections=(
+        "(D=(0,fE.jsxs)(fE.Fragment,{children:[y,b,x,S,C,w,T,E]})",
+        "(D=(0,fE.jsxs)(fE.Fragment,{children:[y,b,x,S,C,w,(0,fE.jsx)(CodexMuxThreadSubscription,{}),T,E]})",
+    ),
+    composer_actions=(
+        "(0,DW.jsxs)(WS.FooterActions,{ref:ft,spacing:an,children:[on,nn,sn]})",
+        "(0,DW.jsxs)(WS.FooterActions,{spacing:`none`,children:[nn,(0,DW.jsx)(`div`,{className:`ms-2 flex items-center`,children:Nt})]})",
+    ),
+    fork_titles=(
+        "function uSr(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
+        "function uSr(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
+    ),
+    fork_identifiers={
+        "CODEX_MUX_SERVICES": "$3",
+        "codexMuxConversationTurns": "SZn",
+        "codexMuxTurnWithId": "QQ",
+        "codexMuxRememberDescription": "bXr",
+    },
+    identifier_probes=(
+        "function H8a(e,t){return U8a(e,t).src}",
+        "Aa(c,nHi,{initialAvailableCount:a.rate_limit_reset_credits?.available_count??0,isRateLimitReached:!0,",
+        "function nHi(e){let t=(0,iHi.c)(7),n;t[0]===e.onClose?n=t[1]:(n=(0,DG.jsx)(rHi,{onClose:e.onClose}),t[0]=e.onClose,t[1]=n);let r;t[2]===e?r=t[3]:(r=(0,DG.jsx)(oHi,{...e}),t[2]=e,t[3]=r);let i;return t[4]!==n||t[5]!==r?(i=(0,DG.jsx)(aHi.Suspense,{fallback:n,children:r}),t[4]=n,t[5]=r,t[6]=i):i=t[6],i}function rHi(e){let t=(0,iHi.c)(8),{onClose:n,failed:r}=e,i=r!==void 0&&r,a;t[0]===n?a=t[1]:(a=e=>{e||n()},t[0]=n,t[1]=a);let o;t[2]===i?o=t[3]:(o=i?(0,DG.jsx)(G,{id:`codex.rateLimitResetModal.loadError.title`,",
+        "function eln(){let e=(0,sln.c)(2),t=vf(X),n;return e[0]===t?n=e[1]:(n=$cn(t),e[0]=t,e[1]=n),n}function tln(e){let t=eln();return(0,cln.useSyncExternalStoreWithSelector)(t.subscribe,t.getState,t.getInitialState,e)}",
+        "r=vf(Hl),[i,a]=(0,I$r.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
+        "t=Zm(),n=Mc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:Vdr,",
+        "$3=await Q3.services,Q3.onRpcBroken(Doi($3.histogramCollector)),$3.threadReadState!=null",
+        "function SZn(e){return e==null?null:ZQ(e)}function QQ(e,t){return SZn(e)?.find(e=>e.turnId===t)??null}",
+        "function bXr(e,t,n){let r={...JF(xXr,{}),[t]:n};",
+        "let kt=gi(Ot),At=r?xt:kt.data,",
+        "(i=(0,Ub.jsx)(Z.Section,{sectionKey:`triggers`,",
+        "kLr=Z(),ALr=hd(yLr)})))()}var MLr,NLr,PLr,FLr,ILr;",
+        "nft=rf(),rft=(0,nft.createContext)(Rat)})))()}var aft,oft,sft,cft,lft,uft,dft,fft,pft,mft,hft,gft,_ft,tb,vft,yft,bft,xft,Sft,Cft,wft,Tft,nb,Eft,Dft,Oft,kft,Aft;",
+        "Ner=Td(),UF(),c9n(),Per=(0,KF.createContext)(null)",
+        "kMt=Bi(X,()=>Cs().homeModePreferences??Khe({",
+        "let e=Bi(Hl,[]),t=Vs(Hl,e=>null);return{entries$:$g(Hl,({",
+        "ECo.jsx)(fhe,{onSelect:()=>window.location.reload(),",
+        "(s=(0,B$.jsx)(jl.Item,{leftIconAsset:Kee,onClick:r,children:o})",
+    ),
+    usage_status=(
+        "async function S$r({additionalHeaders:e,signal:t}){try{return n$r(await hW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":MQr.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
+        "async function S$r({additionalHeaders:e,signal:t}){try{return n$r(await codexMuxFilterUsageStatus(await hW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":MQr.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
+    ),
+)
+
+RENDERER_BUILDS = (RENDERER_BUILD_13232, RENDERER_BUILD_13536)
 
 PROFILE_QUERY_PATTERN = re.compile(
     r"let e=await [A-Za-z_$][\w$]*\.safeGet\(`/wham/profiles/me`\)"
@@ -1257,8 +1253,8 @@ def patch_renderer(extracted: Path, token: str) -> None:
         "the native ChatGPT profile menu component",
     )
     renderer.replace(
-        build.usage_slot,
-        re.sub(r"usageItems:[\w$]+", "usageItems:(0,$.jsx)(globalThis.CodexMuxAccountMenu,{})", build.usage_slot),
+        build.marker,
+        re.sub(r"usageItems:[\w$]+", "usageItems:(0,$.jsx)(globalThis.CodexMuxAccountMenu,{})", build.marker),
         "the native ChatGPT usage menu slot",
     )
     renderer.replace(

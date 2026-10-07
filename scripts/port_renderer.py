@@ -264,7 +264,7 @@ def main() -> int:
         (port.locate(check, "plugin_request_checks") or (None, check))[1]
         for check in reference.plugin_request_checks
     )
-    for field in ("usage_slot", "usage_modal", "usage_windows"):
+    for field in ("usage_modal", "usage_windows"):
         located = port.locate(getattr(reference, field), field)
         profile[field] = located[1] if located else getattr(reference, field)
     thread = port.locate(reference.thread_anchor, "thread_anchor")

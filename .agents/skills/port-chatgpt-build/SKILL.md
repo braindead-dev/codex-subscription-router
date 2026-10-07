@@ -5,10 +5,9 @@ description: Port the router patch to a new official ChatGPT (Codex) macOS build
 
 # Port a new ChatGPT build
 
-The patch anchors on minified code that every official release renames and
-sometimes reshapes. A port finds the same code in the new build, records it as
-one profile, proves it, and ships it. Done means: the newest build is in
-`SUPPORTED_BUILDS`, every check below passes, and the port is pushed to `main`.
+A port locates the renamed or reshaped minified anchors, records a profile,
+and proves it. Done means the newest build is in `SUPPORTED_BUILDS`, every
+check below passes, and the port is pushed to `main`.
 
 ## Rules
 
@@ -44,7 +43,7 @@ It matches every anchor of the newest profile by shape and prints a ready
 `RENDERER_BUILD_<build>` plus a list of what it could not resolve. Register the
 profile in `RENDERER_BUILDS` and the build in `SUPPORTED_BUILDS` (hash from
 step 3). If the generated profile equals an existing one in every field,
-alias it and register the shared profile once. Fix only what it listed:
+alias it and register the shared profile once. Resolve the listed gaps:
 
 - Find the moved code by a string literal or property name from the old
   anchor, and copy the new anchor verbatim from the bundle. Never retype it.
@@ -54,7 +53,9 @@ alias it and register the shared profile once. Fix only what it listed:
   component itself initializes. Otherwise draw it (see the usage icon) or read
   it through a live import.
 - Give every borrowed identifier a probe in `identifier_probes`, taken from a
-  usage site that is unique by shape, never from an import clause.
+  usage site that is unique by shape, never from an import clause. Check its
+  binding in the injection bundle: a capture in another chunk may name a
+  different local alias even when the generator reports no gap.
 - Our UI lives in the eager `app-initial` bundle next to `menu_anchor`; lazy
   chunks only call it through `globalThis`. Patches land in whichever bundle
   holds their anchor, so moved code needs a new anchor, not a new mechanism.
@@ -115,5 +116,4 @@ supported, and scratch extractions. The patcher keeps a single install backup
 and the updater prunes release sources and older official builds. Leave the
 diff smaller than you found it.
 
-## Keeping this skill current
-Fix incorrect steps in the same commit; replace text and keep this under 120 lines.
+Fix incorrect skill steps in the same commit; keep this under 120 lines.
