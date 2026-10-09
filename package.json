@@ -1,7 +1,7 @@
 {
   "name": "codex-subscription-router-patcher",
   "private": true,
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Build tooling for the independent Codex Subscription Router macOS app patch",
   "license": "MIT",
   "repository": {
