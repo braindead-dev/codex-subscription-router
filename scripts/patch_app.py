@@ -72,14 +72,14 @@ class SourceBuild:
 # The newest three official builds, keyed by (version, build). Adding a build
 # removes the oldest one here and its RENDERER_BUILD profile.
 SUPPORTED_BUILDS = {
-    ("26.1007.21159", "20052"): SourceBuild(
-        "97b8e5fddfced82d782c5f3f3e7c5aba7940b8cb1068dd214ffa3d71687d9fdb"
-    ),
     ("26.1007.30912", "20156"): SourceBuild(
         "75e397e2280dde93b70a85aa926f4282c728eacc84dfeb15ba7fb6ddd84628af"
     ),
     ("26.1007.41230", "20324"): SourceBuild(
         "42da0dd3694b3eb3c79ebd243b14fa5cc6dfcd4d5c71d92d2aae1f993cb5ea43"
+    ),
+    ("26.1007.71326", "20398"): SourceBuild(
+        "2f231a64e6dd30111bcd09e03c149cd06c8679b25914842772423251c4608ded"
     ),
 }
 # Counts assumed for a build passed with --allow-untested-source.
@@ -892,9 +892,9 @@ class RendererBuild:
     )
 
 
-RENDERER_BUILD_20052 = RendererBuild(
+RENDERER_BUILD_20156 = RendererBuild(
     marker="(A=(0,$.jsx)(Wi,{accountIcon:o,accountSwitcher:Pn,additionalItems:_,displayName:v,hasWorkspaceAccount:s,identityItems:y,isOverlayOpen:m,onCloseMenu:c,onCopyUserId:b,onLogOut:C,onOpenChatGptAnalytics:w,onOpenPersonalization:T,onOpenProfile:E,onOpenSettings:_n,onOpenWorkspaceSettings:D,personalPlanLabel:d,onTogglePet:O,petShortcut:et,settingsShortcut:$e,usageItems:k})",
-    data_anchor="function QL(e,t){try{var n=ZL();let r=e.get(JL,t),i=e.get($L);",
+    data_anchor="function KI(e,t){try{var n=GI();let r=e.get(HI,t),i=e.get(qI);",
     menu_identifiers={
         "e7": "W()",
         "kXc": "us()",
@@ -920,7 +920,7 @@ RENDERER_BUILD_20052 = RendererBuild(
         "(0,$.jsxs)(H,{id:`notifications`,children:[A,(0,$.jsx)(H.Content,{children:(0,$.jsx)(Bt,{children:(0,$.jsx)(Wi,{})})})]})",
     ),
     plugin_request_checks=(
-        "listMcpServers(e,t){return urn(this,this.mcpServerStatusPromises,e,t,",
+        "listMcpServers(e,t){return Oan(this,this.mcpServerStatusPromises,e,t,",
         "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
     ),
     reset_query=(
@@ -965,14 +965,14 @@ RENDERER_BUILD_20052 = RendererBuild(
         "(0,k9.jsxs)($S.FooterActions,{ref:x,spacing:`none`,children:[h,g==null?null:(0,k9.jsx)(`div`,{className:`ms-2 flex items-center`,children:g})]})",
     ),
     fork_titles=(
-        "function Vwr(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
-        "function Vwr(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
+        "function Bwr(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
+        "function Bwr(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
     ),
     fork_identifiers={
         "CODEX_MUX_SERVICES": "e6",
-        "codexMuxConversationTurns": "XQn",
-        "codexMuxTurnWithId": "KQ",
-        "codexMuxRememberDescription": "s1r",
+        "codexMuxConversationTurns": "YQn",
+        "codexMuxTurnWithId": "qQ",
+        "codexMuxRememberDescription": "o1r",
     },
     identifier_probes=(
         "function Hco(e,t){return Uco(e,t).src}",
@@ -982,8 +982,8 @@ RENDERER_BUILD_20052 = RendererBuild(
         "r=Di(ws),[i,a]=(0,Q1n.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
         "t=ju(),n=qc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:ZRr,",
         "e6=await $3.services,$3.onRpcBroken(Gli(e6.histogramCollector)),e6.threadReadState!=null",
-        "function XQn(e){return e==null?null:GQ(e)}function KQ(e,t){return XQn(e)?.find(e=>e.turnId===t)??null}",
-        "function s1r(e,t,n){let r={...hL(c1r,{}),[t]:n};",
+        "function YQn(e){return e==null?null:KQ(e)}function qQ(e,t){return YQn(e)?.find(e=>e.turnId===t)??null}",
+        "function o1r(e,t,n){let r={..._I(s1r,{}),[t]:n};",
         "let Rt=Ur(Lt),zt=a?kt:Rt.data,Bt=zt?.activityInsights,",
         "(i=(0,Kb.jsx)(Q.Section,{sectionKey:`triggers`,",
         "SLn=W(),CLn=um(fLn)})))()}var TLn,ELn,DLn,OLn,kLn;",
@@ -995,45 +995,63 @@ RENDERER_BUILD_20052 = RendererBuild(
         "(s=(0,pNo.jsx)(Pm.Item,{leftIconAsset:T$e,onClick:r,children:o})",
     ),
     usage_status=(
-        "async function L2r({additionalHeaders:e,signal:t}){try{return g2r(await xq.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":K0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
-        "async function L2r({additionalHeaders:e,signal:t}){try{return g2r(await codexMuxFilterUsageStatus(await xq.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":K0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
-    ),
-)
-
-# The UI chunks are unchanged; only the shared renderer bundle was rebuilt.
-RENDERER_BUILD_20156 = replace(
-    RENDERER_BUILD_20052,
-    data_anchor="function KI(e,t){try{var n=GI();let r=e.get(HI,t),i=e.get(qI);",
-    plugin_request_checks=(
-        "listMcpServers(e,t){return Oan(this,this.mcpServerStatusPromises,e,t,",
-        "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
-    ),
-    fork_titles=(
-        "function Bwr(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
-        "function Bwr(e,t){codexMuxForkTitles(e,t);t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
-    ),
-    fork_identifiers={
-        "CODEX_MUX_SERVICES": "e6",
-        "codexMuxConversationTurns": "YQn",
-        "codexMuxTurnWithId": "qQ",
-        "codexMuxRememberDescription": "o1r",
-    },
-    identifier_probes=(
-        *RENDERER_BUILD_20052.identifier_probes[:7],
-        "function YQn(e){return e==null?null:KQ(e)}function qQ(e,t){return YQn(e)?.find(e=>e.turnId===t)??null}",
-        "function o1r(e,t,n){let r={..._I(s1r,{}),[t]:n};",
-        *RENDERER_BUILD_20052.identifier_probes[9:],
-    ),
-    usage_status=(
         "async function I2r({additionalHeaders:e,signal:t}){try{return h2r(await FW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":G0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
         "async function I2r({additionalHeaders:e,signal:t}){try{return h2r(await codexMuxFilterUsageStatus(await FW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":G0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
     ),
+
 )
 
 # Build 20324 uses the same renderer anchors and identifiers as 20156.
 RENDERER_BUILD_20324 = RENDERER_BUILD_20156
 
-RENDERER_BUILDS = (RENDERER_BUILD_20052, RENDERER_BUILD_20324)
+# Build 20398 renames helpers in the eager renderer bundle.
+RENDERER_BUILD_20398 = replace(
+    RENDERER_BUILD_20156,
+    menu_identifiers={
+        "e7": "W()",
+        "kXc": "us()",
+        "Lo": "Oi",
+        "Q": "q",
+        "BW": "vf",
+        "QLs": "v0i",
+        "_H": "qCe",
+        "CH": "Mm",
+        "jLa": "Lco",
+        "lt": "ku",
+        "Rv": "ws",
+        "RD": "Qo()",
+    },
+    menu_anchor="function Lco(e,t){return Rco(e,t).src}",
+    reset_query=(
+        "function HRr(){let e=(0,BB.c)(1);mp(),G(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:WRr,select:URr,refetchInterval:qg.ONE_MINUTE,staleTime:qg.FIVE_SECONDS},e[0]=t):t=e[0],xp(t)}",
+        "function HRr(){mp(),G(null);let e=window.__codexMuxResetAccountId;return xp({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):WRr,select:URr,refetchInterval:qg.ONE_MINUTE,staleTime:qg.FIVE_SECONDS})}",
+    ),
+    reset_mutation=(
+        "function GRr(){let e=(0,BB.c)(3),t=ku(),n=Gc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:KRr,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>gRr(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],xh(r)}",
+        "function GRr(){let e=ku(),t=Gc(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return xh({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):KRr,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>gRr(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+    ),
+    composer_actions=(
+        "(0,O9.jsxs)(BS.FooterActions,{ref:x,spacing:`none`,children:[h,g==null?null:(0,O9.jsx)(`div`,{className:`ms-2 flex items-center`,children:g})]})",
+    ),
+    identifier_probes=(
+        "function Lco(e,t){return Rco(e,t).src}",
+        "vf(c,v0i,{initialAvailableCount:a.rate_limit_reset_credits?.available_count??0,isRateLimitReached:!0,",
+        "function v0i(e){let t=(0,b0i.c)(7),n;t[0]===e.onClose?n=t[1]:(n=(0,RK.jsx)(y0i,{onClose:e.onClose}),t[0]=e.onClose,t[1]=n);let r;t[2]===e?r=t[3]:(r=(0,RK.jsx)(S0i,{...e}),t[2]=e,t[3]=r);let i;return t[4]!==n||t[5]!==r?(i=(0,RK.jsx)(x0i.Suspense,{fallback:n,children:r}),t[4]=n,t[5]=r,t[6]=i):i=t[6],i}function y0i(e){let t=(0,b0i.c)(8),{onClose:n,failed:r}=e,i=r!==void 0&&r,a;t[0]===n?a=t[1]:(a=e=>{e||n()},t[0]=n,t[1]=a);let o;t[2]===i?o=t[3]:(o=i?(0,RK.jsx)($,{id:`codex.rateLimitResetModal.loadError.title`,",
+        "function pIt(e){let t=(0,gIt.c)(21),{ref:n,active:r,compact:i,disabled:a,highlightTooltip:o,onOpen:s}=e,c=r!==void 0&&r,l=i!==void 0&&i,u=a!==void 0&&a,d=o!==void 0&&o,f=Oi(q),p=zd();",
+        "r=Oi(ws),[i,a]=(0,p0n.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
+        "t=ku(),n=Gc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:KRr,",
+        *RENDERER_BUILD_20156.identifier_probes[6:11],
+        "_Ln=W(),vLn=cm(sLn)})))()}var bLn,xLn,SLn,CLn,wLn;",
+        "Fpt=us(),Ipt=(0,Fpt.createContext)(Fot)})))()}var Rpt,zpt,Bpt,Vpt,Hpt,Upt,Wpt,Gpt,Kpt,qpt,Jpt,Ypt,Xpt,_b,Zpt,Qpt,$pt,emt,tmt,nmt,rmt,imt,vb,amt,omt,smt,cmt,lmt;",
+        "F4n=Qo(),zN(),u2n(),I4n=(0,HN.createContext)(null)",
+        "sPt=ld(q,()=>Hl().homeModePreferences??ZTe({\"oai-chat-surface-mode-chat-override-expires-at\":",
+        "let e=ld(ws,[]),t=Of(ws,e=>null);return{entries$:Cu(ws,({",
+        "YNo.jsx)(qCe,{onSelect:()=>window.location.reload(),",
+        "(s=(0,mNo.jsx)(Mm.Item,{leftIconAsset:O$e,onClick:r,children:o})",
+    ),
+)
+
+RENDERER_BUILDS = (RENDERER_BUILD_20324, RENDERER_BUILD_20398)
 
 PROFILE_QUERY_PATTERN = re.compile(
     r"let e=await [A-Za-z_$][\w$]*\.safeGet\(`/wham/profiles/me`\)"
@@ -1132,7 +1150,8 @@ def patch_renderer(extracted: Path, token: str) -> None:
         raise RuntimeError("source app already contains the Codex multiplexer")
     matches = [
         candidate for candidate in RENDERER_BUILDS
-        if renderer.contains(candidate.marker) and renderer.contains(candidate.data_anchor)
+        if all(renderer.contains(anchor) for anchor in
+               (candidate.marker, candidate.menu_anchor, candidate.data_anchor))
     ]
     if len(matches) != 1:
         raise RuntimeError("the ChatGPT renderer layout is unsupported or ambiguous")

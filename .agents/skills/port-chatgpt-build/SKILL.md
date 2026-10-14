@@ -47,8 +47,8 @@ alias it and register the shared profile once. Resolve the listed gaps:
 
 - Find the moved code by a string literal or property name from the old
   anchor, and copy the new anchor verbatim from the bundle. Never retype it.
-- Make anchors unique by shape; the menu marker and RPC anchor together must
-  identify exactly one profile, since adjacent builds can share either.
+- Make anchors unique by shape; the menu marker, menu helper, and RPC anchor
+  together must identify one profile; adjacent builds can share any two.
 - Borrow only imports, hoisted functions, or variables of a module the patched
   component itself initializes. Otherwise draw it (see the usage icon) or read
   it through a live import.
