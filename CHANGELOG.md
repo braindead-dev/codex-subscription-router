@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-14
+
+### Added
+
+- Codex chats and Claude Code sessions on this Mac can list, read, and message
+  each other. The new `sessions` MCP server (`codex sessions-mcp`) and skill are
+  registered with Codex and Claude Code at install. Every Codex chat gets an
+  inbox address in Claude Code's own form, so Claude's `SendMessage` reaches
+  Codex chats, and a message starts a turn in the receiving chat or joins the
+  turn it is running.
+
 ## [0.17.0] - 2026-10-13
 
 ### Added
@@ -377,7 +388,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.18.0
 [0.17.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.17.0
 [0.16.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.16.0
 [0.15.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.15.0

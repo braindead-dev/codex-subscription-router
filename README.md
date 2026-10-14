@@ -34,6 +34,9 @@ which is archived.
   Apps and MCP connections, and Profile statistics.
 - **Remote control per subscription** — pair a phone or another computer to
   any account, not only Primary.
+- **Agents that talk to each other** — Codex chats and Claude Code sessions on
+  this Mac list, read, and message one another through the `sessions` MCP
+  server; a message starts a turn in the chat that receives it.
 - **Independent app** — its own bundle ID, desktop profile, and signed
   Computer Use helper, so it coexists with the official app and holds its own
   macOS privacy grants.
@@ -142,6 +145,14 @@ connections to an account.
 
 The thread's subscription appears in its pinned summary.
 
+**Talk to other sessions** — installing registers the `sessions` MCP server
+and skill with Codex and, when it is installed, Claude Code. Ask an agent to
+message another chat or session: `list_sessions` finds it, `read_session`
+shows its latest messages, and `send_message` delivers a message as a new
+turn there, or into the turn it is running. Every Codex chat has an inbox
+address in the same form Claude Code uses for its sessions, so Claude's own
+`SendMessage` reaches Codex chats and replies come back to whoever sent.
+
 ## Updates
 
 The router updates from this repository's published releases, never from
@@ -175,6 +186,7 @@ outside the bundle and are untouched.
 | `~/.codex-mux/accounts/<id>/codex-home` | Isolated secondary accounts |
 | `~/.codex-mux/state.json` | Accounts and thread ownership |
 | `~/.codex-mux/control-token` | Token for the loopback-only control API |
+| `~/.codex-mux/inbox` | Inbox sockets of Codex chats other sessions message |
 | `~/.codex-mux/backups` | Previous builds and recovery copies |
 | `~/.codex-mux/update` | Updater settings, state, staged build, and release sources |
 | `~/Library/Application Support/Codex Subscription Router` | Desktop profile |

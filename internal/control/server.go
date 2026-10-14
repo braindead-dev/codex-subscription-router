@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,6 +42,8 @@ func New(address, token, root, modelManagerURL string, multiplexer *mux.Multiple
 	router.HandleFunc("/v1/events", server.events)
 	router.HandleFunc("/v1/update", server.update)
 	router.HandleFunc("/v1/model-manager", server.modelManager)
+	router.HandleFunc("/v1/sessions", server.sessions)
+	router.HandleFunc("/v1/sessions/messages", server.sessionMessages)
 	if uiTests {
 		router.HandleFunc("/v1/test/rate-limits", server.rateLimitPreview)
 		router.HandleFunc("/v1/test/rate-limit-resets", server.resetCreditsPreview)
@@ -183,6 +186,74 @@ func (s *Server) modelManager(response http.ResponseWriter, request *http.Reques
 		return
 	}
 	writeJSON(response, http.StatusOK, map[string]any{"url": s.modelManagerURL})
+}
+
+// sessions lists the Codex chats and Claude Code sessions an agent can
+// message.
+func (s *Server) sessions(response http.ResponseWriter, request *http.Request) {
+	if !s.authorized(request) {
+		writeJSON(response, http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		return
+	}
+	if request.Method != http.MethodGet {
+		methodNotAllowed(response)
+		return
+	}
+	ctx, cancel := context.WithTimeout(request.Context(), 30*time.Second)
+	defer cancel()
+	query := request.URL.Query()
+	writeJSON(response, http.StatusOK, map[string]any{"sessions": s.mux.Sessions(ctx, query.Get("query"), limitParam(query.Get("limit"), 20))})
+}
+
+// sessionMessages reads a session's recent messages or sends it one.
+func (s *Server) sessionMessages(response http.ResponseWriter, request *http.Request) {
+	if !s.authorized(request) {
+		writeJSON(response, http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(request.Context(), 60*time.Second)
+	defer cancel()
+	switch request.Method {
+	case http.MethodGet:
+		query := request.URL.Query()
+		messages, err := s.mux.ReadSession(ctx, query.Get("session"), limitParam(query.Get("limit"), 20))
+		if err != nil {
+			writeJSON(response, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		writeJSON(response, http.StatusOK, map[string]any{"messages": messages})
+	case http.MethodPost:
+		var input struct {
+			To      string `json:"to"`
+			From    string `json:"from"`
+			Mode    string `json:"mode"`
+			Message string `json:"message"`
+		}
+		if err := decodeJSON(request, &input); err != nil {
+			writeJSON(response, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
+		if input.To == "" || strings.TrimSpace(input.Message) == "" {
+			writeJSON(response, http.StatusBadRequest, map[string]any{"error": "to and message are required"})
+			return
+		}
+		address, err := s.mux.SendMessage(ctx, input.To, input.From, input.Mode, input.Message)
+		if err != nil {
+			writeJSON(response, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		writeJSON(response, http.StatusOK, map[string]any{"address": address})
+	default:
+		methodNotAllowed(response)
+	}
+}
+
+func limitParam(value string, fallback int) int {
+	limit, err := strconv.Atoi(value)
+	if err != nil || limit <= 0 {
+		return fallback
+	}
+	return min(limit, 200)
 }
 
 func (s *Server) preferredAccount(response http.ResponseWriter, request *http.Request) {

@@ -39,6 +39,21 @@ The project itself does not provide a telemetry or update endpoint. Network
 traffic beyond loopback is performed by the official Codex children or by the
 documented ChatGPT profile and rate-limit APIs.
 
+## Messages between sessions
+
+Each Codex chat another session can reach has an inbox socket in
+`~/.codex-mux/inbox`, inside the `0700` state root, so only the same macOS user
+can connect; a message delivered there starts a turn in that chat. Messages to
+Claude Code sessions use the token each session publishes for its inbox. The
+`sessions` MCP server reaches the router through the control API with the
+control token.
+
+A message carries its sender's permission mode as Claude Code expects: a
+Codex chat attests `bypass` only when its turn runs with full access, so a
+Claude session that skips prompts still holds messages from sandboxed chats
+for its user. Agents are told that a message from another session is a
+teammate's request, never the user's approval.
+
 ## Signing and native access
 
 The source app is copied into a temporary staging directory. Native modules,

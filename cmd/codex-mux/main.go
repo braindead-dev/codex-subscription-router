@@ -40,15 +40,6 @@ func main() {
 }
 
 func run() error {
-	realExecutable, err := resolveRealExecutable()
-	if err != nil {
-		return err
-	}
-	args := os.Args[1:]
-	if !isInteractiveAppServer(args) {
-		return passthrough(realExecutable, args)
-	}
-
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("resolve home directory: %w", err)
@@ -57,6 +48,18 @@ func run() error {
 	if root == "" {
 		root = filepath.Join(home, ".codex-mux")
 	}
+	args := os.Args[1:]
+	if len(args) == 1 && args[0] == "sessions-mcp" {
+		return serveSessionTools(root)
+	}
+	realExecutable, err := resolveRealExecutable()
+	if err != nil {
+		return err
+	}
+	if !isInteractiveAppServer(args) {
+		return passthrough(realExecutable, args)
+	}
+
 	lock, err := acquireMultiplexerLock(root, startupHandoff)
 	if err != nil {
 		return err
@@ -104,14 +107,8 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	port := defaultControlPort
-	if value := os.Getenv("CODEX_MUX_CONTROL_PORT"); value != "" {
-		if parsed, parseErr := strconv.Atoi(value); parseErr == nil && parsed > 0 && parsed <= 65535 {
-			port = parsed
-		}
-	}
 	stopControl := func() {}
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", controlPort()))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "codex-mux: account UI unavailable: %v\n", err)
 	} else {
@@ -205,6 +202,13 @@ func acquireMultiplexerLock(root string, handoff time.Duration) (*os.File, error
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+}
+
+func controlPort() int {
+	if parsed, err := strconv.Atoi(os.Getenv("CODEX_MUX_CONTROL_PORT")); err == nil && parsed > 0 && parsed <= 65535 {
+		return parsed
+	}
+	return defaultControlPort
 }
 
 func resolveRealExecutable() (string, error) {

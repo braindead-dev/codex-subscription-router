@@ -1777,9 +1777,39 @@ def install_built(
             ]
         )
     retire_stale_cached_computer_use_app()
+    register_session_tools(destination)
 
     print(destination)
     print(installed_computer_use_app)
+
+
+def register_session_tools(app: Path) -> None:
+    """Give Codex and Claude Code the sessions MCP server this app's router
+    serves, and the skill that explains it. The app is already in place, so a
+    failure here is reported and skipped."""
+    router = codex_entrypoint(app / "Contents" / "Resources")
+    server = ["sessions", "--", str(router), "sessions-mcp"]
+    homes = [Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")]
+    claude = shutil.which(
+        "claude",
+        path=os.pathsep.join(
+            [os.environ.get("PATH", ""), str(Path.home() / ".local" / "bin"), "/opt/homebrew/bin", "/usr/local/bin"]
+        ),
+    )
+    try:
+        subprocess.run([str(router.with_name("codex.real")), "mcp", "add", *server], check=True, capture_output=True)
+        if claude:
+            # Claude Code refuses to add a server that exists; on a first
+            # install there is nothing to remove and the removal fails.
+            subprocess.run([claude, "mcp", "remove", "--scope", "user", "sessions"], capture_output=True)
+            subprocess.run([claude, "mcp", "add", "--scope", "user", *server], check=True, capture_output=True)
+            homes.append(Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude"))
+        for home in homes:
+            target = home / "skills" / "sessions"
+            target.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(PROJECT_ROOT / "skills" / "sessions" / "SKILL.md", target / "SKILL.md")
+    except (OSError, subprocess.CalledProcessError) as error:
+        print(f"warning: could not set up the sessions tools: {error}", file=sys.stderr)
 
 
 def main() -> int:
