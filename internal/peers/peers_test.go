@@ -23,11 +23,11 @@ func TestEnvelopeMatchesClaudeCodeFormat(t *testing.T) {
 }
 
 func TestAddressEncodesSocketPath(t *testing.T) {
-	address := Address("/Users/me/Application Support/a.sock")
-	if address != "uds:/Users/me/Application%20Support/a.sock" {
+	address := Address("/tmp/Application Support/a.sock")
+	if address != "uds:/tmp/Application%20Support/a.sock" {
 		t.Fatalf("address = %s", address)
 	}
-	if socket, ok := Socket(address); !ok || socket != "/Users/me/Application Support/a.sock" {
+	if socket, ok := Socket(address); !ok || socket != "/tmp/Application Support/a.sock" {
 		t.Fatalf("socket = %q, %v", socket, ok)
 	}
 }
