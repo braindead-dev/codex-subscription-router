@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -139,34 +138,37 @@ func (c *Child) Close() error {
 	return c.command.Process.Signal(os.Interrupt)
 }
 
-func (c *Child) readLoop(stdout io.Reader) {
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 64*1024), 64*1024*1024)
-	for scanner.Scan() {
-		raw := append([]byte(nil), scanner.Bytes()...)
-		message, err := protocol.Parse(raw)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "codex-mux: %s emitted invalid JSON: %v\n", c.accountID, err)
-			continue
-		}
-		if message.Method == "" && len(message.ID) > 0 {
-			key := protocol.RequestIDKey(message.ID)
-			c.pendingMu.Lock()
-			responses := c.pending[key]
-			if responses != nil {
-				delete(c.pending, key)
-			}
-			c.pendingMu.Unlock()
-			if responses != nil {
-				responses <- response{message: message}
-				continue
-			}
-		}
-		c.inbound <- Inbound{AccountID: c.accountID, Message: message, Raw: raw}
-	}
-	if err := scanner.Err(); err != nil {
+func (c *Child) readLoop(stdout io.ReadCloser) {
+	if err := protocol.ReadLines(stdout, c.dispatch); err != nil {
 		fmt.Fprintf(os.Stderr, "codex-mux: read %s app-server: %v\n", c.accountID, err)
 	}
+	// The app-server answers only through this reader. Once it stops, end the
+	// app-server too, so requests fail instead of waiting on replies that can
+	// no longer arrive; closing the pipe frees it from a blocked write.
+	_ = stdout.Close()
+	_ = c.Close()
+}
+
+func (c *Child) dispatch(raw []byte) {
+	message, err := protocol.Parse(raw)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "codex-mux: %s emitted invalid JSON: %v\n", c.accountID, err)
+		return
+	}
+	if message.Method == "" && len(message.ID) > 0 {
+		key := protocol.RequestIDKey(message.ID)
+		c.pendingMu.Lock()
+		responses := c.pending[key]
+		if responses != nil {
+			delete(c.pending, key)
+		}
+		c.pendingMu.Unlock()
+		if responses != nil {
+			responses <- response{message: message}
+			return
+		}
+	}
+	c.inbound <- Inbound{AccountID: c.accountID, Message: message, Raw: raw}
 }
 
 func (c *Child) waitLoop() {

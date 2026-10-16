@@ -1,9 +1,12 @@
 package protocol
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 )
 
 // Message is the JSONL request, response, or notification envelope used by
@@ -20,6 +23,25 @@ type RPCError struct {
 	Code    int             `json:"code"`
 	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data,omitempty"`
+}
+
+// ReadLines calls handle with each message line read from reader, however
+// long, until the reader ends. A chat's history can be hundreds of megabytes
+// in one reply, and a reader that gives up on a line leaves its sender unheard.
+func ReadLines(reader io.Reader, handle func(line []byte)) error {
+	buffered := bufio.NewReaderSize(reader, 64*1024)
+	for {
+		line, err := buffered.ReadBytes('\n')
+		if line = bytes.TrimSpace(line); len(line) > 0 {
+			handle(line)
+		}
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func Parse(line []byte) (Message, error) {

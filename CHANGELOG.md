@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-16
+
+### Fixed
+
+- A subscription no longer stops answering after one very large reply. The
+  router read each app-server message as a line of at most 64 MB; a chat with
+  a long history answered past that, the reader gave up, and every later
+  request to that subscription waited forever, so queued messages never sent,
+  Stop did nothing and the account menu hung. Messages of any length are read
+  now, and an app-server whose reader stops is ended so requests fail at once.
+- Installing an update no longer fails while Claude Code sessions are open.
+  Their `sessions` MCP servers run from the app bundle, and the installer
+  waited for them to exit; they keep working from the replaced files, so the
+  installer now ignores them.
+- The updater's output reaches `~/.codex-mux/logs/update.log`, the log an
+  install failure points to. It was discarded.
+
 ## [0.19.0] - 2026-10-14
 
 ### Added
@@ -401,7 +418,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.19.1
 [0.19.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.19.0
 [0.18.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.18.0
 [0.17.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.17.0

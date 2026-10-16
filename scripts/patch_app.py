@@ -251,10 +251,16 @@ def bundle_processes(path: Path) -> list[tuple[int, str]]:
     return processes
 
 
+# The sessions MCP server runs from the bundle for as long as the Claude Code
+# session that started it stays open. It keeps working from the replaced files
+# and does not use the app, so it never holds up an install.
+SESSION_TOOLS = (" sessions-mcp",)
+
+
 def running_components(path: Path) -> list[str]:
     return [
         command for _, command in bundle_processes(path)
-        if not any(helper in command for helper in LINGERING_HELPERS)
+        if not any(helper in command for helper in LINGERING_HELPERS + SESSION_TOOLS)
     ]
 
 

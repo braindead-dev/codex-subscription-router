@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -133,14 +132,11 @@ func run() error {
 		defer stopControl()
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Buffer(make([]byte, 64*1024), 64*1024*1024)
 	lines := make(chan []byte)
+	var readErr error
 	go func() {
 		defer close(lines)
-		for scanner.Scan() {
-			lines <- append([]byte(nil), scanner.Bytes()...)
-		}
+		readErr = protocol.ReadLines(os.Stdin, func(line []byte) { lines <- line })
 	}()
 	for {
 		select {
@@ -154,7 +150,7 @@ func run() error {
 		case line, ok := <-lines:
 			if !ok {
 				cancel()
-				return scanner.Err()
+				return readErr
 			}
 			message, parseErr := protocol.Parse(line)
 			if parseErr != nil {

@@ -25,13 +25,18 @@ function readJson(name) {
   }
 }
 
+// The updater's output goes to the log the app's failure message points at.
 function runUpdater(args) {
   const settings = readJson("settings.json");
   if (!settings?.python) return false;
+  const log = path.join(os.homedir(), ".codex-mux", "logs", "update.log");
+  fs.mkdirSync(path.dirname(log), { recursive: true });
+  const output = fs.openSync(log, "a");
   spawn(settings.python, [path.join(ROOT, "update.py"), ...args], {
     detached: true,
-    stdio: "ignore",
+    stdio: ["ignore", output, output],
   }).unref();
+  fs.closeSync(output);
   return true;
 }
 
