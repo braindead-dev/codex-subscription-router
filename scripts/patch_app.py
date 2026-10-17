@@ -72,14 +72,15 @@ class SourceBuild:
 # The newest three official builds, keyed by (version, build). Adding a build
 # removes the oldest one here and its RENDERER_BUILD profile.
 SUPPORTED_BUILDS = {
-    ("26.1007.41230", "20324"): SourceBuild(
-        "42da0dd3694b3eb3c79ebd243b14fa5cc6dfcd4d5c71d92d2aae1f993cb5ea43"
-    ),
     ("26.1007.71326", "20398"): SourceBuild(
         "2f231a64e6dd30111bcd09e03c149cd06c8679b25914842772423251c4608ded"
     ),
     ("26.1013.31256", "20586"): SourceBuild(
         "bf9c41fa9770fbfacfba93042ff71c24cb65c82935819377275faac08103383f",
+        asar_cua_identifier_replacements=8,
+    ),
+    ("26.1013.40934", "20770"): SourceBuild(
+        "5ddc4e48259aa6f979e04529b1a5a4ae54b0f5c4ad6db5c6e004924c10916ddb",
         asar_cua_identifier_replacements=8,
     ),
 }
@@ -899,24 +900,24 @@ class RendererBuild:
     )
 
 
-RENDERER_BUILD_20324 = RendererBuild(
+RENDERER_BUILD_20398 = RendererBuild(
     marker="(A=(0,$.jsx)(Wi,{accountIcon:o,accountSwitcher:Pn,additionalItems:_,displayName:v,hasWorkspaceAccount:s,identityItems:y,isOverlayOpen:m,onCloseMenu:c,onCopyUserId:b,onLogOut:C,onOpenChatGptAnalytics:w,onOpenPersonalization:T,onOpenProfile:E,onOpenSettings:_n,onOpenWorkspaceSettings:D,personalPlanLabel:d,onTogglePet:O,petShortcut:et,settingsShortcut:$e,usageItems:k})",
     data_anchor="function KI(e,t){try{var n=GI();let r=e.get(HI,t),i=e.get(qI);",
     menu_identifiers={
         "e7": "W()",
         "kXc": "us()",
-        "Lo": "Di",
+        "Lo": "Oi",
         "Q": "q",
-        "BW": "bf",
-        "QLs": "C0i",
-        "_H": "GCe",
-        "CH": "Pm",
-        "jLa": "Hco",
-        "lt": "ju",
+        "BW": "vf",
+        "QLs": "v0i",
+        "_H": "qCe",
+        "CH": "Mm",
+        "jLa": "Lco",
+        "lt": "ku",
         "Rv": "ws",
         "RD": "Qo()",
     },
-    menu_anchor="function Hco(e,t){return Uco(e,t).src}",
+    menu_anchor="function Lco(e,t){return Rco(e,t).src}",
     settings_slot=(
         "function Bs(){let e=(0,Q.c)(7),t=p(Se),n;if(t){let t;e[1]===Symbol.for(`react.memo_cache_sentinel`)?(t=(0,$.jsx)(Vs,{}),e[1]=t):t=e[1],n=t}else{let t;e[2]===Symbol.for(`react.memo_cache_sentinel`)?(t=(0,$.jsx)(Hs,{}),e[2]=t):t=e[2],n=t}let r;e[3]===Symbol.for(`react.memo_cache_sentinel`)?(r=(0,$.jsx)(dr,{slug:`general-settings`}),e[3]=r):r=e[3];let i;e[4]===Symbol.for(`react.memo_cache_sentinel`)?(i=(0,$.jsx)($n,{name:`toys`,children:(0,$.jsx)(Lo,{})}),e[4]=i):i=e[4];let a;return e[5]===n?a=e[6]:(a=(0,$.jsxs)(Dr,{title:r,children:[n,i]}),e[5]=n,e[6]=a),a}",
         "function CodexMuxSettingsSwitch(e){return(0,$.jsx)(n,e)}function Bs(){let e=(0,Q.c)(7),t=p(Se),n;if(t){let t;e[1]===Symbol.for(`react.memo_cache_sentinel`)?(t=(0,$.jsx)(Vs,{}),e[1]=t):t=e[1],n=t}else{let t;e[2]===Symbol.for(`react.memo_cache_sentinel`)?(t=(0,$.jsx)(Hs,{}),e[2]=t):t=e[2],n=t}let r;e[3]===Symbol.for(`react.memo_cache_sentinel`)?(r=(0,$.jsx)(dr,{slug:`general-settings`}),e[3]=r):r=e[3];let i;e[4]===Symbol.for(`react.memo_cache_sentinel`)?(i=(0,$.jsx)($n,{name:`toys`,children:(0,$.jsx)(Lo,{})}),e[4]=i):i=e[4];let a;return e[5]===n?a=e[6]:(a=(0,$.jsxs)(Dr,{title:r,children:[n,(0,$.jsx)(globalThis.CodexMuxSettings,{Group:H,Stack:Bt,Row:I,Button:_,Switch:CodexMuxSettingsSwitch}),i]}),e[5]=n,e[6]=a),a}",
@@ -931,12 +932,12 @@ RENDERER_BUILD_20324 = RendererBuild(
         "l=e.sendRequest(`mcpServerStatus/list`,n,a)",
     ),
     reset_query=(
-        "function qRr(){let e=(0,FB.c)(1);gp(),G(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:YRr,select:JRr,refetchInterval:Qg.ONE_MINUTE,staleTime:Qg.FIVE_SECONDS},e[0]=t):t=e[0],Cp(t)}",
-        "function qRr(){gp(),G(null);let e=window.__codexMuxResetAccountId;return Cp({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):YRr,select:JRr,refetchInterval:Qg.ONE_MINUTE,staleTime:Qg.FIVE_SECONDS})}",
+        "function HRr(){let e=(0,BB.c)(1);mp(),G(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:WRr,select:URr,refetchInterval:qg.ONE_MINUTE,staleTime:qg.FIVE_SECONDS},e[0]=t):t=e[0],xp(t)}",
+        "function HRr(){mp(),G(null);let e=window.__codexMuxResetAccountId;return xp({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):WRr,select:URr,refetchInterval:qg.ONE_MINUTE,staleTime:qg.FIVE_SECONDS})}",
     ),
     reset_mutation=(
-        "function XRr(){let e=(0,FB.c)(3),t=ju(),n=qc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:ZRr,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>SRr(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],wh(r)}",
-        "function XRr(){let e=ju(),t=qc(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return wh({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):ZRr,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>SRr(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
+        "function GRr(){let e=(0,BB.c)(3),t=ku(),n=Gc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:KRr,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>gRr(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],xh(r)}",
+        "function GRr(){let e=ku(),t=Gc(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return xh({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):KRr,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>gRr(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
     ),
     usage_modal="function Ct(e){let t=(0,wt.c)(19),{defaultResetCreditsOpen:n,",
     usage_windows="let x=b;if(v!=null){let e;return t[7]!==g",
@@ -969,7 +970,7 @@ RENDERER_BUILD_20324 = RendererBuild(
         "(D=(0,dE.jsxs)(dE.Fragment,{children:[y,b,x,S,C,w,(0,dE.jsx)(CodexMuxThreadSubscription,{}),T,E]})",
     ),
     composer_actions=(
-        "(0,k9.jsxs)($S.FooterActions,{ref:x,spacing:`none`,children:[h,g==null?null:(0,k9.jsx)(`div`,{className:`ms-2 flex items-center`,children:g})]})",
+        "(0,O9.jsxs)(BS.FooterActions,{ref:x,spacing:`none`,children:[h,g==null?null:(0,O9.jsx)(`div`,{className:`ms-2 flex items-center`,children:g})]})",
     ),
     fork_titles=(
         "function Bwr(e,t){t.addTurnCompletedListener(n=>{if(n.status===`inProgress`||n.turnId==null)return;",
@@ -982,69 +983,17 @@ RENDERER_BUILD_20324 = RendererBuild(
         "codexMuxRememberDescription": "o1r",
     },
     identifier_probes=(
-        "function Hco(e,t){return Uco(e,t).src}",
-        "bf(c,C0i,{initialAvailableCount:a.rate_limit_reset_credits?.available_count??0,isRateLimitReached:!0,",
-        "function C0i(e){let t=(0,T0i.c)(7),n;t[0]===e.onClose?n=t[1]:(n=(0,NK.jsx)(w0i,{onClose:e.onClose}),t[0]=e.onClose,t[1]=n);let r;t[2]===e?r=t[3]:(r=(0,NK.jsx)(D0i,{...e}),t[2]=e,t[3]=r);let i;return t[4]!==n||t[5]!==r?(i=(0,NK.jsx)(E0i.Suspense,{fallback:n,children:r}),t[4]=n,t[5]=r,t[6]=i):i=t[6],i}function w0i(e){let t=(0,T0i.c)(8),{onClose:n,failed:r}=e,i=r!==void 0&&r,a;t[0]===n?a=t[1]:(a=e=>{e||n()},t[0]=n,t[1]=a);let o;t[2]===i?o=t[3]:(o=i?(0,NK.jsx)($,{id:`codex.rateLimitResetModal.loadError.title`,",
-        "function eIt(e){let t=(0,rIt.c)(21),{ref:n,active:r,compact:i,disabled:a,highlightTooltip:o,onOpen:s}=e,c=r!==void 0&&r,l=i!==void 0&&i,u=a!==void 0&&a,d=o!==void 0&&o,f=Di(q),p=zd();",
-        "r=Di(ws),[i,a]=(0,Q1n.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
-        "t=ju(),n=qc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:ZRr,",
-        "e6=await $3.services,$3.onRpcBroken(Gli(e6.histogramCollector)),e6.threadReadState!=null",
-        "function YQn(e){return e==null?null:KQ(e)}function qQ(e,t){return YQn(e)?.find(e=>e.turnId===t)??null}",
-        "function o1r(e,t,n){let r={..._I(s1r,{}),[t]:n};",
-        "let Rt=Ur(Lt),zt=a?kt:Rt.data,Bt=zt?.activityInsights,",
-        "(i=(0,Kb.jsx)(Q.Section,{sectionKey:`triggers`,",
-        "SLn=W(),CLn=um(fLn)})))()}var TLn,ELn,DLn,OLn,kLn;",
-        "Cpt=us(),wpt=(0,Cpt.createContext)(Cot)})))()}var Ept,Dpt,Opt,kpt,Apt,jpt,Mpt,Npt,Ppt,Fpt,Ipt,Lpt,Rpt,kb,zpt,Bpt,Vpt,Hpt,Upt,Wpt,Gpt,Kpt,Ab,qpt,Jpt,Ypt,Xpt,Zpt;",
-        "b4n=Qo(),eP(),Y0n(),x4n=(0,rP.createContext)(null)",
-        "YNt=fd(q,()=>Ul().homeModePreferences??XTe({\"oai-chat-surface-mode-chat-override-expires-at\":",
-        "let e=fd(ws,[]),t=Af(ws,e=>null);return{entries$:Tu(ws,({",
-        "JNo.jsx)(GCe,{onSelect:()=>window.location.reload(),",
-        "(s=(0,pNo.jsx)(Pm.Item,{leftIconAsset:T$e,onClick:r,children:o})",
-    ),
-    usage_status=(
-        "async function I2r({additionalHeaders:e,signal:t}){try{return h2r(await FW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":G0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
-        "async function I2r({additionalHeaders:e,signal:t}){try{return h2r(await codexMuxFilterUsageStatus(await FW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":G0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
-    ),
-
-)
-
-# Build 20398 renames helpers in the eager renderer bundle.
-RENDERER_BUILD_20398 = replace(
-    RENDERER_BUILD_20324,
-    menu_identifiers={
-        "e7": "W()",
-        "kXc": "us()",
-        "Lo": "Oi",
-        "Q": "q",
-        "BW": "vf",
-        "QLs": "v0i",
-        "_H": "qCe",
-        "CH": "Mm",
-        "jLa": "Lco",
-        "lt": "ku",
-        "Rv": "ws",
-        "RD": "Qo()",
-    },
-    menu_anchor="function Lco(e,t){return Rco(e,t).src}",
-    reset_query=(
-        "function HRr(){let e=(0,BB.c)(1);mp(),G(null);let t;return e[0]===Symbol.for(`react.memo_cache_sentinel`)?(t={queryKey:[`rate-limit-reset-credits`],queryFn:WRr,select:URr,refetchInterval:qg.ONE_MINUTE,staleTime:qg.FIVE_SECONDS},e[0]=t):t=e[0],xp(t)}",
-        "function HRr(){mp(),G(null);let e=window.__codexMuxResetAccountId;return xp({queryKey:[`rate-limit-reset-credits`,e??`primary`],queryFn:e?()=>codexMuxRateLimitResets(e):WRr,select:URr,refetchInterval:qg.ONE_MINUTE,staleTime:qg.FIVE_SECONDS})}",
-    ),
-    reset_mutation=(
-        "function GRr(){let e=(0,BB.c)(3),t=ku(),n=Gc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:KRr,onSuccess:(e,r)=>{let{creditId:i}=r,a=e.code;if(a===`reset`||a===`already_redeemed`){let n=e.code===`reset`?e.credit?.id??i:i;t.setQueryData([`rate-limit-reset-credits`],e=>gRr(e,a,n))}Promise.all([n([`rate-limit-status`]),n([`rate-limit-reset-credits`])])}},e[0]=n,e[1]=t,e[2]=r):r=e[2],xh(r)}",
-        "function GRr(){let e=ku(),t=Gc(),n=window.__codexMuxResetAccountId,r=[`rate-limit-reset-credits`,n??`primary`];return xh({mutationFn:n?i=>codexMuxConsumeRateLimitReset(n,i):KRr,onSuccess:(n,i)=>{let{creditId:a}=i,o=n.code;if(o===`reset`||o===`already_redeemed`){let t=o===`reset`?n.credit?.id??a:a;e.setQueryData(r,e=>gRr(e,o,t))}Promise.all([t([`rate-limit-status`]),t(r)])}})}",
-    ),
-    composer_actions=(
-        "(0,O9.jsxs)(BS.FooterActions,{ref:x,spacing:`none`,children:[h,g==null?null:(0,O9.jsx)(`div`,{className:`ms-2 flex items-center`,children:g})]})",
-    ),
-    identifier_probes=(
         "function Lco(e,t){return Rco(e,t).src}",
         "vf(c,v0i,{initialAvailableCount:a.rate_limit_reset_credits?.available_count??0,isRateLimitReached:!0,",
         "function v0i(e){let t=(0,b0i.c)(7),n;t[0]===e.onClose?n=t[1]:(n=(0,RK.jsx)(y0i,{onClose:e.onClose}),t[0]=e.onClose,t[1]=n);let r;t[2]===e?r=t[3]:(r=(0,RK.jsx)(S0i,{...e}),t[2]=e,t[3]=r);let i;return t[4]!==n||t[5]!==r?(i=(0,RK.jsx)(x0i.Suspense,{fallback:n,children:r}),t[4]=n,t[5]=r,t[6]=i):i=t[6],i}function y0i(e){let t=(0,b0i.c)(8),{onClose:n,failed:r}=e,i=r!==void 0&&r,a;t[0]===n?a=t[1]:(a=e=>{e||n()},t[0]=n,t[1]=a);let o;t[2]===i?o=t[3]:(o=i?(0,RK.jsx)($,{id:`codex.rateLimitResetModal.loadError.title`,",
         "function pIt(e){let t=(0,gIt.c)(21),{ref:n,active:r,compact:i,disabled:a,highlightTooltip:o,onOpen:s}=e,c=r!==void 0&&r,l=i!==void 0&&i,u=a!==void 0&&a,d=o!==void 0&&o,f=Oi(q),p=zd();",
         "r=Oi(ws),[i,a]=(0,p0n.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
         "t=ku(),n=Gc(),r;return e[0]!==n||e[1]!==t?(r={mutationFn:KRr,",
-        *RENDERER_BUILD_20324.identifier_probes[6:11],
+        "e6=await $3.services,$3.onRpcBroken(Gli(e6.histogramCollector)),e6.threadReadState!=null",
+        "function YQn(e){return e==null?null:KQ(e)}function qQ(e,t){return YQn(e)?.find(e=>e.turnId===t)??null}",
+        "function o1r(e,t,n){let r={..._I(s1r,{}),[t]:n};",
+        "let Rt=Ur(Lt),zt=a?kt:Rt.data,Bt=zt?.activityInsights,",
+        "(i=(0,Kb.jsx)(Q.Section,{sectionKey:`triggers`,",
         "_Ln=W(),vLn=cm(sLn)})))()}var bLn,xLn,SLn,CLn,wLn;",
         "Fpt=us(),Ipt=(0,Fpt.createContext)(Fot)})))()}var Rpt,zpt,Bpt,Vpt,Hpt,Upt,Wpt,Gpt,Kpt,qpt,Jpt,Ypt,Xpt,_b,Zpt,Qpt,$pt,emt,tmt,nmt,rmt,imt,vb,amt,omt,smt,cmt,lmt;",
         "F4n=Qo(),zN(),u2n(),I4n=(0,HN.createContext)(null)",
@@ -1052,6 +1001,14 @@ RENDERER_BUILD_20398 = replace(
         "let e=ld(ws,[]),t=Of(ws,e=>null);return{entries$:Cu(ws,({",
         "YNo.jsx)(qCe,{onSelect:()=>window.location.reload(),",
         "(s=(0,mNo.jsx)(Mm.Item,{leftIconAsset:O$e,onClick:r,children:o})",
+    ),
+    usage_status=(
+        "async function I2r({additionalHeaders:e,signal:t}){try{return h2r(await FW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":G0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
+        "async function I2r({additionalHeaders:e,signal:t}){try{return h2r(await codexMuxFilterUsageStatus(await FW.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":G0r.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
+    ),
+    plugin_request=(
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error(`AppServerRequestClient is missing a message dispatcher`);return e===`config/read`?",
+        "async sendRequest(e,t,n){if(this.dispatchMessage==null)throw Error(`AppServerRequestClient is missing a message dispatcher`);t=codexMuxScopePluginRequest(e,t);return e===`config/read`?",
     ),
 )
 
@@ -1163,7 +1120,33 @@ RENDERER_BUILD_20586 = RendererBuild(
     ),
 )
 
-RENDERER_BUILDS = (RENDERER_BUILD_20324, RENDERER_BUILD_20398, RENDERER_BUILD_20586)
+# Build 20770 reshapes profile UI while retaining the eager helper bindings.
+RENDERER_BUILD_20770 = replace(
+    RENDERER_BUILD_20586,
+    marker="(M=(0,$.jsx)(na,{accountIcon:c,accountSwitcher:En,additionalItems:y,displayName:b,hasWorkspaceAccount:u,identityItems:S,isOverlayOpen:p,onCloseMenu:s,onCopyUserId:C,onLogOut:w,onOpenChatGptAnalytics:T,onOpenPersonalization:E,onOpenProfile:D,onOpenSettings:nn,onOpenWorkspaceSettings:O,profileTrailing:k,personalPlanLabel:h,onTogglePet:A,petShortcut:Ge,settingsShortcut:We,usageItems:j})",
+    profile_avatar=(
+        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":Me&&Te?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Je(`group relative flex rounded-full outline-none`,",
+        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>Bt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":Me&&Te?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Je(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
+    ),
+    profile_identity=(
+        "sr=ir?or:null,cr=a?ae?.display_name?.trim()||null:Vt?.displayName??null,",
+        "sr=globalThis.__codexMuxSelectedProfileAccountId&&ir?or:null,cr=a?ae?.display_name?.trim()||null:Vt?.displayName??null,",
+    ),
+    thread_sections=(
+        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,T,E]}),t[29]=C,t[30]=w,t[31]=E,t[32]=x,t[33]=D):D=t[33];let O=D;if(p&&d!=null){",
+        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,(0,MT.jsx)(CodexMuxThreadSubscription,{}),T,E]}),t[29]=C,t[30]=w,t[31]=E,t[32]=x,t[33]=D):D=t[33];let O=D;if(p&&d!=null){",
+    ),
+    identifier_probes=(
+        *RENDERER_BUILD_20586.identifier_probes[:9],
+        "let Bt=ua(zt),Vt=a?jt:Bt.data,Ut=Vt?.activityInsights,",
+        *RENDERER_BUILD_20586.identifier_probes[10:14],
+        "iqt=cs(U,()=>Ve().homeModePreferences??nMe({\"oai-chat-surface-mode-chat-override-expires-at\":",
+        *RENDERER_BUILD_20586.identifier_probes[15:17],
+        "(s=(0,Uyc.jsx)(wa.Item,{leftIconAsset:sge,onClick:r,children:o})",
+    ),
+)
+
+RENDERER_BUILDS = (RENDERER_BUILD_20398, RENDERER_BUILD_20586, RENDERER_BUILD_20770)
 
 PROFILE_QUERY_PATTERN = re.compile(
     r"let e=await [A-Za-z_$][\w$]*\.safeGet\(`/wham/profiles/me`\)"
