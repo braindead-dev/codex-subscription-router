@@ -18,7 +18,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -72,14 +72,14 @@ class SourceBuild:
 # The newest three official builds, keyed by (version, build). Adding a build
 # removes the oldest one here and its RENDERER_BUILD profile.
 SUPPORTED_BUILDS = {
-    ("26.1013.31256", "20586"): SourceBuild(
-        "bf9c41fa9770fbfacfba93042ff71c24cb65c82935819377275faac08103383f"
-    ),
     ("26.1013.40934", "20770"): SourceBuild(
         "5ddc4e48259aa6f979e04529b1a5a4ae54b0f5c4ad6db5c6e004924c10916ddb"
     ),
     ("26.1016.51333", "21161"): SourceBuild(
         "9d0260dd37f9c45546d5a89d9d782b8362c9957b70b992e2c3f91df60a046b07"
+    ),
+    ("26.1016.61520", "21421"): SourceBuild(
+        "c9945f821fcbaf48424933a82860beac4dd4ad8b8a5444a75568fa6e38a1ad4b"
     ),
 }
 # Counts assumed for a build passed with --allow-untested-source.
@@ -898,8 +898,8 @@ class RendererBuild:
     )
 
 
-RENDERER_BUILD_20586 = RendererBuild(
-    marker="(M=(0,$.jsx)(na,{accountIcon:c,accountSwitcher:En,additionalItems:y,displayName:b,hasWorkspaceAccount:u,identityItems:x,isOverlayOpen:p,onCloseMenu:s,onCopyUserId:C,onLogOut:w,onOpenChatGptAnalytics:T,onOpenPersonalization:E,onOpenProfile:D,onOpenSettings:nn,onOpenWorkspaceSettings:O,profileTrailing:k,personalPlanLabel:h,onTogglePet:A,petShortcut:We,settingsShortcut:Ue,usageItems:j})",
+RENDERER_BUILD_20770 = RendererBuild(
+    marker="(M=(0,$.jsx)(na,{accountIcon:c,accountSwitcher:En,additionalItems:y,displayName:b,hasWorkspaceAccount:u,identityItems:S,isOverlayOpen:p,onCloseMenu:s,onCopyUserId:C,onLogOut:w,onOpenChatGptAnalytics:T,onOpenPersonalization:E,onOpenProfile:D,onOpenSettings:nn,onOpenWorkspaceSettings:O,profileTrailing:k,personalPlanLabel:h,onTogglePet:A,petShortcut:Ge,settingsShortcut:We,usageItems:j})",
     data_anchor="function Vh(e,t){try{var n=Ec();let r=e.get(Rh,t),i=e.get(Hh);",
     menu_identifiers={
         "e7": "$()",
@@ -944,16 +944,16 @@ RENDERER_BUILD_20586 = RendererBuild(
         "(Ae=(0,$.jsxs)(A,{children:[(0,$.jsx)(C,{title:(0,$.jsx)(b,{asChild:!0,children:(0,$.jsx)(`h2`,{className:`m-0`,children:(0,$.jsx)(a,{id:`codex.rateLimitResetPromptModal.usageTrackingHeading`,defaultMessage:`Usage`,description:`Heading for the Codex usage limit modal`})})})}),window.__codexMuxResetAccountSelector??null]}),n[41]=Ae)",
     ),
     profile_avatar=(
-        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":je&&we?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Ye(`group relative flex rounded-full outline-none`,",
-        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>Bt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":je&&we?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Ye(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
+        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":Me&&Te?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Je(`group relative flex rounded-full outline-none`,",
+        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>Bt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":Me&&Te?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Je(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
     ),
     profile_name=(
         "jr=ur??(0,$.jsx)(D,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})",
         "jr=globalThis.__codexMuxSelectedProfileAccountId?(ur??(0,$.jsx)(D,{id:`profile.nameFallback`,defaultMessage:`ChatGPT user`,description:`Fallback profile display name`})):null",
     ),
     profile_identity=(
-        "sr=ir?or:null,cr=a?ae?.display_name?.trim()||null:Ht?.displayName??null,",
-        "sr=globalThis.__codexMuxSelectedProfileAccountId&&ir?or:null,cr=a?ae?.display_name?.trim()||null:Ht?.displayName??null,",
+        "sr=ir?or:null,cr=a?ae?.display_name?.trim()||null:Vt?.displayName??null,",
+        "sr=globalThis.__codexMuxSelectedProfileAccountId&&ir?or:null,cr=a?ae?.display_name?.trim()||null:Vt?.displayName??null,",
     ),
     plugin_scope=(
         "(k=(0,yo.jsx)(qn,{title:b,subtitle:S,action:O,children:y})",
@@ -964,8 +964,8 @@ RENDERER_BUILD_20586 = RendererBuild(
     },
     thread_anchor="function kT(e){let t=(0,AT.c)(4),{onOpenPullRequestSidePanel:n,onForceShow:r,registerEnvironmentActionCommands:i}=e,a=ee(Hl),",
     thread_sections=(
-        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,T,E]})",
-        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,(0,MT.jsx)(CodexMuxThreadSubscription,{}),T,E]})",
+        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,T,E]}),t[29]=C,t[30]=w,t[31]=E,t[32]=x,t[33]=D):D=t[33];let O=D;if(p&&d!=null){",
+        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,(0,MT.jsx)(CodexMuxThreadSubscription,{}),T,E]}),t[29]=C,t[30]=w,t[31]=E,t[32]=x,t[33]=D):D=t[33];let O=D;if(p&&d!=null){",
     ),
     composer_actions=(
         "(0,j9.jsxs)(jk.FooterActions,{ref:x,spacing:`none`,children:[h,g==null?null:(0,j9.jsx)(`div`,{className:`ms-2 flex items-center`,children:g})]})",
@@ -990,45 +990,19 @@ RENDERER_BUILD_20586 = RendererBuild(
         "hme(await Gte.services),Gte.onRpcBroken(aRu(Oi.histogramCollector)),Oi.threadReadState!=null",
         "function WWn(e){return e==null?null:HWn(e)}function GWn(e,t){return WWn(e)?.find(e=>e.turnId===t)??null}",
         "function AWn(e,t,n){let r={..._h(jWn,{}),[t]:n};",
-        "let Bt=ua(zt),Ht=a?jt:Bt.data,Ut=Ht?.activityInsights,",
+        "let Bt=ua(zt),Vt=a?jt:Bt.data,Ut=Vt?.activityInsights,",
         "(i=(0,mb.jsx)(Z.Section,{sectionKey:`triggers`,",
         "EIo=Z(),DIo=yu(),Us(),Euo(),bu(),yY=$(),Uc(),OIo=et(async()=>(await J(async()=>{let{RateLimitResetModal:e}=",
         "pcr=yu(),mcr=(0,pcr.createContext)(null)})))()}var gcr,_cr,vcr,ycr,bcr,xcr,Scr,Ccr,wcr,Tcr,Ecr,Dcr,Ocr,Ek;",
         "yRi=mu(),Mz(),KIi(),bRi=(0,Nz.createContext)(null)",
-        "iqt=cs(U,()=>Ve().homeModePreferences??tMe({\"oai-chat-surface-mode-chat-override-expires-at\":",
+        "iqt=cs(U,()=>Ve().homeModePreferences??nMe({\"oai-chat-surface-mode-chat-override-expires-at\":",
         "let e=cs(Qy,[]),t=wo(Qy,e=>null);return{entries$:Y(Qy,({",
         "wbc.jsx)(vse,{onSelect:()=>window.location.reload(),",
-        "(s=(0,Uyc.jsx)(wa.Item,{leftIconAsset:cge,onClick:r,children:o})",
+        "(s=(0,Uyc.jsx)(wa.Item,{leftIconAsset:sge,onClick:r,children:o})",
     ),
     usage_status=(
         "async function _Xr({additionalHeaders:e,signal:t}){try{return JYr(await mg.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":uP.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t}))}",
         "async function _Xr({additionalHeaders:e,signal:t}){try{return JYr(await codexMuxFilterUsageStatus(await mg.safeGet(`/wham/usage`,{additionalHeaders:{\"OAI-App-Brand\":uP.toLowerCase(),\"x-openai-codex-pricing-chooser\":`1`,...e},signal:t})))}",
-    ),
-)
-
-# Build 20770 reshapes profile UI while retaining the eager helper bindings.
-RENDERER_BUILD_20770 = replace(
-    RENDERER_BUILD_20586,
-    marker="(M=(0,$.jsx)(na,{accountIcon:c,accountSwitcher:En,additionalItems:y,displayName:b,hasWorkspaceAccount:u,identityItems:S,isOverlayOpen:p,onCloseMenu:s,onCopyUserId:C,onLogOut:w,onOpenChatGptAnalytics:T,onOpenPersonalization:E,onOpenProfile:D,onOpenSettings:nn,onOpenWorkspaceSettings:O,profileTrailing:k,personalPlanLabel:h,onTogglePet:A,petShortcut:Ge,settingsShortcut:We,usageItems:j})",
-    profile_avatar=(
-        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":Me&&Te?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Je(`group relative flex rounded-full outline-none`,",
-        "avatar:(0,$.jsxs)(`div`,{className:`relative z-10`,children:[globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>Bt.refetch()})??null,(0,$.jsxs)(`div`,{\"aria-disabled\":zn,\"data-profile-sticker-photo\":!0,\"data-sticker-ui\":Me&&Te?``:void 0,onPointerEnter:e=>ln(!zn&&e.pointerType!==`touch`),onPointerLeave:()=>ln(!1),onPointerCancel:()=>ln(!1),className:Je(globalThis.CodexMuxProfileAvatarStack?`hidden`:`group relative flex rounded-full outline-none`,",
-    ),
-    profile_identity=(
-        "sr=ir?or:null,cr=a?ae?.display_name?.trim()||null:Vt?.displayName??null,",
-        "sr=globalThis.__codexMuxSelectedProfileAccountId&&ir?or:null,cr=a?ae?.display_name?.trim()||null:Vt?.displayName??null,",
-    ),
-    thread_sections=(
-        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,T,E]}),t[29]=C,t[30]=w,t[31]=E,t[32]=x,t[33]=D):D=t[33];let O=D;if(p&&d!=null){",
-        "(D=(0,MT.jsxs)(MT.Fragment,{children:[y,b,x,S,C,w,(0,MT.jsx)(CodexMuxThreadSubscription,{}),T,E]}),t[29]=C,t[30]=w,t[31]=E,t[32]=x,t[33]=D):D=t[33];let O=D;if(p&&d!=null){",
-    ),
-    identifier_probes=(
-        *RENDERER_BUILD_20586.identifier_probes[:9],
-        "let Bt=ua(zt),Vt=a?jt:Bt.data,Ut=Vt?.activityInsights,",
-        *RENDERER_BUILD_20586.identifier_probes[10:14],
-        "iqt=cs(U,()=>Ve().homeModePreferences??nMe({\"oai-chat-surface-mode-chat-override-expires-at\":",
-        *RENDERER_BUILD_20586.identifier_probes[15:17],
-        "(s=(0,Uyc.jsx)(wa.Item,{leftIconAsset:sge,onClick:r,children:o})",
     ),
 )
 
@@ -1140,7 +1114,9 @@ RENDERER_BUILD_21161 = RendererBuild(
     ),
 )
 
-RENDERER_BUILDS = (RENDERER_BUILD_20586, RENDERER_BUILD_20770, RENDERER_BUILD_21161)
+# Build 21421 changes the CLI but preserves every renderer anchor and binding.
+RENDERER_BUILD_21421 = RENDERER_BUILD_21161
+RENDERER_BUILDS = (RENDERER_BUILD_20770, RENDERER_BUILD_21421)
 
 PROFILE_QUERY_PATTERN = re.compile(
     r"let e=await [A-Za-z_$][\w$]*\.safeGet\(`/wham/profiles/me`\)"
