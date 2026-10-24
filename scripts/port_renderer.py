@@ -33,7 +33,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 IDENTIFIER = re.compile(r"[A-Za-z_$][\w$]*")
 KEEP = {
-    "function", "return", "let", "const", "var", "if", "else", "for", "of", "in",
+    "function", "import", "return", "let", "const", "var", "if", "else", "for", "of", "in",
     "new", "null", "void", "typeof", "await", "async", "true", "false", "this",
     "throw", "try", "catch", "children", "className", "Symbol", "Error", "Promise", "JSON",
     "Object", "Math", "Map", "Set", "window", "document", "globalThis",

@@ -590,6 +590,8 @@ func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourc
 	if _, err := target.Request(ctx, "thread/resume", resumeParams); err != nil {
 		return fmt.Errorf("resume existing chat: %w", err)
 	}
+	// A quick move back must lift the previous release's notification mute.
+	m.unmuteNotifications(targetAccountID, threadID)
 	return nil
 }
 

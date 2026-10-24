@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-24
+
+### Added
+
+- Compatibility with official ChatGPT builds `21828` (26.1021.31345),
+  `21747` (26.1021.22027), and `21477` (26.1016.62342).
+  Builds `21421`, `21161`, and `20770` are retired.
+
+### Fixed
+
+- Moving a chat back to an account within five seconds no longer hides the
+  new owner's turn notifications behind the previous release's mute window.
+
 ## [0.23.0] - 2026-10-22
 
 ### Added
@@ -450,7 +463,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.24.0
 [0.23.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.23.0
 [0.22.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.22.0
 [0.21.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.21.0
