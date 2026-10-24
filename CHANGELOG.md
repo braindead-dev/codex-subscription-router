@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ### Added
 
+- Incoming cross-session messages show the sender in a compact, left-aligned
+  card with the app's native expand and copy controls. The XML envelope stays
+  in model input but is hidden from the card; quoted examples and messages
+  with attachments retain their normal presentation.
 - Guarded offline history-index repair for chats whose projection cursor is
   past the end of a rollout. It backs up the index and asks the native CLI to
   rebuild affected streams without editing chat files or saving a fork.

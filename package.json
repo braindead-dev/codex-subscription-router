@@ -18,7 +18,7 @@
   "scripts": {
     "check": "npm run check:go && npm run check:js && npm run check:python && npm run check:shell",
     "check:go": "go test ./... && go vet ./...",
-    "check:js": "for f in ui/*.js ui/*.cjs; do node --check \"$f\" || exit 1; done",
+    "check:js": "for f in ui/*.js ui/*.cjs; do node --check \"$f\" || exit 1; done; node --test ui/*.test.cjs",
     "check:python": "python3 -m py_compile scripts/*.py && python3 -m unittest discover -s scripts -p 'test_*.py'",
     "check:shell": "bash -n install.sh",
     "release:check": "python3 scripts/check_release.py"

@@ -152,6 +152,9 @@ shows its latest messages, and `send_message` delivers a message as a new
 turn there, or into the turn it is running. Every Codex chat has an inbox
 address in the same form Claude Code uses for its sessions, so Claude's own
 `SendMessage` reaches Codex chats and replies come back to whoever sent.
+Incoming text messages appear in a compact card labelled with the sending
+session, with native expand and copy controls. The original envelope remains
+available to the agent for replying.
 
 ## Updates
 

@@ -257,7 +257,7 @@ def main() -> int:
     for field in (
         "plugin_request", "reset_query", "reset_mutation",
         "usage_header", "profile_avatar", "profile_name", "profile_identity",
-        "plugin_scope", "thread_sections", "settings_slot",
+        "plugin_scope", "thread_sections", "settings_slot", "session_message",
     ):
         profile[field] = port.port_pair(getattr(reference, field), field)
     profile["plugin_request_checks"] = tuple(

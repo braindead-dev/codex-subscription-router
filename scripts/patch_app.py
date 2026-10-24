@@ -886,6 +886,7 @@ class RendererBuild:
     thread_anchor: str
     thread_sections: tuple[str, str]
     composer_actions: tuple[str, ...]
+    session_message: tuple[str, str]
     fork_titles: tuple[str, str]
     fork_identifiers: dict[str, str]
     # Unique probes name borrowed identifiers for the porter and patcher.
@@ -969,6 +970,10 @@ RENDERER_BUILD_21477 = RendererBuild(
     composer_actions=(
         "(0,k9.jsxs)(jk.FooterActions,{ref:S,spacing:`none`,children:[g,_==null?null:(0,k9.jsx)(`div`,{className:`ms-2 flex items-center`,children:_})]})",
     ),
+    session_message=(
+        "case`user-message`:{if(n.automationTitle!=null){let e;t[31]===Symbol.for(`react.memo_cache_sentinel`)?(e=(0,$.jsx)(qh,{speaker:`user`}),t[31]=e):e=t[31];let r;return t[32]!==be||t[33]!==p||t[34]!==b||t[35]!==x||t[36]!==n.message||t[37]!==n.sentAtMs?(r=(0,$.jsxs)($.Fragment,{children:[e,(0,$.jsx)(TS,{conversationId:p,message:n.message,sentAtMs:n.sentAtMs,cwd:b,hostId:x,compactActions:be})]}),",
+        "case`user-message`:{{let codexMuxCard=globalThis.codexMuxSessionMessage(n,{conversationId:p,cwd:b,hostId:x,compactActions:be},ey);if(codexMuxCard)return codexMuxCard;}if(n.automationTitle!=null){let e;t[31]===Symbol.for(`react.memo_cache_sentinel`)?(e=(0,$.jsx)(qh,{speaker:`user`}),t[31]=e):e=t[31];let r;return t[32]!==be||t[33]!==p||t[34]!==b||t[35]!==x||t[36]!==n.message||t[37]!==n.sentAtMs?(r=(0,$.jsxs)($.Fragment,{children:[e,(0,$.jsx)(TS,{conversationId:p,message:n.message,sentAtMs:n.sentAtMs,cwd:b,hostId:x,compactActions:be})]}),",
+    ),
     fork_titles=(
         "function uqn(e,t,n){let r=t.getHostId();t.addTurnCompletedListener(t=>{Rv(e,Gue,{fileCount:t.fileCount,status:t.status})})",
         "function uqn(e,t,n){codexMuxForkTitles(e,t);let r=t.getHostId();t.addTurnCompletedListener(t=>{Rv(e,Gue,{fileCount:t.fileCount,status:t.status})})",
@@ -980,6 +985,7 @@ RENDERER_BUILD_21477 = RendererBuild(
         "codexMuxRememberDescription": "pqn",
     },
     identifier_probes=(
+        "(h=(0,FS.jsx)(ey,{conversationId:n,label:p,message:i,sentAtMs:a,cwd:o,hostId:s,compactActions:l,onLabelClick:m})",
         "function Rtc(e,t){return ztc(e,t).src}",
         "pA(c,BZo,{initialAvailableCount:a.rate_limit_reset_credits?.available_count??0,isRateLimitReached:!0,",
         "r=E(tb),[i,a]=(0,Hzi.useState)(!1),o;if(t[0]!==r||t[1]!==n.tabId){",
@@ -1075,6 +1081,10 @@ RENDERER_BUILD_21828 = RendererBuild(
     composer_actions=(
         "(0,A9.jsxs)(Jj.FooterActions,{ref:S,spacing:`none`,children:[g,(ce==null?_:ce.sendButton)==null?null:(0,A9.jsx)(`div`,{className:`ms-2 flex items-center`,children:ce==null?_:ce.sendButton})]})",
     ),
+    session_message=(
+        "case`user-message`:{if(n.automationTitle!=null){let e;t[31]===Symbol.for(`react.memo_cache_sentinel`)?(e=(0,$.jsx)(lp,{speaker:`user`}),t[31]=e):e=t[31];let r;return t[32]!==xe||t[33]!==p||t[34]!==b||t[35]!==x||t[36]!==n.message||t[37]!==n.sentAtMs?(r=(0,$.jsxs)($.Fragment,{children:[e,(0,$.jsx)(VC,{conversationId:p,message:n.message,sentAtMs:n.sentAtMs,cwd:b,hostId:x,compactActions:xe})]}),",
+        "case`user-message`:{{let codexMuxCard=globalThis.codexMuxSessionMessage(n,{conversationId:p,cwd:b,hostId:x,compactActions:xe},gb);if(codexMuxCard)return codexMuxCard;}if(n.automationTitle!=null){let e;t[31]===Symbol.for(`react.memo_cache_sentinel`)?(e=(0,$.jsx)(lp,{speaker:`user`}),t[31]=e):e=t[31];let r;return t[32]!==xe||t[33]!==p||t[34]!==b||t[35]!==x||t[36]!==n.message||t[37]!==n.sentAtMs?(r=(0,$.jsxs)($.Fragment,{children:[e,(0,$.jsx)(VC,{conversationId:p,message:n.message,sentAtMs:n.sentAtMs,cwd:b,hostId:x,compactActions:xe})]}),",
+    ),
     fork_titles=(
         "function AGn({scope:e,dispatchMessageFromView:t,manager:n,readLatestImageEditTurnState:r}){if(e==null)return;",
         "function AGn({scope:e,dispatchMessageFromView:t,manager:n,readLatestImageEditTurnState:r}){if(e==null)return;SKn();codexMuxForkTitles(e,n);",
@@ -1086,6 +1096,7 @@ RENDERER_BUILD_21828 = RendererBuild(
         "codexMuxRememberDescription": "yKn",
     },
     identifier_probes=(
+        "(h=(0,ZC.jsx)(gb,{conversationId:n,label:p,message:i,sentAtMs:a,cwd:o,hostId:s,compactActions:l,onLabelClick:m})",
         "function Lua(e,t){return Rua(e,t).src}",
         "function HGt(e){let t=(0,GGt.c)(21),{ref:n,active:r,compact:i,disabled:a,highlightTooltip:o,onOpen:s}=e,c=r!==void 0&&r,l=i!==void 0&&i,u=a!==void 0&&a,d=o!==void 0&&o,f=bs(V),p=Qa();",
         "function fGt(e){let t=(0,pGt.c)(14),{layout:n,fallback:r}=e,i=r!==void 0&&r,a=bs(Ux),",
@@ -1259,6 +1270,12 @@ def patch_renderer(extracted: Path, token: str) -> None:
         injected_source("account-menu.js", token, menu_identifiers),
         "the native ChatGPT profile menu component",
     )
+    renderer.inject(
+        build.menu_anchor,
+        injected_source("session-messages.js", token, {}),
+        "the cross-session message renderer",
+    )
+    renderer.replace(*build.session_message, "the native user-message dispatch")
     renderer.replace(
         build.marker,
         re.sub(r"usageItems:[\w$]+", "usageItems:(0,$.jsx)(globalThis.CodexMuxAccountMenu,{})", build.marker),
