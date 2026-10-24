@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+### Added
+
+- Guarded offline history-index repair for chats whose projection cursor is
+  past the end of a rollout. It backs up the index and asks the native CLI to
+  rebuild affected streams without editing chat files or saving a fork.
+
 ## [0.24.0] - 2026-10-24
 
 ### Added
