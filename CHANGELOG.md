@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+### Fixed
+
+- Moving a fork can reuse independently copied ancestor history when the
+  destination contains the same bytes or a newer matching copy. Existing
+  ancestor files, current rollout paths, and projections are preserved;
+  genuinely divergent history still blocks the move.
+
 ### Added
 
 - Incoming cross-session messages show the sender in a compact, left-aligned

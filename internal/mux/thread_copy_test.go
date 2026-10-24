@@ -185,6 +185,54 @@ func TestSyncThreadCopyBringsForkedFromThreadAlong(t *testing.T) {
 			t.Fatalf("expected %s to have a projection on the target, got %q err=%v", id, offset, err)
 		}
 	}
+
+	// An independently copied ancestor may have progressed on the target.
+	// Moving its fork must preserve that file, current path and every derived
+	// table, even though the source still indexes an older ancestor rollout.
+	targetParent := threadRollouts(target, parentID)[0]
+	parentBody, err := os.ReadFile(parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(targetParent); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetParent, append(parentBody, []byte("later ancestor turn\n")...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.Stat(targetParent)
+	newCurrent := filepath.Join(target, "sessions", "newer-ancestor.jsonl")
+	if err := runSQLite(stateDatabase(target), "update threads set rollout_path = '"+newCurrent+"' where id = '"+parentID+"';"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runSQLite(historyDatabase(target), "update thread_history_projection_state set next_rollout_byte_offset = 999 where thread_id = '"+parentID+"';"+
+		"insert into thread_turns values ('"+parentID+"', 'newer', 99);"+
+		"insert into thread_items values ('"+parentID+"', 'newer', 'item', 99);"+
+		"insert into thread_realtime_items values ('"+parentID+"', 'item');"); err != nil {
+		t.Fatal(err)
+	}
+	if err := syncThreadCopy(source, target, forkID); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := os.Stat(targetParent)
+	if !os.SameFile(before, after) || before.Size() != after.Size() {
+		t.Fatal("moving a fork replaced its ancestor")
+	}
+	row, err := querySQLite(stateDatabase(target), "select rollout_path from threads where id = '"+parentID+"';")
+	if err != nil || strings.TrimSpace(row) != newCurrent {
+		t.Fatalf("ancestor current rollout changed: %q, %v", row, err)
+	}
+	for _, table := range historyTables {
+		value := "count(*)"
+		want := "1"
+		if table == "thread_history_projection_state" {
+			value, want = "next_rollout_byte_offset", "999"
+		}
+		row, err := querySQLite(historyDatabase(target), "select "+value+" from "+table+" where thread_id = '"+parentID+"';")
+		if err != nil || strings.TrimSpace(row) != want {
+			t.Fatalf("ancestor %s changed: %q, %v", table, row, err)
+		}
+	}
 }
 
 func TestHistoryBaseThreadIgnoresOwnHistory(t *testing.T) {
