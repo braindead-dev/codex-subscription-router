@@ -222,6 +222,11 @@ func resolveRealExecutable() (string, error) {
 	return realExecutable, nil
 }
 
+// isInteractiveAppServer reports whether the arguments start an app-server
+// session. Since build 21828 the desktop reads its startup requirements with
+// a one-shot `app-server --print-startup-config` that prints JSON and exits;
+// it must reach the real binary, or the desktop pauses on "Organization
+// settings could not be loaded".
 func isInteractiveAppServer(args []string) bool {
 	for index, argument := range args {
 		if argument != "app-server" {
@@ -230,6 +235,11 @@ func isInteractiveAppServer(args []string) bool {
 		if index+1 < len(args) {
 			switch args[index+1] {
 			case "daemon", "proxy", "generate-ts", "generate-json-schema", "help":
+				return false
+			}
+		}
+		for _, option := range args[index+1:] {
+			if option == "--print-startup-config" {
 				return false
 			}
 		}

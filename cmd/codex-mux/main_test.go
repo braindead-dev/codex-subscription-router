@@ -15,6 +15,8 @@ func TestInteractiveAppServerDetection(t *testing.T) {
 		{args: []string{"-c", "features.code_mode_host=true", "app-server", "--analytics-default-enabled"}, want: true},
 		{args: []string{"app-server", "daemon", "version"}, want: false},
 		{args: []string{"app-server", "generate-ts", "--out", "/tmp/schema"}, want: false},
+		{args: []string{"app-server", "--analytics-default-enabled", "--print-startup-config", "--startup-client-info", `{"name":"codex_desktop"}`}, want: false},
+		{args: []string{"app-server", "--analytics-default-enabled", "--print-startup-config", "--startup-client-info", `{"name":"codex_desktop"}`, "--startup-sign-out"}, want: false},
 		{args: []string{"exec", "hello"}, want: false},
 	}
 	for _, test := range tests {
