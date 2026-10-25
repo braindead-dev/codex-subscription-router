@@ -24,7 +24,12 @@ func linkRolloutIntoHome(sourcePath, codexHome string) (string, error) {
 // An ancestor is a read-only dependency of the moving chat. It may already
 // have an independent, newer copy on the destination. Reuse that copy only
 // when it contains the entire source as a byte-identical prefix; never replace
-// its file or derived history. The bool reports a newly created hard link.
+// its file or derived history. The moving chat's own rollout may find a
+// separate copy that no longer shares the source's file: copying a home to a
+// new macOS account turns every hard link into its own file. When that copy
+// holds nothing the source lacks, it is replaced by a link to the source; the
+// chat is not open on the destination, so nothing writes to the old copy.
+// The bool reports a newly created hard link.
 func shareRolloutIntoHome(sourcePath, codexHome string, ancestor bool) (string, bool, error) {
 	marker := string(filepath.Separator) + "sessions" + string(filepath.Separator)
 	index := strings.LastIndex(sourcePath, marker)
@@ -53,7 +58,31 @@ func shareRolloutIntoHome(sourcePath, codexHome string, ancestor bool) (string, 
 	if ancestor && rolloutPrefixMatches(sourcePath, target) {
 		return target, false, nil
 	}
+	// The destination's copy is the start of the source: rejoin the source.
+	if !ancestor && rolloutPrefixMatches(target, sourcePath) {
+		if err := replaceWithLink(sourcePath, target); err != nil {
+			return "", false, err
+		}
+		return target, true, nil
+	}
 	return "", false, fmt.Errorf("a different rollout already exists at %s", target)
+}
+
+// replaceWithLink swaps target for a hard link to source in one rename. The
+// temporary name does not end in .jsonl, so no rollout scan picks it up.
+func replaceWithLink(sourcePath, target string) error {
+	temporary := filepath.Join(filepath.Dir(target), "."+filepath.Base(target)+".link")
+	if err := os.Remove(temporary); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("clear rollout link: %w", err)
+	}
+	if err := os.Link(sourcePath, temporary); err != nil {
+		return fmt.Errorf("link rollout: %w", err)
+	}
+	if err := os.Rename(temporary, target); err != nil {
+		_ = os.Remove(temporary)
+		return fmt.Errorf("rejoin rollout: %w", err)
+	}
+	return nil
 }
 
 func rolloutPrefixMatches(sourcePath, targetPath string) bool {

@@ -46,11 +46,12 @@ func TestAncestorRolloutReusesOnlyMatchingCopies(t *testing.T) {
 	for _, tc := range []struct {
 		name, targetText string
 		wantOK           bool
+		wantRejoin       bool
 	}{
-		{"identical", sourceText, true},
-		{"newer", sourceText + "later turn\n", true},
-		{"shorter", sourceText[:len(sourceText)-1], false},
-		{"diverged", sourceText[:len(sourceText)-2] + "x\n", false},
+		{"identical", sourceText, true, true},
+		{"newer", sourceText + "later turn\n", true, false},
+		{"shorter", sourceText[:len(sourceText)-1], false, true},
+		{"diverged", sourceText[:len(sourceText)-2] + "x\n", false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -74,8 +75,21 @@ func TestAncestorRolloutReusesOnlyMatchingCopies(t *testing.T) {
 			if !os.SameFile(before, after) || string(body) != tc.targetText {
 				t.Fatal("ancestor file was replaced or changed")
 			}
-			if _, err := linkRolloutIntoHome(source, filepath.Join(root, "target")); err == nil {
-				t.Fatal("a writable moving thread must still use a shared file")
+			// The moving thread must end up on the source's file or not move.
+			moved, err := linkRolloutIntoHome(source, filepath.Join(root, "target"))
+			sourceInfo, _ := os.Stat(source)
+			movedInfo, _ := os.Stat(target)
+			body, _ = os.ReadFile(target)
+			if tc.wantRejoin {
+				if err != nil || moved != target || !os.SameFile(sourceInfo, movedInfo) {
+					t.Fatalf("moving thread was not rejoined: path=%q err=%v", moved, err)
+				}
+			} else if err == nil || !os.SameFile(after, movedInfo) || string(body) != tc.targetText {
+				t.Fatalf("moving thread replaced a copy with history the source lacks: err=%v", err)
+			}
+			entries, _ := os.ReadDir(filepath.Dir(target))
+			if len(entries) != 1 {
+				t.Fatalf("rejoining left %d entries beside the rollout", len(entries)-1)
 			}
 		})
 	}
