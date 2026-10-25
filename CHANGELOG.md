@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.25.2] - 2026-10-24
+
+### Fixed
+
+- Reordering pinned chats no longer fails with "Couldn't save pinned order"
+  depending on which list the sidebar loaded last. The router kept one view
+  of pins, rebuilt from each listing: after the all-chats list it could pick
+  an account's unpinned copy as the pin and anchor a move on a chat outside
+  that account's section, which Codex refuses; after the archived list it
+  forgot every pin. It now keeps each copy's section per account, keeps
+  copies a listing leaves out, places a pin at the copy that is in the
+  section, and anchors moves only on chats in that account's section.
+
 ## [0.25.1] - 2026-10-24
 
 ### Fixed
@@ -498,7 +511,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.25.1...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.25.2...HEAD
+[0.25.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.2
 [0.25.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.1
 [0.25.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.0
 [0.24.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.24.0
