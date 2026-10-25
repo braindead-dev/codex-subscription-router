@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-10-24
+
+### Fixed
+
+- Moving a chat no longer fails with "a different rollout already exists"
+  when the destination holds its own copy of the chat's history. Copying a
+  home to a new macOS account turns the router's shared hard links into
+  separate files; a destination copy that holds nothing the source lacks is
+  now replaced by a link to the source. A copy with history the source lacks
+  still blocks the move.
+
 ## [0.25.0] - 2026-10-24
 
 ### Fixed
@@ -487,7 +498,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.25.1...HEAD
+[0.25.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.1
 [0.25.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.0
 [0.24.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.24.0
 [0.23.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.23.0
