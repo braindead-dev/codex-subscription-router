@@ -47,7 +47,6 @@ func (m *Multiplexer) aggregateThreadList(request protocol.Message) {
 	for threadID, accountID := range learned {
 		_ = m.store.SetThreadOwner(threadID, accountID)
 	}
-	view.listed = listedThreads(listings)
 	m.rememberListings(view)
 	switch sectionID := sectionListingID(request.Params); {
 	case sectionID != "" && listsBySectionPosition(request.Params):
@@ -75,24 +74,6 @@ func listsBySectionPosition(params json.RawMessage) bool {
 	return json.Unmarshal(params, &decoded) == nil && decoded.SortKey == "section_position"
 }
 
-// listedThreads records which accounts list each thread.
-func listedThreads(listings []threadListing) map[string]map[string]struct{} {
-	listed := make(map[string]map[string]struct{})
-	for _, listing := range listings {
-		for _, thread := range listing.threads {
-			id, ok := thread["id"].(string)
-			if !ok || id == "" {
-				continue
-			}
-			if listed[id] == nil {
-				listed[id] = make(map[string]struct{})
-			}
-			listed[id][listing.accountID] = struct{}{}
-		}
-	}
-	return listed
-}
-
 type threadListing struct {
 	accountID string
 	threads   []map[string]any
@@ -107,16 +88,16 @@ type threadListing struct {
 // listing; threads without an assignment are attributed to the first account
 // that lists them (the controller first). Pins are section membership in one
 // account's index, so the section shown is the one held by the first account
-// that lists the thread, and that copy is returned as the thread's section
-// view so section moves and reads are served where the sidebar reads them.
+// whose copy is in a section (the first that lists the thread when none is),
+// and every copy's section is returned as the section view so section moves
+// and reads are served where the pin is.
 func mergeThreadListings(
 	listings []threadListing,
 	owner func(threadID string) (string, bool),
 	originatesFrom func(accountID string, thread map[string]any) bool,
 ) ([]map[string]any, map[string]string, sectionView) {
 	learned := make(map[string]string)
-	sectionHomes := make(map[string]string)
-	sectionCopies := make(map[string]map[string]any)
+	view := sectionViewOf(listings)
 	position := make(map[string]int)
 	copies := make(map[string][]map[string]any)
 	previews := make(map[string]any)
@@ -134,10 +115,6 @@ func mergeThreadListings(
 				}
 			}
 			copies[threadID] = append(copies[threadID], thread)
-			if _, ok := sectionHomes[threadID]; !ok {
-				sectionHomes[threadID] = listing.accountID
-				sectionCopies[threadID] = thread
-			}
 			if preview, ok := nonEmptyString(thread["preview"]); ok &&
 				originatesFrom(listing.accountID, thread) {
 				previews[threadID] = preview
@@ -164,8 +141,9 @@ func mergeThreadListings(
 		if preview, ok := previews[threadID]; ok {
 			merged["preview"] = preview
 		}
-		for _, key := range []string{"section", "sectionEnteredAt"} {
-			if value, ok := sectionCopies[threadID][key]; ok {
+		home, _ := view.home(threadID)
+		for _, key := range sectionFieldKeys {
+			if value, ok := view.copies[threadID][home][key]; ok {
 				merged[key] = value
 			}
 		}
@@ -179,7 +157,7 @@ func mergeThreadListings(
 		}
 		threads[index] = merged
 	}
-	return threads, learned, sectionView{homes: sectionHomes, copies: sectionCopies}
+	return threads, learned, view
 }
 
 func nonEmptyString(value any) (string, bool) {

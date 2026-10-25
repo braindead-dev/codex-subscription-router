@@ -348,7 +348,7 @@ func (m *Multiplexer) routeExistingRequest(message protocol.Message) {
 				message.Params,
 				parsed,
 				m.store.SectionOrder(parsed.SectionID),
-				func(id string) bool { return m.listedBy(id, accountID) },
+				func(id string) bool { return m.inSection(id, accountID, parsed.SectionID) },
 			)
 		}
 	}
@@ -826,6 +826,9 @@ func (m *Multiplexer) learnSectionMove(route externalRoute, message protocol.Mes
 		return
 	}
 	move := *route.section
+	m.sectionMu.Lock()
+	m.sections.record(route.accountID, move)
+	m.sectionMu.Unlock()
 	if move.SectionID == "" {
 		_ = m.store.RemoveFromSections(move.ThreadID)
 		return
@@ -869,21 +872,19 @@ func (m *Multiplexer) childEntries() []childEntry {
 func (m *Multiplexer) rememberListings(view sectionView) {
 	m.sectionMu.Lock()
 	defer m.sectionMu.Unlock()
-	m.sections = view
+	m.sections.merge(view)
 }
 
-func (m *Multiplexer) listedBy(threadID, accountID string) bool {
+func (m *Multiplexer) inSection(threadID, accountID, sectionID string) bool {
 	m.sectionMu.RLock()
 	defer m.sectionMu.RUnlock()
-	_, ok := m.sections.listed[threadID][accountID]
-	return ok
+	return m.sections.inSection(threadID, accountID, sectionID)
 }
 
 func (m *Multiplexer) sectionHome(threadID string) (string, bool) {
 	m.sectionMu.RLock()
 	defer m.sectionMu.RUnlock()
-	home, ok := m.sections.homes[threadID]
-	return home, ok
+	return m.sections.home(threadID)
 }
 
 // sectionFields returns the section of the copy the sidebar shows when it is
@@ -891,11 +892,11 @@ func (m *Multiplexer) sectionHome(threadID string) (string, bool) {
 func (m *Multiplexer) sectionFields(threadID, answeringAccountID string) (map[string]any, bool) {
 	m.sectionMu.RLock()
 	defer m.sectionMu.RUnlock()
-	home, ok := m.sections.homes[threadID]
+	home, ok := m.sections.home(threadID)
 	if !ok || home == answeringAccountID {
 		return nil, false
 	}
-	return m.sections.copies[threadID], true
+	return m.sections.copies[threadID][home], true
 }
 
 // threadOwner is the subscription a chat belongs to: the recorded one or, for

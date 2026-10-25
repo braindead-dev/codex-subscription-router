@@ -102,7 +102,7 @@ func TestMergeThreadListingsKeepsNameSetOnOriginatingCopy(t *testing.T) {
 	}
 }
 
-func TestMergeThreadListingsKeepsSectionFromFirstListing(t *testing.T) {
+func TestMergeThreadListingsKeepsSectionFromPinnedCopy(t *testing.T) {
 	pinned := map[string]any{"id": "sec", "name": "Pinned"}
 	listings := []threadListing{
 		{accountID: "primary", threads: []map[string]any{
@@ -123,11 +123,27 @@ func TestMergeThreadListingsKeepsSectionFromFirstListing(t *testing.T) {
 			t.Fatalf("expected the freshest copy with the first listing's section, got %#v", thread)
 		}
 	}
-	if view.homes["moved"] != "primary" || view.homes["own"] != "secondary" {
-		t.Fatalf("expected section homes from the first listing of each thread, got %#v", view.homes)
+	movedHome, _ := view.home("moved")
+	ownHome, _ := view.home("own")
+	if movedHome != "primary" || ownHome != "secondary" {
+		t.Fatalf("expected section homes at the pinned copies, got %q and %q", movedHome, ownHome)
 	}
-	if view.copies["moved"]["sectionEnteredAt"] != 5.0 {
+	if view.copies["moved"]["primary"]["sectionEnteredAt"] != 5.0 {
 		t.Fatalf("expected the displayed copy to be remembered, got %#v", view.copies["moved"])
+	}
+}
+
+func TestMergeThreadListingsShowsThePinnedCopyListedLater(t *testing.T) {
+	pinned := map[string]any{"id": "sec"}
+	threads, _, view := mergeThreadListings([]threadListing{
+		{accountID: "primary", threads: []map[string]any{{"id": "chat", "updatedAt": 3.0, "section": nil, "sectionEnteredAt": nil}}},
+		{accountID: "secondary", threads: []map[string]any{{"id": "chat", "updatedAt": 1.0, "section": pinned, "sectionEnteredAt": 7.0}}},
+	}, func(string) (string, bool) { return "primary", true }, neverOriginates)
+	if len(threads) != 1 || threads[0]["sectionEnteredAt"] != 7.0 {
+		t.Fatalf("expected the pinned copy's section, got %#v", threads)
+	}
+	if home, _ := view.home("chat"); home != "secondary" {
+		t.Fatalf("expected the pin's account as home, got %q", home)
 	}
 }
 

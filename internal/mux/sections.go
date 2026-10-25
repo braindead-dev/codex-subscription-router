@@ -7,16 +7,112 @@ import (
 	"github.com/b-nnett/codex-subscription-router/internal/protocol"
 )
 
-// sectionView is what the last listing established about sections: which
-// account's copy of each thread the sidebar shows, that copy, and which
-// accounts list each thread at all.
+// sectionView is what listings have shown of each account's copy of a
+// thread: the copy's section fields, by thread and then account, and the order
+// accounts are consulted in (the controller first). A listing replaces only
+// the copies it lists, so one that leaves pinned threads out, such as the
+// archived chats, does not forget where they are pinned.
 type sectionView struct {
-	homes  map[string]string
-	copies map[string]map[string]any
-	listed map[string]map[string]struct{}
+	accounts []string
+	copies   map[string]map[string]map[string]any
 }
 
 var sectionFieldKeys = []string{"section", "sectionEnteredAt"}
+
+// sectionViewOf records the section fields of every copy in listings, which
+// arrive in consultation order.
+func sectionViewOf(listings []threadListing) sectionView {
+	view := sectionView{copies: make(map[string]map[string]map[string]any)}
+	for _, listing := range listings {
+		view.accounts = append(view.accounts, listing.accountID)
+		for _, thread := range listing.threads {
+			threadID, _ := thread["id"].(string)
+			if threadID == "" {
+				continue
+			}
+			fields := make(map[string]any, len(sectionFieldKeys))
+			for _, key := range sectionFieldKeys {
+				if value, ok := thread[key]; ok {
+					fields[key] = value
+				}
+			}
+			if view.copies[threadID] == nil {
+				view.copies[threadID] = make(map[string]map[string]any)
+			}
+			view.copies[threadID][listing.accountID] = fields
+		}
+	}
+	return view
+}
+
+// merge takes in a newer listing's copies and keeps every copy it did not list.
+func (v *sectionView) merge(newer sectionView) {
+	if len(newer.accounts) > 0 {
+		v.accounts = newer.accounts
+	}
+	if v.copies == nil {
+		v.copies = make(map[string]map[string]map[string]any)
+	}
+	for threadID, copies := range newer.copies {
+		if v.copies[threadID] == nil {
+			v.copies[threadID] = make(map[string]map[string]any)
+		}
+		for accountID, fields := range copies {
+			v.copies[threadID][accountID] = fields
+		}
+	}
+}
+
+// home is the account whose copy the sidebar shows: the first whose copy is in
+// a section, or else the first that lists the thread.
+func (v sectionView) home(threadID string) (string, bool) {
+	fallback := ""
+	for _, accountID := range v.accounts {
+		fields, ok := v.copies[threadID][accountID]
+		if !ok {
+			continue
+		}
+		if copySection(fields) != "" {
+			return accountID, true
+		}
+		if fallback == "" {
+			fallback = accountID
+		}
+	}
+	return fallback, fallback != ""
+}
+
+// inSection reports whether an account's copy of a thread is in a section.
+func (v sectionView) inSection(threadID, accountID, sectionID string) bool {
+	return sectionID != "" && copySection(v.copies[threadID][accountID]) == sectionID
+}
+
+// record notes a move an account accepted, until a listing shows the copy.
+func (v *sectionView) record(accountID string, move sectionMove) {
+	if v.copies == nil {
+		v.copies = make(map[string]map[string]map[string]any)
+	}
+	if v.copies[move.ThreadID] == nil {
+		v.copies[move.ThreadID] = make(map[string]map[string]any)
+	}
+	fields := v.copies[move.ThreadID][accountID]
+	if fields == nil {
+		fields = make(map[string]any, len(sectionFieldKeys))
+		v.copies[move.ThreadID][accountID] = fields
+	}
+	switch {
+	case move.SectionID == "":
+		fields["section"] = nil
+	case copySection(fields) != move.SectionID:
+		fields["section"] = map[string]any{"id": move.SectionID}
+	}
+}
+
+func copySection(fields map[string]any) string {
+	section, _ := fields["section"].(map[string]any)
+	id, _ := section["id"].(string)
+	return id
+}
 
 // sectionMove is the desktop's thread/section/move request. A null sectionId
 // unpins the thread; a null beforeThreadId places it last.
@@ -91,8 +187,9 @@ func orderSection(threads []map[string]any, order []string) ([]map[string]any, [
 }
 
 // scopeBeforeThread keeps beforeThreadId meaningful for the account applying
-// a move: the first thread at or after it in the section order that the
-// account lists, or null when none follows.
+// a move: the first thread at or after it in the section order whose copy on
+// that account is in the section, or null when none follows. Codex refuses an
+// anchor outside the section.
 func scopeBeforeThread(
 	params json.RawMessage,
 	move sectionMove,
