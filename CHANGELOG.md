@@ -5,8 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-10-24
+
 ### Fixed
 
+- Builds `21747` and `21828` no longer stop at "Organization settings could
+  not be loaded" when the router app starts. The desktop now reads its
+  startup requirements with a one-shot `app-server --print-startup-config`;
+  the router passes it to Codex instead of starting a multiplexer that
+  printed nothing.
 - Moving a fork can reuse independently copied ancestor history when the
   destination contains the same bytes or a newer matching copy. Existing
   ancestor files, current rollout paths, and projections are preserved;
@@ -480,7 +487,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.0
 [0.24.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.24.0
 [0.23.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.23.0
 [0.22.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.22.0
