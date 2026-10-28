@@ -5,9 +5,8 @@ description: Port the router patch to a new official ChatGPT (Codex) macOS build
 
 # Port a new ChatGPT build
 
-A port locates the renamed or reshaped minified anchors, records a profile,
-and proves it. Done means the newest build is in `SUPPORTED_BUILDS`, every
-check below passes, and the port is pushed to `main`.
+A port records and proves exact anchors for a new build in `SUPPORTED_BUILDS`.
+Done means every check below passes and the port is pushed to `main`.
 
 ## Rules
 
@@ -47,8 +46,8 @@ alias it and register the shared profile once. Resolve the listed gaps:
 
 - Find the moved code by a string literal or property name from the old
   anchor, and copy the new anchor verbatim from the bundle. Never retype it.
-- Make anchors unique by shape; the menu marker, menu helper, and RPC anchor
-  together must identify one profile; adjacent builds can share any two.
+- The menu marker, menu helper, RPC, and message-dispatch anchors together
+  must identify exactly one profile, even when adjacent builds share most.
 - Borrow only imports, hoisted functions, or variables of a module the patched
   component itself initializes. Otherwise draw it (see the usage icon) or read
   it through a live import.
@@ -88,7 +87,9 @@ The staged app must boot: `python3 scripts/launch_check.py --app <staged>`
 targets the staged CLI with an isolated desktop profile. It requires a rendered
 UI and an initialized app-server, without a test-server port. Signing and
 Electron hardening only show up here. The router, adjacent `codex.real`, and
-`codex-cli/bin/codex` must each print the Codex version. Then run the live
+`codex-cli/bin/codex` must each print the Codex version. Also call the staged
+wrapper with `app-server --print-startup-config` and require valid JSON:
+a live router lock can mask wrapper failures during boot. Then run the live
 move test against the staged `codex.real` (`scripts/live_seed.py` prepares its
 home). After his "go", quit the app, install with
 `patch_app.py --install-staged ~/.codex-mux/port-stage --destination <app>`
@@ -113,7 +114,6 @@ through the bridge on port 48124. Unset the variable afterwards.
 
 Delete by exact path: source apps in `~/.codex-mux/sources` that are no longer
 supported, and scratch extractions. The patcher keeps a single install backup
-and the updater prunes release sources and older official builds. Leave the
-diff smaller than you found it.
+and the updater prunes old release sources. Leave the diff smaller than before.
 
-Fix incorrect skill steps in the same commit; keep this under 120 lines.
+Fix incorrect steps in the same commit; keep this under 120 lines.

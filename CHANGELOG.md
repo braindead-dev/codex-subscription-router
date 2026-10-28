@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-10-28
+
+### Added
+
+- Support official ChatGPT builds `22530` (`26.1023.51421`) and `22391`
+  (`26.1023.50603`), both with Codex CLI `0.165.0-alpha.1.2`. The newest
+  three official builds are supported, including `21828`.
+
+### Changed
+
+- Port the account menu, usage sheet, settings, composer, thread panel,
+  and session-message cards to the new renderer layout. The two profiles share
+  their common anchors; retired builds `21477` and `21747` are removed.
+- Check the staged router's one-shot startup configuration directly as
+  well as booting its UI, so a running app cannot mask a wrapper failure.
+
 ## [0.25.2] - 2026-10-24
 
 ### Fixed
@@ -511,7 +527,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.25.2...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.26.0
 [0.25.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.2
 [0.25.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.1
 [0.25.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.0
