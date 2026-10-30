@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-30
+
+### Added
+
+- Support official ChatGPT build `22943` (`26.1027.30824`) with Codex CLI
+  `0.166.0-alpha.5.1`. Builds `22530` and `22391` remain supported, covering
+  the newest three official appcast builds.
+
+### Changed
+
+- Port the router UI to the new renderer's exact anchors and bindings.
+  Retire build `21828` and its renderer profile.
+- Adapt combined and per-account statistics to the new Profile page API,
+  preserving native profile editing and pins. Hide unavailable chat counts
+  instead of mixing the primary account's counts with pooled token usage.
+- Locate desktop patches by unique code anchors across the new bundle layout.
+  Remove the official app's associated-domains entitlement when signing the
+  independent copy so macOS permits it to launch.
+
 ## [0.26.0] - 2026-10-28
 
 ### Added
@@ -527,7 +546,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.27.0
 [0.26.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.26.0
 [0.25.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.2
 [0.25.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.1

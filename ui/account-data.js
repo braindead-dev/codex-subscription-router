@@ -121,6 +121,52 @@ async function codexMuxProfileData(accountId = null) {
   return result.profile;
 }
 
+// Newer desktops render /profiles/me/page instead of the legacy usage query.
+// Keep the native page's ownership, editing data and pins; replace only its
+// statistics and carry the selected display identity separately from edit data.
+async function codexMuxProfilePageData(native) {
+  if (!native?.is_self || !native.page) return native;
+  const profile = await codexMuxProfileData(
+    globalThis.__codexMuxSelectedProfileAccountId ?? null,
+  );
+  const stats = profile.stats;
+  const failed = Boolean(profile.metadata?.stats_error);
+  return {
+    ...native,
+    codexMuxIdentity: profile.profile,
+    page: {
+      ...native.page,
+      stats: failed ? null : {
+        current_streak_days: stats.current_streak_days,
+        longest_streak_days: stats.longest_streak_days,
+        agentic: {
+          lifetime_tokens: stats.lifetime_tokens,
+          peak_daily_tokens: stats.peak_daily_tokens,
+          longest_running_turn_sec: stats.longest_running_turn_sec,
+        },
+      },
+      insights: failed ? null : {
+        agentic: {
+          fast_mode_usage_percentage: stats.fast_mode_usage_percentage,
+          most_used_reasoning_effort: stats.most_used_reasoning_effort,
+          most_used_reasoning_effort_percentage: stats.most_used_reasoning_effort_percentage,
+          total_threads: stats.total_threads,
+        },
+        total_skills_used: stats.total_skills_used,
+        unique_skills_used: stats.unique_skills_used,
+      },
+      top_plugins: failed ? null : (stats.top_invocations || []).filter(
+        (item) => item.type === "plugin" && item.plugin_id,
+      ),
+      activity_graph: failed ? null : {
+        daily_usage_buckets: stats.daily_usage_buckets,
+        weekly_usage_buckets: stats.weekly_usage_buckets,
+        cumulative_daily_usage_buckets: stats.cumulative_daily_usage_buckets,
+      },
+    },
+  };
+}
+
 // The renderer polls `/wham/usage` over HTTP for the Primary account only, so
 // its usage banners, sidebar alert, and reset prompts describe one account
 // while the multiplexer routes across the pool. Replace the rate-limit
@@ -274,6 +320,7 @@ Object.assign(globalThis, {
   codexMuxFetchAccounts,
   codexMuxScopePluginRequest,
   codexMuxProfileData,
+  codexMuxProfilePageData,
   codexMuxFilterUsageStatus,
   codexMuxRateLimitResets,
   codexMuxConsumeRateLimitReset,

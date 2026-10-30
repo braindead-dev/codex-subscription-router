@@ -273,6 +273,9 @@ def main() -> int:
         (port.locate(anchor, "composer_actions") or (None, anchor))[1]
         for anchor in reference.composer_actions
     )
+    profile["profile_page_patches"] = tuple(
+        port.port_pair(pair, "profile_page_patches") for pair in reference.profile_page_patches
+    )
     profile["fork_titles"] = port.port_pair(reference.fork_titles, "fork_titles")
     profile["usage_status"] = port.port_pair(reference.usage_status, "usage_status")
 
