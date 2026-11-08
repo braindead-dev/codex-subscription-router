@@ -889,6 +889,7 @@ class RendererBuild:
     thread_sections: tuple[str, str]
     composer_actions: tuple[str, ...]
     session_message: tuple[str, str]
+    native_message: tuple[str, str]
     fork_titles: tuple[str, str]
     fork_identifiers: dict[str, str]
     # Unique probes name borrowed identifiers for the porter and patcher.
@@ -977,7 +978,12 @@ RENDERER_BUILD_25679 = RendererBuild(
     ),
     session_message=(
         "case\"user-message\":{let e,s,c,u,h,g,x,v,y,k,M,R,E,D,F,O,U,H,V,Q,K;B[30]!==es?",
-        "case\"user-message\":{{let codexMuxCard=globalThis.codexMuxSessionMessage(Z,{conversationId:es,cwd:eh,hostId:ef,compactActions:tx},J);if(codexMuxCard)return codexMuxCard;}let e,s,c,u,h,g,x,v,y,k,M,R,E,D,F,O,U,H,V,Q,K;B[30]!==es?",
+        "case\"user-message\":{{let codexMuxCard=globalThis.codexMuxSessionMessage(Z,{conversationId:es,cwd:eh,hostId:ef,compactActions:tx},codexMuxNativeMessage);if(codexMuxCard)return codexMuxCard;}let e,s,c,u,h,g,x,v,y,k,M,R,E,D,F,O,U,H,V,Q,K;B[30]!==es?",
+    ),
+    # The turn renderer shadows J twice (a prop, then a block `let J`), so the card gets a module alias.
+    native_message=(
+        "K=n(\"on57\");function J(e){let t,",
+        "K=n(\"on57\"),codexMuxNativeMessage=J;function J(e){let t,",
     ),
     fork_titles=(
         "function({scope:e,dispatchMessageFromView:t,manager:n,readLatestImageEditTurnState:i}){let s,o;if(null==e)return;",
@@ -1187,6 +1193,7 @@ def patch_renderer(extracted: Path, token: str) -> None:
         injected_source("session-messages.js", token, {}),
         "the cross-session message renderer",
     )
+    renderer.replace(*build.native_message, "the native message component")
     renderer.replace(*build.session_message, "the native user-message dispatch")
     renderer.replace(
         build.marker,
