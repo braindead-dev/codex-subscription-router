@@ -5,6 +5,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-08
+
+### Added
+
+- Support official ChatGPT builds `25679` (`26.1103.41825`), `25471`
+  (`26.1103.32239`), and `25241` (`26.1103.31037`), all with Codex CLI
+  `0.167.0-alpha.3.2`.
+
+### Changed
+
+- Port account routing, usage resets, combined profiles, plugin selection,
+  fork titles, and cross-session message cards to the new webpack renderer.
+  Initialize the router UI before the first render, including when the
+  native profile menu has not been opened.
+- Retire builds `22943`, `22530`, and `22391` and their renderer profiles.
+- Add an AST module inventory to the porting tool to distinguish bindings
+  in separate closures and preserve repeated module IDs across chunks.
+
+### Fixed
+
+- Keep the usage-sheet account selector current after switching accounts.
+  Send a reset to the account selected when clicked, and update that account's
+  cached credits even if the user switches accounts while the reset is pending.
+
 ## [0.27.0] - 2026-10-30
 
 ### Added
@@ -546,7 +570,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.0
 [0.27.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.27.0
 [0.26.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.26.0
 [0.25.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.25.2

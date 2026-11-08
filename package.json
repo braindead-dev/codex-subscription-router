@@ -1,7 +1,7 @@
 {
   "name": "codex-subscription-router-patcher",
   "private": true,
-  "version": "0.27.0",
+  "version": "0.28.0",
   "description": "Build tooling for the independent Codex Subscription Router macOS app patch",
   "license": "MIT",
   "repository": {
@@ -18,12 +18,13 @@
   "scripts": {
     "check": "npm run check:go && npm run check:js && npm run check:python && npm run check:shell",
     "check:go": "go test ./... && go vet ./...",
-    "check:js": "for f in ui/*.js ui/*.cjs; do node --check \"$f\" || exit 1; done; node --test ui/*.test.cjs",
+    "check:js": "for f in ui/*.js ui/*.cjs scripts/*.cjs; do node --check \"$f\" || exit 1; done; node --test ui/*.test.cjs scripts/*.test.cjs",
     "check:python": "python3 -m py_compile scripts/*.py && python3 -m unittest discover -s scripts -p 'test_*.py'",
     "check:shell": "bash -n install.sh",
     "release:check": "python3 scripts/check_release.py"
   },
   "devDependencies": {
-    "@electron/asar": "4.2.1"
+    "@electron/asar": "4.2.1",
+    "acorn": "8.15.0"
   }
 }

@@ -136,8 +136,13 @@ class Port:
 
     def locate(self, anchor: str, label: str) -> tuple[str, str] | None:
         pattern, names = pattern_for(anchor)
+        literals = [text for kind, text in tokens(anchor) if kind == "string"]
         hits: list[tuple[str, re.Match[str]]] = []
         for name, text in self.bundles.items():
+            # These strings are escaped verbatim in the pattern. Skip bundles
+            # that cannot match before trying identifier captures on large assets.
+            if any(literal not in text for literal in literals):
+                continue
             hits.extend((name, match) for match in pattern.finditer(text))
         if len(hits) != 1:
             self.problems.append(f"{label}: {len(hits)} matches for {anchor[:70]!r}")
@@ -177,7 +182,7 @@ def load_patcher():
     return module
 
 
-def renderer_bundles(app: Path) -> dict[str, str]:
+def renderer_bundles(app: Path, module_inventory: bool = False) -> dict[str, str] | list[dict[str, object]]:
     asar = app / "Contents" / "Resources" / "app.asar"
     with tempfile.TemporaryDirectory() as scratch:
         subprocess.run(
@@ -186,9 +191,14 @@ def renderer_bundles(app: Path) -> dict[str, str]:
             capture_output=True,
         )
         assets = Path(scratch) / "webview" / "assets"
+        if module_inventory:
+            return json.loads(subprocess.check_output(
+                ["node", str(PROJECT_ROOT / "scripts" / "renderer_modules.cjs"), str(assets)],
+                text=True,
+            ))
         return {
-            path.name: path.read_text(encoding="utf-8")
-            for path in sorted(assets.glob("*.js"))
+            str(path.relative_to(assets)): path.read_text(encoding="utf-8")
+            for path in sorted(assets.rglob("*.js"))
         }
 
 
@@ -226,7 +236,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--reference", help="supported build to port from (default: newest)")
+    parser.add_argument("--modules", action="store_true", help="print webpack module inventory as JSON instead of a profile")
     args = parser.parse_args()
+    if args.modules:
+        print(json.dumps(renderer_bundles(args.source, module_inventory=True)))
+        return 0
 
     patcher = load_patcher()
     reference = (
@@ -278,6 +292,15 @@ def main() -> int:
     )
     profile["fork_titles"] = port.port_pair(reference.fork_titles, "fork_titles")
     profile["usage_status"] = port.port_pair(reference.usage_status, "usage_status")
+    if reference.profile_query:
+        profile["profile_query"] = port.port_pair(reference.profile_query, "profile_query")
+    if reference.startup:
+        profile["startup"] = port.port_pair(reference.startup, "startup")
+    for field in ("usage_export", "fork_injection_anchor"):
+        anchor = getattr(reference, field)
+        if anchor:
+            located = port.locate(anchor, field)
+            profile[field] = located[1] if located else anchor
 
     profile["menu_identifiers"] = port.port_identifiers(
         reference.menu_identifiers, "menu_identifiers"

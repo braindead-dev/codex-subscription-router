@@ -5,13 +5,13 @@ every modified renderer, main-process, and native binary anchor and stops
 instead of applying a partial patch. The newest three official builds
 are supported.
 
-## Release 0.27.0
+## Release 0.28.0
 
 | Official ChatGPT version | Bundle build | Codex CLI | `app.asar` SHA-256 |
 | --- | --- | --- | --- |
-| `26.1023.50603` | `22391` | `0.165.0-alpha.1.2` | `94a7fac7fdf222261170204df0406249822431cf4db3627d5524b6ba033ce3e6` |
-| `26.1023.51421` | `22530` | `0.165.0-alpha.1.2` | `1c8ef1bef66e5fc416ae66eff8e6529972aa3601e27a1c7b5f61d6a292b957d3` |
-| `26.1027.30824` | `22943` | `0.166.0-alpha.5.1` | `36bf3d2b35e95e11852074b9ca9459b89efbecd6b8311345d060cf66de8f0ba6` |
+| `26.1103.31037` | `25241` | `0.167.0-alpha.3.2` | `57602118a9890cb62ddfa750996e41440396d0aac2725b6837b5391305c78acf` |
+| `26.1103.32239` | `25471` | `0.167.0-alpha.3.2` | `8e55cbc7f0b7797ca1972cbf6d8b37f26dd8b79d0613235bc7448905a3bc7a2b` |
+| `26.1103.41825` | `25679` | `0.167.0-alpha.3.2` | `766faa8a3da8f6d6902c751d5b6b29395a6c5bf3c966ef7f8ca3f629d931df85` |
 
 Architecture: Apple silicon (`arm64`).
 

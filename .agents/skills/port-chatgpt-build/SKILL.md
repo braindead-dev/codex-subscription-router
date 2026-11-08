@@ -55,9 +55,12 @@ alias it and register the shared profile once. Resolve the listed gaps:
   usage site that is unique by shape, never from an import clause. Check its
   binding in the injection bundle: a capture in another chunk may name a
   different local alias even when the generator reports no gap.
-- Our UI lives in the eager `app-initial` bundle next to `menu_anchor`; lazy
-  chunks only call it through `globalThis`. Patches land in whichever bundle
-  holds their anchor, so moved code needs a new anchor, not a new mechanism.
+- Use `port_renderer.py --source <app> --modules` to inspect webpack module
+  boundaries. Bindings are local to each closure; repeated IDs in different
+  chunks must not be collapsed. Our UI lives beside `menu_anchor`; `startup`
+  loads that module through its native dependency list before the first render.
+  Lazy chunks call the UI through `globalThis`. Verify a cold launch without
+  opening the profile menu so an initialization race cannot hide.
 - When main-process code or packaging changes shape, teach the one helper
   both shapes instead of branching per build (see `attach_router_updater`),
   and drop the old shape with the last build that had it. A string that moves
