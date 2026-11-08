@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-11-08
+
+### Fixed
+
+- Render chat turns again on builds `25679`, `25471`, and `25241`. The
+  cross-session message card was handed the turn renderer's own `J`, a binding
+  shadowed by a prop and by a block `let` declared later, so every user message
+  threw `Cannot access 'J' before initialization` and each turn showed "This
+  turn couldn't render". The card now gets a module alias of the native message
+  component.
+
 ## [0.28.0] - 2026-11-08
 
 ### Added
@@ -570,7 +581,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.28.0...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.28.1...HEAD
+[0.28.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.1
 [0.28.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.0
 [0.27.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.27.0
 [0.26.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.26.0
