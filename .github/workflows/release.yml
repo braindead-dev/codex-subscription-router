@@ -31,6 +31,9 @@ jobs:
           node-version: "22.12"
           package-manager-cache: false
 
+      - name: Install JavaScript dependencies
+        run: npm ci --ignore-scripts
+
       - name: Verify tag and metadata
         shell: bash
         run: |
