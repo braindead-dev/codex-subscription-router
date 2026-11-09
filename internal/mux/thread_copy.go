@@ -14,7 +14,7 @@ import (
 
 var (
 	threadIDPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	linkIDPattern   = regexp.MustCompile(`_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$`)
+	linkIDPattern   = regexp.MustCompile(`_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl(?:\.zst)?$`)
 )
 
 var historyTables = []string{
@@ -105,10 +105,16 @@ func copyThread(sourceHome, targetHome, threadID string, copied map[string]struc
 			}
 		}
 	}
-	current, created, err := shareRolloutIntoHome(path, targetHome, ancestor)
+	// Codex compresses a cold rollout in place and keeps indexing its plain name.
+	file := path
+	if !fileExists(file) && fileExists(file+".zst") {
+		file += ".zst"
+	}
+	current, created, err := shareRolloutIntoHome(file, targetHome, ancestor)
 	if err != nil {
 		return err
 	}
+	current = strings.TrimSuffix(current, strings.TrimPrefix(file, path))
 	if created {
 		streams = append(streams, projectionStream(path, threadID))
 	}
@@ -240,7 +246,12 @@ func historyBaseThread(rollout string) string {
 		return ""
 	}
 	defer file.Close()
-	reader := bufio.NewReaderSize(file, 1<<20)
+	source, closeSource, err := rolloutReader(file)
+	if err != nil {
+		return ""
+	}
+	defer closeSource()
+	reader := bufio.NewReaderSize(source, 1<<20)
 	line, err := reader.ReadBytes('\n')
 	if len(line) == 0 && err != nil {
 		return ""
@@ -261,7 +272,7 @@ func historyBaseThread(rollout string) string {
 	return record.Payload.HistoryBase.ThreadID
 }
 
-var rolloutThreadPattern = regexp.MustCompile(`-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_[0-9a-f-]{36})?\.jsonl$`)
+var rolloutThreadPattern = regexp.MustCompile(`-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_[0-9a-f-]{36})?\.jsonl(?:\.zst)?$`)
 
 // rolloutOwner resolves the thread whose rollout carries a history stream.
 // A fork's history base names the stream it continues from, which is the
@@ -277,9 +288,13 @@ func rolloutOwner(codexHome, streamID string) string {
 	return streamID
 }
 
-// threadRollouts lists every rollout segment of a thread in a Codex home.
+// threadRollouts lists every rollout segment of a thread in a Codex home,
+// including the sealed segments Codex compresses to `.jsonl.zst`; resuming
+// follows the lineage through them.
 func threadRollouts(codexHome, threadID string) []string {
 	matches, _ := filepath.Glob(filepath.Join(codexHome, "sessions", "*", "*", "*", "*"+threadID+"*.jsonl"))
+	compressed, _ := filepath.Glob(filepath.Join(codexHome, "sessions", "*", "*", "*", "*"+threadID+"*.jsonl.zst"))
+	matches = append(matches, compressed...)
 	rollouts := make([]string, 0, len(matches))
 	for _, match := range matches {
 		if info, err := os.Stat(match); err == nil && info.Mode().IsRegular() {

@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 // linkRolloutIntoHome gives an account its own path to another account's
@@ -98,19 +100,33 @@ func rolloutPrefixMatches(sourcePath, targetPath string) bool {
 	defer target.Close()
 	sourceInfo, sourceErr := source.Stat()
 	targetInfo, targetErr := target.Stat()
-	if sourceErr != nil || targetErr != nil || !sourceInfo.Mode().IsRegular() || !targetInfo.Mode().IsRegular() || targetInfo.Size() < sourceInfo.Size() {
+	if sourceErr != nil || targetErr != nil || !sourceInfo.Mode().IsRegular() || !targetInfo.Mode().IsRegular() {
 		return false
 	}
+	sourceReader, closeSource, err := rolloutReader(source)
+	if err != nil {
+		return false
+	}
+	defer closeSource()
+	targetReader, closeTarget, err := rolloutReader(target)
+	if err != nil {
+		return false
+	}
+	defer closeTarget()
 	left, right := make([]byte, 64*1024), make([]byte, 64*1024)
-	for remaining := sourceInfo.Size(); remaining > 0; {
-		size := min(int64(len(left)), remaining)
-		if _, err := io.ReadFull(source, left[:size]); err != nil {
+	for {
+		size, err := io.ReadFull(sourceReader, left)
+		if size > 0 {
+			if _, err := io.ReadFull(targetReader, right[:size]); err != nil || !bytes.Equal(left[:size], right[:size]) {
+				return false
+			}
+		}
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+			break
+		}
+		if err != nil {
 			return false
 		}
-		if _, err := io.ReadFull(target, right[:size]); err != nil || !bytes.Equal(left[:size], right[:size]) {
-			return false
-		}
-		remaining -= size
 	}
 	// Fail closed if either file changed while it was compared.
 	sourceAfter, sourceErr := os.Stat(sourcePath)
@@ -119,4 +135,18 @@ func rolloutPrefixMatches(sourcePath, targetPath string) bool {
 		os.SameFile(sourceInfo, sourceAfter) && os.SameFile(targetInfo, targetAfter) &&
 		sourceAfter.Size() == sourceInfo.Size() && sourceAfter.ModTime() == sourceInfo.ModTime() &&
 		targetAfter.Size() == targetInfo.Size() && targetAfter.ModTime() == targetInfo.ModTime()
+}
+
+// rolloutReader reads a rollout's records, decompressing a sealed segment
+// Codex stored as `.jsonl.zst`; its bytes differ between copies that hold the
+// same records.
+func rolloutReader(file *os.File) (io.Reader, func(), error) {
+	if !strings.HasSuffix(file.Name(), ".zst") {
+		return file, func() {}, nil
+	}
+	decoder, err := zstd.NewReader(file)
+	if err != nil {
+		return nil, nil, err
+	}
+	return decoder, decoder.Close, nil
 }

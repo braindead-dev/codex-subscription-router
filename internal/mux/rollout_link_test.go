@@ -1,10 +1,13 @@
 package mux
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestLinkRolloutIntoHomeMirrorsSessionsLayout(t *testing.T) {
@@ -43,55 +46,69 @@ func TestLinkRolloutIntoHomeMirrorsSessionsLayout(t *testing.T) {
 
 func TestAncestorRolloutReusesOnlyMatchingCopies(t *testing.T) {
 	sourceText := strings.Repeat("history\n", 20_000)
-	for _, tc := range []struct {
-		name, targetText string
-		wantOK           bool
-		wantRejoin       bool
-	}{
-		{"identical", sourceText, true, true},
-		{"newer", sourceText + "later turn\n", true, false},
-		{"shorter", sourceText[:len(sourceText)-1], false, true},
-		{"diverged", sourceText[:len(sourceText)-2] + "x\n", false, false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
-			source := filepath.Join(root, "source", "sessions", "2026", "08", "12", "rollout.jsonl")
-			target := filepath.Join(root, "target", "sessions", "2026", "08", "12", "rollout.jsonl")
-			for path, body := range map[string]string{source: sourceText, target: tc.targetText} {
-				if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-					t.Fatal(err)
+	// Copies of a compressed segment hold the same records in different bytes.
+	encode := func(t *testing.T, suffix, text string, level zstd.EncoderLevel) []byte {
+		if suffix != ".jsonl.zst" {
+			return []byte(text)
+		}
+		encoder, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(level))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return encoder.EncodeAll([]byte(text), nil)
+	}
+	for _, suffix := range []string{".jsonl", ".jsonl.zst"} {
+		for _, tc := range []struct {
+			name, targetText string
+			wantOK           bool
+			wantRejoin       bool
+		}{
+			{"identical", sourceText, true, true},
+			{"newer", sourceText + "later turn\n", true, false},
+			{"shorter", sourceText[:len(sourceText)-1], false, true},
+			{"diverged", sourceText[:len(sourceText)-2] + "x\n", false, false},
+		} {
+			t.Run(suffix+"/"+tc.name, func(t *testing.T) {
+				root := t.TempDir()
+				source := filepath.Join(root, "source", "sessions", "2026", "08", "12", "rollout"+suffix)
+				target := filepath.Join(root, "target", "sessions", "2026", "08", "12", "rollout"+suffix)
+				targetBytes := encode(t, suffix, tc.targetText, zstd.SpeedBestCompression)
+				for path, body := range map[string][]byte{source: encode(t, suffix, sourceText, zstd.SpeedFastest), target: targetBytes} {
+					if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.WriteFile(path, body, 0o600); err != nil {
+						t.Fatal(err)
+					}
 				}
-				if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-					t.Fatal(err)
+				before, _ := os.Stat(target)
+				path, created, err := shareRolloutIntoHome(source, filepath.Join(root, "target"), true)
+				if (err == nil) != tc.wantOK || created || tc.wantOK && path != target {
+					t.Fatalf("got path=%q created=%v err=%v", path, created, err)
 				}
-			}
-			before, _ := os.Stat(target)
-			path, created, err := shareRolloutIntoHome(source, filepath.Join(root, "target"), true)
-			if (err == nil) != tc.wantOK || created || tc.wantOK && path != target {
-				t.Fatalf("got path=%q created=%v err=%v", path, created, err)
-			}
-			after, _ := os.Stat(target)
-			body, _ := os.ReadFile(target)
-			if !os.SameFile(before, after) || string(body) != tc.targetText {
-				t.Fatal("ancestor file was replaced or changed")
-			}
-			// The moving thread must end up on the source's file or not move.
-			moved, err := linkRolloutIntoHome(source, filepath.Join(root, "target"))
-			sourceInfo, _ := os.Stat(source)
-			movedInfo, _ := os.Stat(target)
-			body, _ = os.ReadFile(target)
-			if tc.wantRejoin {
-				if err != nil || moved != target || !os.SameFile(sourceInfo, movedInfo) {
-					t.Fatalf("moving thread was not rejoined: path=%q err=%v", moved, err)
+				after, _ := os.Stat(target)
+				body, _ := os.ReadFile(target)
+				if !os.SameFile(before, after) || !bytes.Equal(body, targetBytes) {
+					t.Fatal("ancestor file was replaced or changed")
 				}
-			} else if err == nil || !os.SameFile(after, movedInfo) || string(body) != tc.targetText {
-				t.Fatalf("moving thread replaced a copy with history the source lacks: err=%v", err)
-			}
-			entries, _ := os.ReadDir(filepath.Dir(target))
-			if len(entries) != 1 {
-				t.Fatalf("rejoining left %d entries beside the rollout", len(entries)-1)
-			}
-		})
+				// The moving thread must end up on the source's file or not move.
+				moved, err := linkRolloutIntoHome(source, filepath.Join(root, "target"))
+				sourceInfo, _ := os.Stat(source)
+				movedInfo, _ := os.Stat(target)
+				body, _ = os.ReadFile(target)
+				if tc.wantRejoin {
+					if err != nil || moved != target || !os.SameFile(sourceInfo, movedInfo) {
+						t.Fatalf("moving thread was not rejoined: path=%q err=%v", moved, err)
+					}
+				} else if err == nil || !os.SameFile(after, movedInfo) || !bytes.Equal(body, targetBytes) {
+					t.Fatalf("moving thread replaced a copy with history the source lacks: err=%v", err)
+				}
+				entries, _ := os.ReadDir(filepath.Dir(target))
+				if len(entries) != 1 {
+					t.Fatalf("rejoining left %d entries beside the rollout", len(entries)-1)
+				}
+			})
+		}
 	}
 }
 
