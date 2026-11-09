@@ -18,7 +18,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -71,14 +71,14 @@ class SourceBuild:
 
 # Newest three official builds, keyed by (version, build).
 SUPPORTED_BUILDS = {
-    ('26.1103.31037', '25241'): SourceBuild(
-        '57602118a9890cb62ddfa750996e41440396d0aac2725b6837b5391305c78acf'
-    ),
     ('26.1103.32239', '25471'): SourceBuild(
         '8e55cbc7f0b7797ca1972cbf6d8b37f26dd8b79d0613235bc7448905a3bc7a2b'
     ),
     ('26.1103.41825', '25679'): SourceBuild(
         '766faa8a3da8f6d6902c751d5b6b29395a6c5bf3c966ef7f8ca3f629d931df85'
+    ),
+    ('26.1103.60933', '25894'): SourceBuild(
+        'a77588b2dcfa9b394d722dd8c2c8b13d3a09bacd49c839cc715245742dba6048'
     ),
 }
 
@@ -1047,11 +1047,8 @@ RENDERER_BUILD_25679 = RendererBuild(
 )
 
 RENDERER_BUILD_25471 = RENDERER_BUILD_25679
-RENDERER_BUILD_25241 = replace(
-    RENDERER_BUILD_25679,
-    startup=tuple(part.replace('"bREQ"', '"lBze"') for part in RENDERER_BUILD_25679.startup),
-)
-RENDERER_BUILDS = (RENDERER_BUILD_25241, RENDERER_BUILD_25679)
+RENDERER_BUILD_25894 = RENDERER_BUILD_25679
+RENDERER_BUILDS = (RENDERER_BUILD_25679,)
 
 class RendererBundle:
     """One renderer file whose anchors are each replaced exactly once."""

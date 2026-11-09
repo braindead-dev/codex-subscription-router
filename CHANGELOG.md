@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-09
+
+### Added
+
+- Support official ChatGPT build `25894` (`26.1103.60933`), with the same
+  bundled Codex CLI `0.167.0-alpha.3.2`. Builds `25679` and `25471` remain
+  supported, covering the newest three official appcast builds.
+
+### Changed
+
+- Reuse the verified renderer profile and retain the fixes for chat rendering
+  and moving histories with compressed rollout segments from `0.28.1` and
+  `0.28.2`. Retire build `25241` and its startup variant.
+
 ## [0.28.2] - 2026-11-08
 
 ### Fixed
@@ -594,7 +608,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.28.2...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.29.0...HEAD
+[0.29.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.29.0
 [0.28.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.2
 [0.28.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.1
 [0.28.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.0

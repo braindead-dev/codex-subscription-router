@@ -5,8 +5,7 @@ description: Port the router patch to a new official ChatGPT (Codex) macOS build
 
 # Port a new ChatGPT build
 
-A port records and proves exact anchors for a new build in `SUPPORTED_BUILDS`.
-Done means every check below passes and the port is pushed to `main`.
+Record and prove exact anchors in `SUPPORTED_BUILDS`; pass all checks and push to `main`.
 
 ## Rules
 
@@ -21,7 +20,6 @@ Done means every check below passes and the port is pushed to `main`.
   in the same message. Land verified ports directly on `main` without PRs.
 
 ## 1. Detect and fetch
-
 The daily `Upstream` workflow fails when a new build needs a port. Locally:
 
 ```sh
@@ -33,7 +31,6 @@ newest-three request, stop only if `appcast.supported(version, build)` passes
 for all of `appcast.builds()[:3]`; fetch gaps with `appcast.fetch`.
 
 ## 2. Port the profile
-
 ```sh
 python3 scripts/port_renderer.py --source <app> > /tmp/profile.py
 ```
@@ -54,7 +51,9 @@ alias it and register the shared profile once. Resolve the listed gaps:
 - Give every borrowed identifier a probe in `identifier_probes`, taken from a
   usage site that is unique by shape, never from an import clause. Check its
   binding in the injection bundle: a capture in another chunk may name a
-  different local alias even when the generator reports no gap.
+  different local alias even when the generator reports no gap. Check lexical
+  scope at each insertion: nested props or `let` bindings can shadow module names.
+  Use an unshadowed module alias when passing a native component.
 - Use `port_renderer.py --source <app> --modules` to inspect webpack module
   boundaries. Bindings are local to each closure; repeated IDs in different
   chunks must not be collapsed. Our UI lives beside `menu_anchor`; `startup`
@@ -70,7 +69,6 @@ alias it and register the shared profile once. Resolve the listed gaps:
 Finish with `port_renderer.py --source <app> --reference <build>` exiting 0.
 
 ## 3. Verify
-
 ```sh
 npm ci --ignore-scripts && npm run check
 python3 scripts/verify_build.py --source <app>
@@ -99,10 +97,10 @@ home). After his "go", quit the app, install with
 (delete a broken installed copy by exact path first so the backup stays the
 last good build), relaunch with `launchctl setenv CODEX_MUX_UI_TESTS 1`, and
 check the profile menu, composer account picker, usage sheet, and thread panel
-through the bridge on port 48124. Unset the variable afterwards.
+through the bridge on port 48124. Also render an existing chat turn and a session
+message card; cold-boot readiness alone misses component errors. Unset it afterwards.
 
 ## 4. Release
-
 1. Commit as `Support ChatGPT build <build> (<version>, Codex <cli version>)`.
 2. Update `docs/COMPATIBILITY.md`, the Unreleased section of `CHANGELOG.md`,
    and bump the minor version as `docs/RELEASING.md` describes.
@@ -114,7 +112,6 @@ through the bridge on port 48124. Unset the variable afterwards.
    no further go is needed. Publishing enables the installed Update button.
 
 ## 5. Housekeeping
-
 Delete by exact path: source apps in `~/.codex-mux/sources` that are no longer
 supported, and scratch extractions. The patcher keeps a single install backup
 and the updater prunes old release sources. Leave the diff smaller than before.
