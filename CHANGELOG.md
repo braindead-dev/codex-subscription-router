@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+## [0.28.2] - 2026-11-08
+
+### Fixed
+
+- Move chats whose history includes compressed segments. Codex compresses
+  cold rollout segments to `.jsonl.zst` in place and keeps indexing their
+  plain names; resuming follows each segment's `history_base` through them.
+  The router shared only `.jsonl` files, so the destination failed with
+  `thread/resume: invalid paginated history lineage for ...: missing source
+  rollout`. It now shares compressed segments, reads their lineage, uses the
+  compressed file of an indexed rollout whose plain file is gone, and compares
+  an ancestor's existing copy by its decompressed records.
+
 ## [0.28.1] - 2026-11-08
 
 ### Fixed
@@ -581,7 +594,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 - Loopback-only, token-authenticated diagnostic UI states.
 - Source-only CI, draft release automation, security documentation, and smoke tests.
 
-[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.28.1...HEAD
+[Unreleased]: https://github.com/braindead-dev/codex-subscription-router/compare/v0.28.2...HEAD
+[0.28.2]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.2
 [0.28.1]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.1
 [0.28.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.28.0
 [0.27.0]: https://github.com/braindead-dev/codex-subscription-router/releases/tag/v0.27.0
