@@ -7,9 +7,9 @@ const vm = require("node:vm");
 
 // Run the actual native mutation replacement with its query-library bindings.
 // The outer modal creates this mutation before its child selects an account.
-const source = execFileSync("python3", ["-c", "import sys; sys.path.insert(0, 'scripts'); import patch_app; print(patch_app.RENDERER_BUILD_25679.reset_mutation[1])"], { encoding: "utf8" });
+const sources = JSON.parse(execFileSync("python3", ["-c", "import sys, json; sys.path.insert(0, 'scripts'); import patch_app; print(json.dumps([p.reset_mutation[1] for p in patch_app.RENDERER_BUILDS]))"], { encoding: "utf8" }));
 
-test("reset targets the account selected at click time and updates that cache after a switch", async () => {
+for (const source of sources) test(`reset ${source.match(/^function (\w+)/)[1]} targets the selected account and preserves its cache during a switch`, async () => {
   const requests = [], writes = [], invalidations = [];
   let finish;
   const cache = Array(3).fill(Symbol.for("react.memo_cache_sentinel"));
@@ -28,7 +28,7 @@ test("reset targets the account selected at click time and updates that cache af
     },
   });
   vm.runInContext(source, context);
-  const mutation = vm.runInContext("V()", context);
+  const mutation = vm.runInContext(`${source.match(/^function (\w+)/)[1]}()`, context);
   context.window.__codexMuxResetAccountId = "second";
   const input = { creditId: "credit" };
   const pending = mutation.mutationFn(input);
