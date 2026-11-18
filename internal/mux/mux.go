@@ -524,7 +524,7 @@ func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourc
 	if !ok {
 		return fmt.Errorf("target subscription is unavailable")
 	}
-	readParams, _ := json.Marshal(map[string]any{"threadId": threadID, "includeTurns": true})
+	readParams, _ := json.Marshal(map[string]any{"threadId": threadID, "includeTurns": false})
 	readResponse, err := source.Request(ctx, "thread/read", readParams)
 	if err != nil {
 		return fmt.Errorf("read existing chat: %w", err)
@@ -549,6 +549,9 @@ func (m *Multiplexer) resumeThreadOnAccount(ctx context.Context, threadID, sourc
 		"cwd":           readResult.Thread.CWD,
 		"model":         nil,
 		"modelProvider": readResult.Thread.ModelProvider,
+		// The desktop loads the turns itself; hydrating a long chat here ran the
+		// move past its 60-second limit.
+		"excludeTurns": true,
 	}
 	sourceAccount, ok := m.store.Account(sourceAccountID)
 	if !ok {
