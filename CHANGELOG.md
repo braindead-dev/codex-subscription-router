@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/); versioning:
 
 ## [Unreleased]
 
+### Improved
+
+- Sort messageable sessions by recent activity and find Claude conversations by
+  their opening request or recent messages when their generated title names only
+  the working directory. Accept a unique search match as a message target.
+
 ## [0.30.0] - 2026-11-11
 
 ### Added

@@ -22,12 +22,12 @@ import (
 var sessionTools = []map[string]any{
 	{
 		"name": "list_sessions",
-		"description": "List the conversations you can message on this Mac: the most recently updated Codex chats and every live " +
-			"Claude Code session, each with its address. Pass an address to send_message or read_session.",
+		"description": "List messageable conversations, newest activity first: recent Codex chats and every live Claude Code " +
+			"session. Search matches Claude title, working directory, opening request, and recent conversation text. Pass an address or unique search match to send_message or read_session.",
 		"inputSchema": map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"query": map[string]any{"type": "string", "description": "Only sessions whose name contains this text."},
+				"query": map[string]any{"type": "string", "description": "Match title, working directory, or Claude opening and recent conversation text."},
 				"limit": map[string]any{"type": "integer", "description": "How many Codex chats to list, newest first (default 20)."},
 			},
 		},
@@ -42,7 +42,7 @@ var sessionTools = []map[string]any{
 		"inputSchema": map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"to":      map[string]any{"type": "string", "description": "A session address from list_sessions or a from attribute, or a session's exact name."},
+				"to":      map[string]any{"type": "string", "description": "A session address, exact name, or unique search match from list_sessions."},
 				"message": map[string]any{"type": "string", "description": "The message, as plain text."},
 			},
 			"required": []string{"to", "message"},
@@ -54,7 +54,7 @@ var sessionTools = []map[string]any{
 		"inputSchema": map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"session": map[string]any{"type": "string", "description": "A session address or exact name."},
+				"session": map[string]any{"type": "string", "description": "A session address, exact name, or unique search match."},
 				"limit":   map[string]any{"type": "integer", "description": "How many recent messages to read (default 20)."},
 			},
 			"required": []string{"session"},
@@ -150,7 +150,15 @@ func (c sessionClient) call(params json.RawMessage) (string, error) {
 		}
 		var text strings.Builder
 		for _, session := range listed.Sessions {
-			fmt.Fprintf(&text, "- %q (%s, %s) %s\n  %s\n", session.Name, session.Kind, session.Status, session.CWD, session.Address)
+			updated := ""
+			if session.UpdatedAt > 0 {
+				updated = ", updated " + time.UnixMilli(session.UpdatedAt).UTC().Format("2006-01-02 15:04 UTC")
+			}
+			fmt.Fprintf(&text, "- %q (%s, %s%s) %s\n", session.Name, session.Kind, session.Status, updated, session.CWD)
+			if session.Topic != "" {
+				fmt.Fprintf(&text, "  topic: %s\n", session.Topic)
+			}
+			fmt.Fprintf(&text, "  %s\n", session.Address)
 		}
 		return text.String(), nil
 	case "send_message":

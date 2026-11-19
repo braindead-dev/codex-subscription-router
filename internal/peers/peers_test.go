@@ -103,7 +103,7 @@ func TestClaudeSessionsListsLiveSessionsOnly(t *testing.T) {
 	write(1<<30, "gone")
 
 	got := ClaudeSessions()
-	want := []Session{{Address: fmt.Sprintf("uds:/tmp/cc-socks/%d.sock", os.Getpid()), Name: "live", Kind: "claude", Status: "idle", CWD: "/work"}}
+	want := []Session{{Address: fmt.Sprintf("uds:/tmp/cc-socks/%d.sock", os.Getpid()), Name: "live", Kind: "claude", Status: "idle", CWD: "/work", SessionID: fmt.Sprintf("s%d", os.Getpid())}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("sessions = %+v", got)
 	}
@@ -141,5 +141,11 @@ func TestClaudeTranscriptKeepsConversationText(t *testing.T) {
 	want := []Message{{Role: "assistant", Text: "Looking."}, {Role: "assistant", Text: "Fixed."}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("messages = %+v", got)
+	}
+	if topic := claudeTopic("abc"); topic != "fix the bug" {
+		t.Fatalf("opening topic = %q", topic)
+	}
+	if !ClaudeRecentMatches("abc", "Fixed.") || ClaudeRecentMatches("abc", "tool_result") {
+		t.Fatal("recent message search missed conversation text or matched tool output")
 	}
 }

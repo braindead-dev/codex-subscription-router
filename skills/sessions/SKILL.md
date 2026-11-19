@@ -8,8 +8,13 @@ description: Message, read, and coordinate with the other agent sessions running
 The `sessions` MCP server, served by Codex Subscription Router, reaches every
 chat in the Codex app and every live Claude Code session on this Mac.
 
-- `list_sessions`: recent Codex chats and live Claude sessions, each with an
-  address (`uds:…`). `query` filters by name.
+- `list_sessions`: recent Codex chats and live Claude sessions, newest activity
+  first, each with an address (`uds:…`). Claude entries also show their opening
+  request because Claude can assign generic working-directory names. `query`
+  matches title, working directory, or Claude opening and recent messages. Search a topic
+  like `forum.exploit.in` before falling back to a broad list.
+- `send_message` and `read_session` accept a unique topic search result as well
+  as an exact name or address. Use the address when several sessions match.
 - `read_session`: the latest user and assistant messages of one. Read before
   you write, so your message fits what it is doing.
 - `send_message`: delivers a message as a new turn in that conversation, or

@@ -30,11 +30,14 @@ import (
 // Session is one conversation another agent can message: a Codex chat or a
 // live Claude Code session. Messages for it are delivered to Address.
 type Session struct {
-	Address string `json:"address"`
-	Name    string `json:"name"`
-	Kind    string `json:"kind"`
-	Status  string `json:"status"`
-	CWD     string `json:"cwd,omitempty"`
+	Address   string `json:"address"`
+	Name      string `json:"name"`
+	Kind      string `json:"kind"`
+	Status    string `json:"status"`
+	CWD       string `json:"cwd,omitempty"`
+	Topic     string `json:"topic,omitempty"`
+	UpdatedAt int64  `json:"updatedAt,omitempty"`
+	SessionID string `json:"sessionId,omitempty"`
 }
 
 // Message is one user or assistant turn of a conversation, as text.
@@ -112,6 +115,7 @@ type record struct {
 	Name      string `json:"name"`
 	Status    string `json:"status"`
 	Socket    string `json:"messagingSocketPath"`
+	UpdatedAt int64  `json:"updatedAt"`
 }
 
 var recordName = regexp.MustCompile(`^\d+\.json$`)
@@ -121,9 +125,83 @@ func ClaudeSessions() []Session {
 	records := claudeRecords()
 	sessions := make([]Session, 0, len(records))
 	for _, r := range records {
-		sessions = append(sessions, Session{Address: Address(r.Socket), Name: r.Name, Kind: "claude", Status: r.Status, CWD: r.CWD})
+		sessions = append(sessions, Session{Address: Address(r.Socket), Name: r.Name, Kind: "claude", Status: r.Status, CWD: r.CWD, Topic: claudeTopic(r.SessionID), UpdatedAt: r.UpdatedAt, SessionID: r.SessionID})
 	}
 	return sessions
+}
+
+// claudeTopic is the opening human request. Claude's derived session names
+// often contain only the working directory, which does not identify the task.
+func claudeTopic(sessionID string) string {
+	if sessionID == "" {
+		return ""
+	}
+	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(sessionsDirectory()), "projects", "*", sessionID+".jsonl"))
+	if len(matches) == 0 {
+		return ""
+	}
+	f, err := os.Open(matches[0])
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(io.LimitReader(f, 128<<10))
+	scanner.Buffer(make([]byte, 4096), 128<<10)
+	for scanner.Scan() {
+		var entry struct {
+			Type    string `json:"type"`
+			IsMeta  bool   `json:"isMeta"`
+			Message struct {
+				Content json.RawMessage `json:"content"`
+			} `json:"message"`
+		}
+		if json.Unmarshal(scanner.Bytes(), &entry) != nil || entry.Type != "user" || entry.IsMeta {
+			continue
+		}
+		text := strings.Join(strings.Fields(contentText(entry.Message.Content)), " ")
+		if text != "" {
+			runes := []rune(text)
+			if len(runes) > 120 {
+				return string(runes[:120]) + "…"
+			}
+			return text
+		}
+	}
+	return ""
+}
+
+// ClaudeRecentMatches searches recent conversation text only when the cheap
+// title, directory and opening-request checks failed. Tool output is ignored.
+func ClaudeRecentMatches(sessionID, query string) bool {
+	if sessionID == "" || query == "" {
+		return false
+	}
+	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(sessionsDirectory()), "projects", "*", sessionID+".jsonl"))
+	if len(matches) == 0 {
+		return false
+	}
+	tail, err := readTail(matches[0], 512<<10)
+	if err != nil {
+		return false
+	}
+	query = strings.ToLower(query)
+	for _, line := range bytes.Split(tail, []byte("\n")) {
+		var entry struct {
+			Type        string `json:"type"`
+			IsMeta      bool   `json:"isMeta"`
+			IsSidechain bool   `json:"isSidechain"`
+			Message     struct {
+				Content json.RawMessage `json:"content"`
+			} `json:"message"`
+		}
+		if json.Unmarshal(line, &entry) != nil || entry.IsMeta || entry.IsSidechain || (entry.Type != "user" && entry.Type != "assistant") {
+			continue
+		}
+		if strings.Contains(strings.ToLower(contentText(entry.Message.Content)), query) {
+			return true
+		}
+	}
+	return false
 }
 
 func claudeRecords() []record {

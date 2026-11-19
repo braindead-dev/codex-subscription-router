@@ -5,8 +5,24 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/b-nnett/codex-subscription-router/internal/peers"
 	"github.com/b-nnett/codex-subscription-router/internal/state"
 )
+
+func TestSessionDiscoveryMatchesTopicAndSortsByActivity(t *testing.T) {
+	sessions := []peers.Session{
+		{Name: "older", UpdatedAt: 1000},
+		{Name: "sixtyfour-monorepo-31", CWD: "/work/Sixtyfour-Monorepo", Topic: "Make a CLI for forum.exploit.in", UpdatedAt: 3000},
+		{Name: "middle", UpdatedAt: 2000},
+	}
+	if !sessionMatches(sessions[1], "forum.exploit.in") || !sessionMatches(sessions[1], "sixtyfour") || sessionMatches(sessions[1], "unrelated") {
+		t.Fatal("session topic, cwd, or title search failed")
+	}
+	sortSessions(sessions)
+	if sessions[0].Name != "sixtyfour-monorepo-31" || sessions[1].Name != "middle" || sessions[2].Name != "older" {
+		t.Fatalf("sessions not sorted by recent activity: %+v", sessions)
+	}
+}
 
 func TestInboxThreadNamesOnlyChatInboxes(t *testing.T) {
 	store, err := state.Open(t.TempDir(), t.TempDir())

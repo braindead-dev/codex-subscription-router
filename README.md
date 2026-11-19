@@ -149,8 +149,12 @@ The thread's subscription appears in its pinned summary.
 and skill with Codex and, when it is installed, Claude Code. Ask an agent to
 message another chat or session: `list_sessions` finds it, `read_session`
 shows its latest messages, and `send_message` delivers a message as a new
-turn there, or into the turn it is running. Every Codex chat has an inbox
-address in the same form Claude Code uses for its sessions, so Claude's own
+turn there, or into the turn it is running. Results are ordered by recent
+activity; a Claude session can be found by its title, working directory,
+opening request, or recent conversation text even when Claude gave it a generic
+directory-based name. A unique search match can be used directly as a
+`send_message` target. Every Codex chat has an inbox address in the same form
+Claude Code uses for its sessions, so Claude's own
 `SendMessage` reaches Codex chats and replies come back to whoever sent.
 Incoming text messages appear in a compact card labelled with the sending
 session, with native expand and copy controls. The original envelope remains

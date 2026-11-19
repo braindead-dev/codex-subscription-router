@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -35,14 +36,36 @@ func (m *Multiplexer) Sessions(ctx context.Context, query string, limit int) []p
 			continue
 		}
 		cwd, _ := thread["cwd"].(string)
-		sessions = append(sessions, peers.Session{Address: address, Name: threadName(thread), Kind: "codex", Status: threadStatus(thread), CWD: cwd})
+		updated := int64(numericField(thread, "updatedAt", "createdAt"))
+		if updated < 1_000_000_000_000 {
+			updated *= 1000
+		}
+		sessions = append(sessions, peers.Session{Address: address, Name: threadName(thread), Kind: "codex", Status: threadStatus(thread), CWD: cwd, UpdatedAt: updated})
 	}
 	for _, session := range peers.ClaudeSessions() {
-		if strings.Contains(strings.ToLower(session.Name), strings.ToLower(query)) {
+		if sessionMatches(session, query) {
 			sessions = append(sessions, session)
 		}
 	}
+	sortSessions(sessions)
 	return sessions
+}
+
+func sortSessions(sessions []peers.Session) {
+	sort.SliceStable(sessions, func(i, j int) bool { return sessions[i].UpdatedAt > sessions[j].UpdatedAt })
+}
+
+func sessionMatches(session peers.Session, query string) bool {
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return true
+	}
+	for _, value := range []string{session.Name, session.CWD, session.Topic} {
+		if strings.Contains(strings.ToLower(value), query) {
+			return true
+		}
+	}
+	return session.Kind == "claude" && peers.ClaudeRecentMatches(session.SessionID, query)
 }
 
 // SendMessage delivers message to the conversation at to, an address or a
@@ -135,19 +158,23 @@ func (m *Multiplexer) resolveSession(ctx context.Context, session string) (strin
 	if strings.HasPrefix(session, "uds:") {
 		return session, nil
 	}
-	var matches []string
+	var exact, matches []string
 	for _, candidate := range m.Sessions(ctx, session, 50) {
+		matches = append(matches, candidate.Address)
 		if strings.EqualFold(candidate.Name, session) {
-			matches = append(matches, candidate.Address)
+			exact = append(exact, candidate.Address)
 		}
+	}
+	if len(exact) > 0 {
+		matches = exact
 	}
 	switch len(matches) {
 	case 1:
 		return matches[0], nil
 	case 0:
-		return "", fmt.Errorf("no session is named %q; list sessions for their addresses", session)
+		return "", fmt.Errorf("no live session matches %q; list sessions for their addresses", session)
 	default:
-		return "", fmt.Errorf("%d sessions are named %q; use one of their addresses: %s", len(matches), session, strings.Join(matches, ", "))
+		return "", fmt.Errorf("%d live sessions match %q; use one of their addresses: %s", len(matches), session, strings.Join(matches, ", "))
 	}
 }
 
